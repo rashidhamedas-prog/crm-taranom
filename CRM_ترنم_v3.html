@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>CRM ترنم</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{
+  --purple:#6B21A8;--purple2:#7C3AED;--purple-light:#EDE9FE;--purple-mid:#C4B5FD;
+  --pink:#DB2777;--pink-light:#FCE7F3;
+  --green:#059669;--green-light:#D1FAE5;
+  --red:#DC2626;--red-light:#FEE2E2;
+  --orange:#D97706;--orange-light:#FEF3C7;
+  --blue:#2563EB;--blue-light:#DBEAFE;
+  --gray50:#F9FAFB;--gray100:#F3F4F6;--gray200:#E5E7EB;--gray300:#D1D5DB;
+  --gray400:#9CA3AF;--gray500:#6B7280;--gray600:#4B5563;--gray700:#374151;--gray800:#1F2937;--gray900:#111827;
+  --bg:#FAF9FF;--surface:#FFFFFF;--border:#E5E7EB;
+  --radius:12px;--radius-sm:8px;--shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.06);
+  --shadow-lg:0 10px 15px rgba(0,0,0,.1),0 4px 6px rgba(0,0,0,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;font-family:'Vazirmatn',Tahoma,sans-serif;background:var(--bg);color:var(--gray800);font-size:13px;overflow-x:hidden}
+
+/* TOPBAR */
+.topbar{background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;box-shadow:var(--shadow-md)}
+.topbar-brand{display:flex;align-items:center;gap:8px}
+.topbar-logo{width:32px;height:32px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.topbar-title{font-size:15px;font-weight:700}
+.topbar-sub{font-size:10px;opacity:.75;margin-top:1px}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#4ADE80;box-shadow:0 0 6px #4ADE80;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.topbar-clock{font-size:11px;opacity:.8}
+
+/* TABS */
+.tabs{background:var(--surface);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;position:sticky;top:57px;z-index:199;box-shadow:var(--shadow)}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:11px 16px;cursor:pointer;font-size:12px;font-weight:500;color:var(--gray500);border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s;font-family:'Vazirmatn',Tahoma,sans-serif}
+.tab.active{color:var(--purple);border-bottom-color:var(--purple);font-weight:700}
+.tab:hover:not(.active){color:var(--gray700)}
+
+/* CONTENT */
+.content{padding:12px;max-width:900px;margin:0 auto}
+.page{display:none}.page.active{display:block}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.kpi{background:var(--surface);border-radius:var(--radius);padding:12px 10px;border:1px solid var(--border);text-align:center;box-shadow:var(--shadow)}
+.kpi-icon{font-size:18px;margin-bottom:4px}
+.kpi-val{font-size:19px;font-weight:700;line-height:1}
+.kpi-val.c-purple{color:var(--purple)}.kpi-val.c-pink{color:var(--pink)}.kpi-val.c-green{color:var(--green)}.kpi-val.c-red{color:var(--red)}.kpi-val.c-orange{color:var(--orange)}.kpi-val.c-blue{color:var(--blue)}
+.kpi-label{font-size:10px;color:var(--gray400);margin-top:3px}
+
+/* CARDS */
+.card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden}
+.card-head{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--gray50)}
+.card-title{font-size:12px;font-weight:700;color:var(--gray700)}
+.card-body{padding:12px 14px}
+
+/* SECTION HEADER */
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap}
+.sec-title{font-size:13px;font-weight:700;color:var(--purple)}
+
+/* SEARCH + FILTER BAR */
+.filter-bar{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.filter-bar input,.filter-bar select{padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:'Vazirmatn',Tahoma,sans-serif;direction:rtl;background:var(--surface);color:var(--gray700);flex:1;min-width:100px}
+.filter-bar select{-webkit-appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%236B7280' d='M5 7L1 3h8z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:left 8px center;padding-left:24px}
+.filter-bar input{min-width:140px}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;min-width:460px;font-size:11px}
+thead th{background:var(--purple);color:#fff;padding:9px 8px;font-weight:600;text-align:right;white-space:nowrap;font-family:'Vazirmatn',Tahoma,sans-serif}
+thead th:first-child{border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+thead th:last-child{border-radius:var(--radius-sm) 0 0 var(--radius-sm)}
+tbody td{padding:8px 8px;border-bottom:1px solid var(--gray100);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--purple-light)}
+tbody tr:nth-child(even) td{background:var(--gray50)}
+tbody tr:nth-child(even):hover td{background:var(--purple-light)}
+
+/* BADGES */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}
+.bvip{background:var(--orange-light);color:#92400E;border:1px solid #FCD34D}
+.bactive{background:var(--green-light);color:#065F46;border:1px solid #6EE7B7}
+.bfollowup{background:var(--orange-light);color:#92400E;border:1px solid #FDE68A}
+.bsilent{background:var(--red-light);color:#991B1B;border:1px solid #FCA5A5}
+.bnew{background:var(--purple-light);color:var(--purple);border:1px solid var(--purple-mid)}
+.bdone{background:var(--green-light);color:#065F46;border:1px solid #6EE7B7}
+.bpending{background:var(--blue-light);color:#1D4ED8;border:1px solid #93C5FD}
+.bonway{background:var(--orange-light);color:#92400E;border:1px solid #FDE68A}
+.bcancel{background:var(--red-light);color:#991B1B;border:1px solid #FCA5A5}
+
+/* BUTTONS */
+.btn{border:none;cursor:pointer;font-family:'Vazirmatn',Tahoma,sans-serif;border-radius:var(--radius-sm);transition:all .15s;font-weight:600}
+.btn-primary{background:var(--purple);color:#fff;padding:10px 20px;font-size:13px}.btn-primary:hover{background:var(--purple2)}
+.btn-secondary{background:var(--gray100);color:var(--gray600);padding:10px 18px;font-size:12px;border:1px solid var(--border)}.btn-secondary:hover{background:var(--gray200)}
+.btn-success{background:var(--green);color:#fff;padding:10px 18px;font-size:12px}.btn-success:hover{background:#047857}
+.btn-danger{background:var(--red);color:#fff;padding:8px 14px;font-size:12px}.btn-danger:hover{background:#B91C1C}
+.btn-add{background:var(--purple);color:#fff;padding:8px 14px;font-size:12px}.btn-add:hover{background:var(--purple2)}
+.btn-icon{background:transparent;border:none;cursor:pointer;padding:3px 5px;border-radius:6px;font-size:15px;line-height:1}
+.btn-icon:hover{background:var(--gray100)}
+.btn-sm{padding:5px 10px;font-size:11px}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(15,15,15,.65);z-index:9000;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px)}
+.overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;padding:16px 16px 32px;box-shadow:var(--shadow-lg)}
+.modal-handle{width:36px;height:4px;background:var(--gray200);border-radius:2px;margin:0 auto 14px}
+.modal-title{font-size:15px;font-weight:700;color:var(--purple);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.modal-footer{display:flex;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)}
+.modal-footer .btn{flex:1}
+
+/* FORM */
+.form-group{margin-bottom:10px}
+.form-group label{display:block;font-size:11px;font-weight:600;color:var(--gray600);margin-bottom:4px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Vazirmatn',Tahoma,sans-serif;direction:rtl;color:var(--gray800);background:var(--surface);outline:none;transition:border-color .2s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(107,33,168,.1)}
+.form-group select{-webkit-appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%236B7280' d='M5 7L1 3h8z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:left 10px center;padding-left:28px}
+.form-group input[readonly]{background:var(--gray50);color:var(--gray500)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.debt-field input{color:var(--red)!important;font-weight:700!important;background:var(--red-light)!important}
+
+/* INVOICE ITEMS TABLE */
+.inv-items{width:100%;border-collapse:collapse;margin:10px 0;font-size:12px}
+.inv-items th{background:var(--gray100);padding:7px 8px;text-align:right;font-size:11px;color:var(--gray600);border-bottom:1px solid var(--border)}
+.inv-items td{padding:6px 8px;border-bottom:1px solid var(--gray100);vertical-align:middle}
+.inv-items input{width:100%;border:1px solid var(--border);border-radius:6px;padding:5px 7px;font-size:12px;font-family:'Vazirmatn',Tahoma,sans-serif;direction:rtl}
+.inv-items input:focus{outline:none;border-color:var(--purple)}
+.add-row-btn{background:var(--green-light);color:var(--green);border:1px dashed var(--green);padding:6px 14px;border-radius:var(--radius-sm);cursor:pointer;font-size:12px;font-family:'Vazirmatn',Tahoma,sans-serif;width:100%;margin-top:6px}
+
+/* INVOICE PREVIEW */
+.inv-preview{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-top:10px;font-size:12px}
+.inv-preview-head{text-align:center;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--purple)}
+.inv-preview-title{font-size:18px;font-weight:700;color:var(--purple);margin-bottom:4px}
+.inv-preview-sub{font-size:11px;color:var(--gray500)}
+.inv-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;background:var(--gray50);padding:10px;border-radius:8px}
+.inv-meta-item span:first-child{font-weight:600;color:var(--gray600)}
+.inv-tbl{width:100%;border-collapse:collapse;margin-bottom:14px}
+.inv-tbl th{background:var(--purple);color:#fff;padding:7px 10px;text-align:right;font-size:11px}
+.inv-tbl td{padding:7px 10px;border-bottom:1px solid var(--gray100);font-size:12px}
+.inv-totals{display:flex;flex-direction:column;align-items:flex-start;gap:5px;background:var(--gray50);padding:10px;border-radius:8px}
+.inv-total-row{display:flex;justify-content:space-between;width:100%;font-size:12px}
+.inv-total-row.grand{font-size:14px;font-weight:700;color:var(--purple);border-top:1px solid var(--border);padding-top:8px;margin-top:3px}
+
+/* FOLLOWUP CARDS */
+.fup-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;display:flex;gap:10px;box-shadow:var(--shadow)}
+.fup-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.fup-title{font-size:12px;font-weight:700}
+.fup-sub{font-size:11px;color:var(--gray500);margin-top:2px}
+.fup-date{font-size:10px;color:var(--gray400);margin-top:4px}
+
+/* DASH ROW */
+.dash-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray100);font-size:12px}
+.dash-row:last-child{border-bottom:none}
+.debt-val{color:var(--red);font-weight:700}
+.green-val{color:var(--green);font-weight:700}
+
+/* PRINT */
+@media print{
+  .topbar,.tabs,.no-print{display:none!important}
+  .page{display:block!important}
+  body{background:#fff}
+  .overlay.open{position:static;background:none;display:block}
+  .modal{border-radius:0;box-shadow:none;max-height:none;padding:0}
+  .modal-handle,.modal-footer,.modal-title{display:none}
+  .inv-preview{border:none;padding:0}
+}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:32px 20px;color:var(--gray400);font-size:12px}
+.empty-icon{font-size:36px;margin-bottom:8px}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:50%;transform:translateX(50%);background:var(--gray800);color:#fff;padding:10px 20px;border-radius:20px;font-size:12px;z-index:99999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+
+/* LOADING */
+.loading{text-align:center;padding:40px;color:var(--gray400);font-size:13px}
+
+@media(max-width:480px){
+  .kpi-grid{grid-template-columns:repeat(3,1fr)}
+  .kpi-val{font-size:16px}
+  .form-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-logo">🌸</div>
+    <div>
+      <div class="topbar-title">CRM ترنم</div>
+      <div class="topbar-sub">مدیریت مشتریان عمده</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="sync-dot" id="syncDot" title="اتصال به سرور"></div>
+    <div class="topbar-clock" id="clock"></div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showPage('dash')">📊 داشبورد</div>
+  <div class="tab" onclick="showPage('customers')">👥 مشتریان</div>
+  <div class="tab" onclick="showPage('orders')">📦 سفارشات</div>
+  <div class="tab" onclick="showPage('followups')">📞 پیگیری‌ها</div>
+  <div class="tab" onclick="showPage('invoices')">🧾 فاکتور</div>
+</div>
+
+<div class="content">
+
+<!-- DASHBOARD -->
+<div class="page active" id="page-dash">
+  <div class="kpi-grid" id="kpiGrid">
+    <div class="kpi"><div class="kpi-icon">⏳</div><div class="kpi-val c-gray">—</div><div class="kpi-label">در حال بارگذاری</div></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><span class="card-title">📈 فروش ماهانه (تومان)</span></div>
+    <div class="card-body"><div style="position:relative;height:160px"><canvas id="chartMonth" role="img" aria-label="فروش ماهانه"></canvas></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="card">
+      <div class="card-head"><span class="card-title">🏆 برترین مشتریان</span></div>
+      <div class="card-body" id="dashTop"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">💳 بدهی‌های معوق</span></div>
+      <div class="card-body" id="dashDebt"></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:10px">
+    <div class="card-head"><span class="card-title">⚠️ پیگیری‌های باز</span></div>
+    <div class="card-body" id="dashFup"></div>
+  </div>
+</div>
+
+<!-- CUSTOMERS -->
+<div class="page" id="page-customers">
+  <div class="sec-head">
+    <span class="sec-title">👥 مشتریان</span>
+    <button class="btn btn-add no-print" onclick="openModal('customer')">+ مشتری جدید</button>
+  </div>
+  <div class="filter-bar">
+    <input id="cq" placeholder="🔍 جستجو..." oninput="renderCustomers()">
+    <select id="cf-type" onchange="renderCustomers()">
+      <option value="">همه انواع</option>
+      <option>بوتیک</option><option>مزون</option><option>خرده‌فروش</option>
+      <option>بازار</option><option>آنلاین‌شاپ</option><option>نمایندگی</option>
+    </select>
+    <select id="cf-status" onchange="renderCustomers()">
+      <option value="">همه وضعیت‌ها</option>
+      <option value="vip">⭐ VIP</option>
+      <option value="active">🟢 فعال</option>
+      <option value="followup">🟡 پیگیری</option>
+      <option value="silent">🔴 خاموش</option>
+      <option value="new">🔵 جدید</option>
+    </select>
+    <select id="cf-city" onchange="renderCustomers()">
+      <option value="">همه شهرها</option>
+    </select>
+  </div>
+  <div class="card">
+    <div class="tbl-wrap">
+      <table><thead><tr>
+        <th>نام کسب‌وکار</th><th>شهر</th><th>موبایل</th><th>نوع</th>
+        <th>مجموع خرید</th><th>آخرین خرید</th><th>وضعیت</th><th></th>
+      </tr></thead>
+      <tbody id="custBody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ORDERS -->
+<div class="page" id="page-orders">
+  <div class="sec-head">
+    <span class="sec-title">📦 سفارشات</span>
+    <button class="btn btn-add no-print" onclick="openModal('order')">+ سفارش جدید</button>
+  </div>
+  <div class="filter-bar">
+    <input id="oq" placeholder="🔍 جستجو..." oninput="renderOrders()">
+    <select id="of-type" onchange="renderOrders()">
+      <option value="">همه نوع کالا</option>
+      <option>مانتو بهاره</option><option>مانتو تابستانه</option><option>مانتو پاییزه</option>
+      <option>مانتو زمستانه</option><option>شومیز</option><option>پیراهن</option>
+      <option>دامن</option><option>شلوار</option><option>لباس مجلسی</option>
+      <option>کاپشن</option><option>پالتو</option><option>ست کامل</option><option>متفرقه</option>
+    </select>
+    <select id="of-status" onchange="renderOrders()">
+      <option value="">همه وضعیت‌ها</option>
+      <option value="pending">⏳ آماده‌سازی</option>
+      <option value="onway">🚚 در راه</option>
+      <option value="done">✅ تحویل</option>
+      <option value="cancel">❌ کنسل</option>
+    </select>
+    <select id="of-pay" onchange="renderOrders()">
+      <option value="">همه روش پرداخت</option>
+      <option>نقد</option><option>کارت به کارت</option><option>چک</option><option>نسیه</option><option>ترکیبی</option>
+    </select>
+    <select id="of-cust" onchange="renderOrders()">
+      <option value="">همه مشتریان</option>
+    </select>
+  </div>
+  <div class="card">
+    <div class="tbl-wrap">
+      <table><thead><tr>
+        <th>مشتری</th><th>تاریخ</th><th>نوع کالا</th><th>تعداد</th>
+        <th>مبلغ کل</th><th>پرداخت‌شده</th><th>مانده</th><th>وضعیت</th><th></th>
+      </tr></thead>
+      <tbody id="ordBody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- FOLLOWUPS -->
+<div class="page" id="page-followups">
+  <div class="sec-head">
+    <span class="sec-title">📞 پیگیری‌ها</span>
+    <button class="btn btn-add no-print" onclick="openModal('followup')">+ پیگیری جدید</button>
+  </div>
+  <div class="filter-bar">
+    <input id="fq" placeholder="🔍 جستجو..." oninput="renderFollowups()">
+    <select id="ff-type" onchange="renderFollowups()">
+      <option value="">همه انواع تماس</option>
+      <option>📱 تلفن</option><option>💬 واتساپ</option><option>📸 اینستاگرام</option>
+      <option>🤝 حضوری</option><option>📩 تلگرام</option>
+    </select>
+    <select id="ff-status" onchange="renderFollowups()">
+      <option value="">همه وضعیت‌ها</option>
+      <option value="open">⏳ باز</option>
+      <option value="done">✅ بسته</option>
+      <option value="cancel">❌ کنسل</option>
+    </select>
+    <select id="ff-priority" onchange="renderFollowups()">
+      <option value="">همه اولویت‌ها</option>
+      <option value="high">🔴 فوری</option>
+      <option value="mid">🟡 متوسط</option>
+      <option value="low">🟢 عادی</option>
+    </select>
+    <select id="ff-cust" onchange="renderFollowups()">
+      <option value="">همه مشتریان</option>
+    </select>
+  </div>
+  <div id="fupList"></div>
+</div>
+
+<!-- INVOICES -->
+<div class="page" id="page-invoices">
+  <div class="sec-head">
+    <span class="sec-title">🧾 فاکتور / پیش‌فاکتور</span>
+    <button class="btn btn-add no-print" onclick="openModal('invoice')">+ فاکتور جدید</button>
+  </div>
+  <div class="filter-bar">
+    <input id="iq" placeholder="🔍 جستجو..." oninput="renderInvoices()">
+    <select id="if-type" onchange="renderInvoices()">
+      <option value="">همه انواع</option>
+      <option value="proforma">پیش‌فاکتور</option>
+      <option value="final">فاکتور رسمی</option>
+    </select>
+    <select id="if-cust" onchange="renderInvoices()">
+      <option value="">همه مشتریان</option>
+    </select>
+  </div>
+  <div class="card">
+    <div class="tbl-wrap">
+      <table><thead><tr>
+        <th>شماره</th><th>مشتری</th><th>تاریخ</th><th>نوع</th>
+        <th>مبلغ کل</th><th>تخفیف</th><th>قابل پرداخت</th><th>وضعیت</th><th></th>
+      </tr></thead>
+      <tbody id="invBody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+</div><!-- content -->
+
+<!-- ============ MODAL: CUSTOMER ============ -->
+<div class="overlay" id="modal-customer">
+<div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title">👥 مشتری جدید / ویرایش</div>
+  <input type="hidden" id="c-id">
+  <div class="form-row">
+    <div class="form-group"><label>نام کسب‌وکار *</label><input id="c-biz" placeholder="بوتیک گلستان"></div>
+    <div class="form-group"><label>نام صاحب</label><input id="c-owner" placeholder="فاطمه احمدی"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>شهر</label><input id="c-city" placeholder="مشهد"></div>
+    <div class="form-group"><label>موبایل</label><input id="c-phone" type="tel" placeholder="09151234567"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>اینستاگرام / کانال</label><input id="c-insta" placeholder="@tolidi.taranom"></div>
+    <div class="form-group"><label>نوع مشتری</label>
+      <select id="c-type"><option>بوتیک</option><option>مزون</option><option>خرده‌فروش</option><option>بازار</option><option>آنلاین‌شاپ</option><option>نمایندگی</option></select>
+    </div>
+  </div>
+  <div class="form-group"><label>وضعیت</label>
+    <select id="c-status">
+      <option value="new">🔵 جدید</option>
+      <option value="active">🟢 فعال</option>
+      <option value="followup">🟡 نیاز به پیگیری</option>
+      <option value="silent">🔴 خاموش</option>
+      <option value="vip">⭐ VIP</option>
+    </select>
+  </div>
+  <div class="form-group"><label>یادداشت</label><textarea id="c-note" rows="2" placeholder="اطلاعات تکمیلی..."></textarea></div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="closeModal('customer')">انصراف</button>
+    <button class="btn btn-primary" onclick="saveCustomer()">ذخیره</button>
+  </div>
+</div>
+</div>
+
+<!-- ============ MODAL: ORDER ============ -->
+<div class="overlay" id="modal-order">
+<div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title">📦 ثبت سفارش</div>
+  <input type="hidden" id="o-id">
+  <div class="form-group"><label>مشتری *</label><select id="o-cust"></select></div>
+  <div class="form-row">
+    <div class="form-group"><label>تاریخ سفارش</label><input id="o-date" placeholder="1403/04/01"></div>
+    <div class="form-group"><label>نوع کالا</label>
+      <select id="o-type">
+        <option>مانتو بهاره</option><option>مانتو تابستانه</option><option>مانتو پاییزه</option>
+        <option>مانتو زمستانه</option><option>شومیز</option><option>پیراهن</option>
+        <option>دامن</option><option>شلوار</option><option>لباس مجلسی</option>
+        <option>کاپشن</option><option>پالتو</option><option>ست کامل</option><option>متفرقه</option>
+      </select>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>تعداد (عدد)</label><input id="o-qty" type="number" min="1" placeholder="50"></div>
+    <div class="form-group"><label>روش پرداخت</label>
+      <select id="o-pay"><option>نقد</option><option>کارت به کارت</option><option>چک</option><option>نسیه</option><option>ترکیبی</option></select>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>مبلغ کل (تومان)</label><input id="o-total" type="number" placeholder="0" oninput="calcDebt()"></div>
+    <div class="form-group"><label>مبلغ پرداخت‌شده</label><input id="o-paid" type="number" placeholder="0" oninput="calcDebt()"></div>
+  </div>
+  <div class="form-group debt-field"><label>مانده بدهی (خودکار)</label><input id="o-debt" readonly></div>
+  <div class="form-row">
+    <div class="form-group"><label>تاریخ تحویل</label><input id="o-deliver" placeholder="1403/04/05"></div>
+    <div class="form-group"><label>وضعیت</label>
+      <select id="o-status">
+        <option value="pending">⏳ آماده‌سازی</option>
+        <option value="onway">🚚 در راه</option>
+        <option value="done">✅ تحویل داده شد</option>
+        <option value="cancel">❌ کنسل</option>
+      </select>
+    </div>
+  </div>
+  <div class="form-group"><label>یادداشت</label><textarea id="o-note" rows="2"></textarea></div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="closeModal('order')">انصراف</button>
+    <button class="btn btn-primary" onclick="saveOrder()">ثبت سفارش</button>
+  </div>
+</div>
+</div>
+
+<!-- ============ MODAL: FOLLOWUP ============ -->
+<div class="overlay" id="modal-followup">
+<div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title">📞 ثبت پیگیری</div>
+  <input type="hidden" id="f-id">
+  <div class="form-group"><label>مشتری *</label><select id="f-cust"></select></div>
+  <div class="form-row">
+    <div class="form-group"><label>تاریخ تماس</label><input id="f-date" placeholder="1403/04/01"></div>
+    <div class="form-group"><label>نوع تماس</label>
+      <select id="f-type"><option>📱 تلفن</option><option>💬 واتساپ</option><option>📸 اینستاگرام</option><option>🤝 حضوری</option><option>📩 تلگرام</option></select>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>اولویت</label>
+      <select id="f-priority"><option value="high">🔴 فوری</option><option value="mid">🟡 متوسط</option><option value="low">🟢 عادی</option></select>
+    </div>
+    <div class="form-group"><label>وضعیت</label>
+      <select id="f-status"><option value="open">⏳ باز</option><option value="done">✅ بسته</option><option value="cancel">❌ کنسل</option></select>
+    </div>
+  </div>
+  <div class="form-group"><label>موضوع</label><input id="f-subject" placeholder="پیگیری خرید جدید"></div>
+  <div class="form-group"><label>نتیجه / یادداشت</label><textarea id="f-note" rows="2" placeholder="چه اتفاقی افتاد..."></textarea></div>
+  <div class="form-group"><label>اقدام بعدی</label><input id="f-action" placeholder="ارسال کاتالوگ جدید"></div>
+  <div class="form-group"><label>تاریخ پیگیری بعدی</label><input id="f-next" placeholder="1403/04/08"></div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="closeModal('followup')">انصراف</button>
+    <button class="btn btn-primary" onclick="saveFollowup()">ذخیره</button>
+  </div>
+</div>
+</div>
+
+<!-- ============ MODAL: INVOICE ============ -->
+<div class="overlay" id="modal-invoice">
+<div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title">🧾 ایجاد فاکتور</div>
+  <input type="hidden" id="inv-id">
+  <div class="form-row">
+    <div class="form-group"><label>مشتری *</label><select id="inv-cust"></select></div>
+    <div class="form-group"><label>نوع</label>
+      <select id="inv-type"><option value="proforma">پیش‌فاکتور</option><option value="final">فاکتور رسمی</option></select>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>تاریخ</label><input id="inv-date" placeholder="1403/04/01"></div>
+    <div class="form-group"><label>درصد تخفیف کل (%)</label><input id="inv-disc" type="number" min="0" max="100" placeholder="0" oninput="calcInvTotals()"></div>
+  </div>
+  <div class="form-group"><label>توضیحات / شرایط پرداخت</label><input id="inv-note" placeholder="مثلاً: چک ۳۰ روزه"></div>
+
+  <div style="margin:10px 0 6px;font-size:11px;font-weight:700;color:var(--gray600)">آیتم‌های فاکتور</div>
+  <table class="inv-items">
+    <thead><tr><th style="width:35%">شرح کالا</th><th style="width:15%">تعداد</th><th style="width:25%">قیمت واحد (ت)</th><th style="width:20%">جمع</th><th style="width:5%"></th></tr></thead>
+    <tbody id="invRows"></tbody>
+  </table>
+  <button class="add-row-btn" onclick="addInvRow()">+ افزودن ردیف</button>
+
+  <div style="margin-top:12px;background:var(--gray50);border-radius:8px;padding:10px">
+    <div class="dash-row"><span>جمع کل:</span><strong id="inv-subtotal">۰ تومان</strong></div>
+    <div class="dash-row"><span id="inv-disc-label">تخفیف (۰٪):</span><strong id="inv-disc-val" style="color:var(--red)">۰ تومان</strong></div>
+    <div class="dash-row" style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px"><span style="font-weight:700;font-size:13px">قابل پرداخت:</span><strong id="inv-final" style="color:var(--purple);font-size:14px">۰ تومان</strong></div>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="closeModal('invoice')">انصراف</button>
+    <button class="btn btn-success" onclick="saveInvoice()">ذخیره فاکتور</button>
+  </div>
+</div>
+</div>
+
+<!-- ============ MODAL: VIEW INVOICE ============ -->
+<div class="overlay" id="modal-viewinv">
+<div class="modal">
+  <div class="modal-handle no-print"></div>
+  <div class="modal-title no-print">🧾 پیش‌نمایش فاکتور</div>
+  <div id="invPreview"></div>
+  <div class="modal-footer no-print">
+    <button class="btn btn-secondary" onclick="closeModal('viewinv')">بستن</button>
+    <button class="btn btn-primary" onclick="window.print()">🖨️ چاپ</button>
+  </div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- CONFIRM DIALOG -->
+<div class="overlay" id="modal-confirm" style="align-items:center">
+<div class="modal" style="border-radius:16px;max-width:320px;padding:20px;margin:0 16px">
+  <div style="text-align:center;margin-bottom:16px">
+    <div style="font-size:36px;margin-bottom:8px">🗑️</div>
+    <div style="font-size:14px;font-weight:700;color:var(--gray800)">حذف شود؟</div>
+    <div style="font-size:12px;color:var(--gray500);margin-top:4px">این عملیات قابل بازگشت نیست</div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-secondary" style="flex:1" onclick="closeModal('confirm')">انصراف</button>
+    <button class="btn btn-danger" style="flex:1" id="confirmYesBtn">حذف کن</button>
+  </div>
+</div>
+</div>
+
+<script>
+// ─────────────────────────────────────────
+// FIREBASE CONFIG
+// ─────────────────────────────────────────
+const FB_CONFIG = {
+  apiKey: "AIzaSyD2dBL1QKIAjLnp62exbqC9h_7vr0B1LnU",
+  authDomain: "crm-taranom.firebaseapp.com",
+  databaseURL: "https://crm-taranom-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "crm-taranom",
+  storageBucket: "crm-taranom.firebasestorage.app",
+  messagingSenderId: "527963325380",
+  appId: "1:527963325380:web:e655e68b91e099de539a91",
+  measurementId: "G-CMXF3L6DVM"
+};
+
+// ─────────────────────────────────────────
+// LOCAL DATA (fallback when Firebase not configured)
+// ─────────────────────────────────────────
+let USE_FIREBASE = false;
+let db = null;
+
+let customers = [
+  {id:'C001',biz:'بوتیک گلستان',owner:'فاطمه احمدی',city:'تهران',phone:'09121234567',insta:'@golestan',type:'بوتیک',status:'vip',note:'',createdAt:Date.now()},
+  {id:'C002',biz:'مزون شیرین',owner:'شیرین کریمی',city:'اصفهان',phone:'09131112233',insta:'@shirin',type:'مزون',status:'followup',note:'',createdAt:Date.now()},
+  {id:'C003',biz:'پوشاک نگین',owner:'مریم رضایی',city:'مشهد',phone:'09151234567',insta:'',type:'خرده‌فروش',status:'followup',note:'',createdAt:Date.now()},
+  {id:'C004',biz:'فروشگاه بهار',owner:'زهرا محمدی',city:'تبریز',phone:'09141234567',insta:'@bahar',type:'خرده‌فروش',status:'active',note:'',createdAt:Date.now()},
+  {id:'C005',biz:'بوتیک رویال',owner:'نسرین حسینی',city:'تهران',phone:'09121111222',insta:'@royal',type:'بوتیک',status:'silent',note:'',createdAt:Date.now()}
+];
+let orders = [
+  {id:'F-001',custId:'C001',date:'1403/02/10',type:'مانتو بهاره',qty:50,total:12500000,paid:12500000,pay:'نقد',deliver:'1403/02/12',status:'done',note:'',createdAt:Date.now()},
+  {id:'F-002',custId:'C004',date:'1403/02/28',type:'شومیز',qty:80,total:18000000,paid:10000000,pay:'چک',deliver:'1403/03/05',status:'done',note:'',createdAt:Date.now()},
+  {id:'F-003',custId:'C002',date:'1403/03/01',type:'دامن',qty:30,total:8500000,paid:0,pay:'نسیه',deliver:'1403/03/10',status:'onway',note:'',createdAt:Date.now()},
+  {id:'F-004',custId:'C001',date:'1403/03/05',type:'کاپشن',qty:40,total:22000000,paid:22000000,pay:'کارت به کارت',deliver:'1403/03/08',status:'done',note:'',createdAt:Date.now()},
+  {id:'F-005',custId:'C003',date:'1403/03/10',type:'لباس مجلسی',qty:20,total:9500000,paid:5000000,pay:'ترکیبی',deliver:'1403/03/15',status:'pending',note:'',createdAt:Date.now()}
+];
+let followups = [
+  {id:'P001',custId:'C003',date:'1403/03/12',type:'📱 تلفن',subject:'پیگیری خرید جدید',note:'علاقه‌مند به کالکشن تابستانه',action:'ارسال کاتالوگ',next:'1403/03/19',status:'open',priority:'high',createdAt:Date.now()},
+  {id:'P002',custId:'C005',date:'1403/03/10',type:'💬 واتساپ',subject:'مشتری خاموش شده',note:'گفت بودجه ندارد',action:'تماس ماه دیگر',next:'1403/04/10',status:'open',priority:'mid',createdAt:Date.now()},
+  {id:'P003',custId:'C001',date:'1403/03/05',type:'🤝 حضوری',subject:'نمایش کالکشن',note:'سفارش داد',action:'ارسال فاکتور',next:'',status:'done',priority:'low',createdAt:Date.now()},
+  {id:'P004',custId:'C002',date:'1403/03/01',type:'📱 تلفن',subject:'پیگیری بدهی',note:'قول پرداخت هفته دیگر',action:'تماس مجدد',next:'1403/03/08',status:'open',priority:'high',createdAt:Date.now()}
+];
+let invoices = [];
+let invCounter = 1;
+let custCounter = 6, ordCounter = 6, fupCounter = 5;
+let mChart = null;
+
+// ─────────────────────────────────────────
+// FIREBASE INIT
+// ─────────────────────────────────────────
+function initFirebase() {
+  try {
+    firebase.initializeApp(FB_CONFIG);
+    db = firebase.firestore();
+    USE_FIREBASE = true;
+    document.getElementById('syncDot').style.background = '#4ADE80';
+    setupListeners();
+    showToast('✅ اتصال به Firebase برقرار شد');
+  } catch(e) {
+    USE_FIREBASE = false;
+    document.getElementById('syncDot').style.background = '#F59E0B';
+    loadLocal();
+    renderAll();
+    showToast('⚠️ حالت آفلاین — داده‌ها روی این دستگاه ذخیره می‌شوند');
+  }
+}
+
+function setupListeners() {
+  db.collection('customers').orderBy('createdAt','desc').onSnapshot(snap => {
+    customers = snap.docs.map(d => ({...d.data(), id: d.id}));
+    renderAll();
+  });
+  db.collection('orders').orderBy('createdAt','desc').onSnapshot(snap => {
+    orders = snap.docs.map(d => ({...d.data(), id: d.id}));
+    renderAll();
+  });
+  db.collection('followups').orderBy('createdAt','desc').onSnapshot(snap => {
+    followups = snap.docs.map(d => ({...d.data(), id: d.id}));
+    renderAll();
+  });
+  db.collection('invoices').orderBy('createdAt','desc').onSnapshot(snap => {
+    invoices = snap.docs.map(d => ({...d.data(), id: d.id}));
+    renderInvoices();
+  });
+}
+
+function loadLocal() {
+  try {
+    const c = localStorage.getItem('crm_c');
+    const o = localStorage.getItem('crm_o');
+    const f = localStorage.getItem('crm_f');
+    const i = localStorage.getItem('crm_i');
+    if(c) customers = JSON.parse(c);
+    if(o) orders = JSON.parse(o);
+    if(f) followups = JSON.parse(f);
+    if(i) invoices = JSON.parse(i);
+  } catch(e) {}
+}
+
+function saveLocal() {
+  if(USE_FIREBASE) return;
+  try {
+    localStorage.setItem('crm_c', JSON.stringify(customers));
+    localStorage.setItem('crm_o', JSON.stringify(orders));
+    localStorage.setItem('crm_f', JSON.stringify(followups));
+    localStorage.setItem('crm_i', JSON.stringify(invoices));
+  } catch(e) {}
+}
+
+// ─────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────
+function gc(id) { return customers.find(c => c.id === id); }
+function fmt(n) { return Number(n).toLocaleString('fa-IR'); }
+function today() { return new Date().toLocaleDateString('fa-IR'); }
+function uid(prefix) { return prefix + '-' + Date.now().toString(36); }
+
+function sBadge(s) {
+  const m = {vip:'bvip ⭐ VIP',active:'bactive 🟢 فعال',followup:'bfollowup 🟡 پیگیری',silent:'bsilent 🔴 خاموش',new:'bnew 🔵 جدید'};
+  const v = (m[s]||'bnew 🔵 جدید').split(' ');
+  return `<span class="badge ${v[0]}">${v.slice(1).join(' ')}</span>`;
+}
+function osBadge(s) {
+  const m = {done:'bdone ✅ تحویل',pending:'bpending ⏳ آماده',onway:'bonway 🚚 در راه',cancel:'bcancel ❌ کنسل'};
+  const v = (m[s]||'bpending ⏳ آماده').split(' ');
+  return `<span class="badge ${v[0]}">${v.slice(1).join(' ')}</span>`;
+}
+
+function custTotals(id) {
+  const os = orders.filter(o => o.custId === id);
+  const total = os.reduce((a,o) => a + Number(o.total||0), 0);
+  const lastDate = os.length ? os.sort((a,b) => (b.date||'').localeCompare(a.date||''))[0].date : '—';
+  return { count: os.length, total, lastDate };
+}
+
+// ─────────────────────────────────────────
+// UI
+// ─────────────────────────────────────────
+function showPage(p) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    if(['dash','customers','orders','followups','invoices'][i] === p) t.classList.add('active');
+  });
+  document.getElementById('page-'+p).classList.add('active');
+  if(p === 'dash') renderDash();
+}
+
+function openModal(type) {
+  // Populate customer selects
+  if(['order','followup','invoice'].includes(type)) {
+    const selId = {order:'o-cust',followup:'f-cust',invoice:'inv-cust'}[type];
+    document.getElementById(selId).innerHTML = customers.map(c =>
+      `<option value="${c.id}">${c.biz}</option>`).join('');
+  }
+  // Reset forms
+  if(type === 'customer') {
+    ['c-id','c-biz','c-owner','c-city','c-phone','c-insta','c-note'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.value = '';
+    });
+    document.getElementById('c-status').value = 'new';
+  }
+  if(type === 'order') {
+    ['o-id','o-qty','o-total','o-paid','o-debt','o-deliver','o-note'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.value = '';
+    });
+    document.getElementById('o-date').value = today();
+    document.getElementById('o-status').value = 'pending';
+  }
+  if(type === 'followup') {
+    ['f-id','f-subject','f-note','f-action','f-next'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.value = '';
+    });
+    document.getElementById('f-date').value = today();
+    document.getElementById('f-status').value = 'open';
+    document.getElementById('f-priority').value = 'mid';
+  }
+  if(type === 'invoice') {
+    document.getElementById('inv-id').value = '';
+    document.getElementById('inv-date').value = today();
+    document.getElementById('inv-disc').value = '0';
+    document.getElementById('inv-note').value = '';
+    document.getElementById('invRows').innerHTML = '';
+    addInvRow(); addInvRow();
+    calcInvTotals();
+  }
+  document.getElementById('modal-'+type).classList.add('open');
+  document.getElementById('modal-'+type).scrollTop = 0;
+}
+function closeModal(type) {
+  document.getElementById('modal-'+type).classList.remove('open');
+}
+
+// Close on backdrop click
+document.querySelectorAll('.overlay').forEach(ov => {
+  ov.addEventListener('click', e => {
+    if(e.target === ov) { const t = ov.id.replace('modal-',''); closeModal(t); }
+  });
+});
+
+function showToast(msg, dur=2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+// ─────────────────────────────────────────
+// CUSTOMERS CRUD
+// ─────────────────────────────────────────
+function saveCustomer() {
+  const biz = document.getElementById('c-biz').value.trim();
+  if(!biz) { showToast('❌ نام کسب‌وکار الزامی است'); return; }
+  const id = document.getElementById('c-id').value;
+  const obj = {
+    biz, owner: document.getElementById('c-owner').value,
+    city: document.getElementById('c-city').value,
+    phone: document.getElementById('c-phone').value,
+    insta: document.getElementById('c-insta').value,
+    type: document.getElementById('c-type').value,
+    status: document.getElementById('c-status').value,
+    note: document.getElementById('c-note').value,
+    createdAt: Date.now()
+  };
+  if(USE_FIREBASE) {
+    if(id) db.collection('customers').doc(id).update(obj);
+    else db.collection('customers').add(obj);
+  } else {
+    if(id) { const i = customers.findIndex(c => c.id === id); if(i>=0) customers[i] = {...obj, id}; }
+    else customers.unshift({...obj, id: uid('C')});
+    saveLocal(); renderAll();
+  }
+  closeModal('customer');
+  showToast('✅ مشتری ذخیره شد');
+}
+
+function editCustomer(id) {
+  const c = gc(id); if(!c) return;
+  document.getElementById('c-id').value = c.id;
+  document.getElementById('c-biz').value = c.biz||'';
+  document.getElementById('c-owner').value = c.owner||'';
+  document.getElementById('c-city').value = c.city||'';
+  document.getElementById('c-phone').value = c.phone||'';
+  document.getElementById('c-insta').value = c.insta||'';
+  document.getElementById('c-type').value = c.type||'بوتیک';
+  document.getElementById('c-status').value = c.status||'new';
+  document.getElementById('c-note').value = c.note||'';
+  document.getElementById('modal-customer').classList.add('open');
+}
+
+function confirmDelete(callback) {
+  document.getElementById('modal-confirm').classList.add('open');
+  const btn = document.getElementById('confirmYesBtn');
+  const newBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(newBtn, btn);
+  newBtn.addEventListener('click', function() {
+    closeModal('confirm');
+    callback();
+  });
+}
+
+function deleteCustomer(id) {
+  confirmDelete(function() {
+    if(USE_FIREBASE) db.collection('customers').doc(id).delete();
+    else { customers = customers.filter(c => c.id !== id); saveLocal(); renderAll(); }
+    showToast('🗑️ حذف شد');
+  });
+}
+
+// ─────────────────────────────────────────
+// ORDERS CRUD
+// ─────────────────────────────────────────
+function calcDebt() {
+  const t = Number(document.getElementById('o-total').value)||0;
+  const p = Number(document.getElementById('o-paid').value)||0;
+  document.getElementById('o-debt').value = fmt(t-p) + ' تومان';
+}
+
+function saveOrder() {
+  const custId = document.getElementById('o-cust').value;
+  const total = document.getElementById('o-total').value;
+  if(!custId || !total) { showToast('❌ مشتری و مبلغ الزامی است'); return; }
+  const id = document.getElementById('o-id').value;
+  const obj = {
+    custId, date: document.getElementById('o-date').value,
+    type: document.getElementById('o-type').value,
+    qty: Number(document.getElementById('o-qty').value)||0,
+    total: Number(total),
+    paid: Number(document.getElementById('o-paid').value)||0,
+    pay: document.getElementById('o-pay').value,
+    deliver: document.getElementById('o-deliver').value,
+    status: document.getElementById('o-status').value,
+    note: document.getElementById('o-note').value,
+    createdAt: Date.now()
+  };
+  if(USE_FIREBASE) {
+    if(id) db.collection('orders').doc(id).update(obj);
+    else db.collection('orders').add(obj);
+  } else {
+    if(id) { const i = orders.findIndex(o => o.id === id); if(i>=0) orders[i] = {...obj, id}; }
+    else orders.unshift({...obj, id: uid('F')});
+    saveLocal(); renderAll();
+  }
+  closeModal('order');
+  showToast('✅ سفارش ثبت شد');
+}
+
+function editOrder(id) {
+  const o = orders.find(x => x.id === id); if(!o) return;
+  const sel = document.getElementById('o-cust');
+  sel.innerHTML = customers.map(c => `<option value="${c.id}">${c.biz}</option>`).join('');
+  document.getElementById('o-id').value = o.id;
+  document.getElementById('o-cust').value = o.custId;
+  document.getElementById('o-date').value = o.date||'';
+  document.getElementById('o-type').value = o.type||'مانتو بهاره';
+  document.getElementById('o-qty').value = o.qty||0;
+  document.getElementById('o-total').value = o.total||0;
+  document.getElementById('o-paid').value = o.paid||0;
+  document.getElementById('o-debt').value = fmt((o.total||0)-(o.paid||0)) + ' تومان';
+  document.getElementById('o-pay').value = o.pay||'نقد';
+  document.getElementById('o-deliver').value = o.deliver||'';
+  document.getElementById('o-status').value = o.status||'pending';
+  document.getElementById('o-note').value = o.note||'';
+  document.getElementById('modal-order').classList.add('open');
+}
+
+function deleteOrder(id) {
+  confirmDelete(function() {
+    if(USE_FIREBASE) db.collection('orders').doc(id).delete();
+    else { orders = orders.filter(o => o.id !== id); saveLocal(); renderAll(); }
+    showToast('🗑️ حذف شد');
+  });
+}
+
+// ─────────────────────────────────────────
+// FOLLOWUPS CRUD
+// ─────────────────────────────────────────
+function saveFollowup() {
+  const custId = document.getElementById('f-cust').value;
+  if(!custId) { showToast('❌ مشتری الزامی است'); return; }
+  const id = document.getElementById('f-id').value;
+  const obj = {
+    custId, date: document.getElementById('f-date').value,
+    type: document.getElementById('f-type').value,
+    subject: document.getElementById('f-subject').value,
+    note: document.getElementById('f-note').value,
+    action: document.getElementById('f-action').value,
+    next: document.getElementById('f-next').value,
+    status: document.getElementById('f-status').value,
+    priority: document.getElementById('f-priority').value,
+    createdAt: Date.now()
+  };
+  if(USE_FIREBASE) {
+    if(id) db.collection('followups').doc(id).update(obj);
+    else db.collection('followups').add(obj);
+  } else {
+    if(id) { const i = followups.findIndex(f => f.id === id); if(i>=0) followups[i] = {...obj, id}; }
+    else followups.unshift({...obj, id: uid('P')});
+    saveLocal(); renderAll();
+  }
+  closeModal('followup');
+  showToast('✅ پیگیری ثبت شد');
+}
+
+function editFollowup(id) {
+  const f = followups.find(x => x.id === id); if(!f) return;
+  const sel = document.getElementById('f-cust');
+  sel.innerHTML = customers.map(c => `<option value="${c.id}">${c.biz}</option>`).join('');
+  document.getElementById('f-id').value = f.id;
+  document.getElementById('f-cust').value = f.custId;
+  document.getElementById('f-date').value = f.date||'';
+  document.getElementById('f-type').value = f.type||'📱 تلفن';
+  document.getElementById('f-subject').value = f.subject||'';
+  document.getElementById('f-note').value = f.note||'';
+  document.getElementById('f-action').value = f.action||'';
+  document.getElementById('f-next').value = f.next||'';
+  document.getElementById('f-status').value = f.status||'open';
+  document.getElementById('f-priority').value = f.priority||'mid';
+  document.getElementById('modal-followup').classList.add('open');
+}
+
+function deleteFollowup(id) {
+  confirmDelete(function() {
+    if(USE_FIREBASE) db.collection('followups').doc(id).delete();
+    else { followups = followups.filter(f => f.id !== id); saveLocal(); renderAll(); }
+    showToast('🗑️ حذف شد');
+  });
+}
+
+// ─────────────────────────────────────────
+// INVOICE CRUD
+// ─────────────────────────────────────────
+function addInvRow(desc='',qty=1,price=0) {
+  const tbody = document.getElementById('invRows');
+  const rowId = 'row-' + Date.now() + Math.random().toString(36).slice(2,5);
+  const tr = document.createElement('tr');
+  tr.id = rowId;
+  tr.innerHTML = `
+    <td><input type="text" placeholder="مانتو لینن بهاره" value="${desc}" oninput="calcInvTotals()"></td>
+    <td><input type="number" min="1" value="${qty}" oninput="calcInvTotals()" style="width:60px"></td>
+    <td><input type="number" min="0" value="${price}" oninput="calcInvTotals()"></td>
+    <td id="${rowId}-sum" style="font-weight:600;color:var(--purple)">${fmt(qty*price)}</td>
+    <td><button class="btn-icon" onclick="document.getElementById('${rowId}').remove();calcInvTotals()">🗑️</button></td>`;
+  tbody.appendChild(tr);
+}
+
+function calcInvTotals() {
+  let sub = 0;
+  document.querySelectorAll('#invRows tr').forEach(tr => {
+    const inputs = tr.querySelectorAll('input');
+    if(inputs.length >= 3) {
+      const q = Number(inputs[1].value)||0;
+      const p = Number(inputs[2].value)||0;
+      const rowSum = q * p;
+      sub += rowSum;
+      const sumCell = tr.querySelector('td:nth-child(4)');
+      if(sumCell) sumCell.textContent = fmt(rowSum);
+    }
+  });
+  const disc = Number(document.getElementById('inv-disc').value)||0;
+  const discAmt = sub * disc / 100;
+  const final = sub - discAmt;
+  document.getElementById('inv-subtotal').textContent = fmt(sub) + ' تومان';
+  document.getElementById('inv-disc-label').textContent = `تخفیف (${disc}٪):`;
+  document.getElementById('inv-disc-val').textContent = fmt(discAmt) + ' تومان';
+  document.getElementById('inv-final').textContent = fmt(final) + ' تومان';
+}
+
+function saveInvoice() {
+  const custId = document.getElementById('inv-cust').value;
+  if(!custId) { showToast('❌ مشتری الزامی است'); return; }
+  const rows = [];
+  let sub = 0;
+  document.querySelectorAll('#invRows tr').forEach(tr => {
+    const inputs = tr.querySelectorAll('input');
+    if(inputs.length >= 3 && inputs[0].value.trim()) {
+      const q = Number(inputs[1].value)||0;
+      const p = Number(inputs[2].value)||0;
+      rows.push({desc: inputs[0].value, qty: q, price: p, sum: q*p});
+      sub += q*p;
+    }
+  });
+  if(!rows.length) { showToast('❌ حداقل یک آیتم اضافه کنید'); return; }
+  const disc = Number(document.getElementById('inv-disc').value)||0;
+  const discAmt = sub * disc / 100;
+  const obj = {
+    custId,
+    type: document.getElementById('inv-type').value,
+    date: document.getElementById('inv-date').value,
+    note: document.getElementById('inv-note').value,
+    rows, subtotal: sub, disc, discAmt, final: sub - discAmt,
+    num: 'T-' + String(invCounter++).padStart(4,'0'),
+    createdAt: Date.now()
+  };
+  const existId = document.getElementById('inv-id').value;
+  if(USE_FIREBASE) {
+    if(existId) db.collection('invoices').doc(existId).update(obj);
+    else db.collection('invoices').add(obj);
+  } else {
+    if(existId) { const i = invoices.findIndex(x => x.id === existId); if(i>=0) invoices[i] = {...obj, id: existId}; }
+    else invoices.unshift({...obj, id: uid('INV')});
+    saveLocal(); renderInvoices();
+  }
+  closeModal('invoice');
+  showToast('✅ فاکتور ذخیره شد');
+}
+
+function viewInvoice(id) {
+  const inv = invoices.find(x => x.id === id); if(!inv) return;
+  const c = gc(inv.custId);
+  const typeLabel = inv.type === 'proforma' ? 'پیش‌فاکتور' : 'فاکتور رسمی';
+  const html = `
+    <div class="inv-preview">
+      <div class="inv-preview-head">
+        <div class="inv-preview-title">🌸 پوشاک ترنم</div>
+        <div class="inv-preview-sub">مشهد، خیابان ۱۷ شهریور، پاساژ کیمیا، طبقه منفی ۱، پلاک ۱۳۳</div>
+        <div class="inv-preview-sub">@toliditaranom | poshaktaranom.com</div>
+        <div style="margin-top:8px;font-size:14px;font-weight:700;color:var(--purple)">${typeLabel} شماره ${inv.num}</div>
+      </div>
+      <div class="inv-meta">
+        <div class="inv-meta-item"><span>مشتری: </span><span>${c?c.biz:'—'}</span></div>
+        <div class="inv-meta-item"><span>تاریخ: </span><span>${inv.date||'—'}</span></div>
+        <div class="inv-meta-item"><span>صاحب: </span><span>${c?c.owner||'—':'—'}</span></div>
+        <div class="inv-meta-item"><span>شهر: </span><span>${c?c.city||'—':'—'}</span></div>
+      </div>
+      <table class="inv-tbl">
+        <thead><tr><th>ردیف</th><th>شرح کالا</th><th>تعداد</th><th>قیمت واحد</th><th>جمع</th></tr></thead>
+        <tbody>
+          ${(inv.rows||[]).map((r,i) => `<tr><td>${i+1}</td><td>${r.desc}</td><td>${r.qty}</td><td>${fmt(r.price)} ت</td><td>${fmt(r.sum)} ت</td></tr>`).join('')}
+        </tbody>
+      </table>
+      <div class="inv-totals">
+        <div class="inv-total-row"><span>جمع کل:</span><span>${fmt(inv.subtotal)} تومان</span></div>
+        ${inv.disc ? `<div class="inv-total-row"><span>تخفیف (${inv.disc}٪):</span><span style="color:var(--red)">- ${fmt(inv.discAmt)} تومان</span></div>` : ''}
+        <div class="inv-total-row grand"><span>قابل پرداخت:</span><span>${fmt(inv.final)} تومان</span></div>
+      </div>
+      ${inv.note ? `<div style="margin-top:12px;font-size:11px;color:var(--gray500)">📝 شرایط پرداخت: ${inv.note}</div>` : ''}
+      <div style="margin-top:16px;font-size:10px;color:var(--gray400);text-align:center;border-top:1px solid var(--border);padding-top:10px">با تشکر از خرید شما | پوشاک ترنم</div>
+    </div>`;
+  document.getElementById('invPreview').innerHTML = html;
+  document.getElementById('modal-viewinv').classList.add('open');
+}
+
+function deleteInvoice(id) {
+  confirmDelete(function() {
+    if(USE_FIREBASE) db.collection('invoices').doc(id).delete();
+    else { invoices = invoices.filter(x => x.id !== id); saveLocal(); renderInvoices(); }
+    showToast('🗑️ حذف شد');
+  });
+}
+
+// ─────────────────────────────────────────
+// RENDER FUNCTIONS
+// ─────────────────────────────────────────
+function renderDash() {
+  const tc = customers.length;
+  const ts = orders.reduce((a,o) => a + Number(o.total||0), 0);
+  const td = orders.reduce((a,o) => a + (Number(o.total||0)-Number(o.paid||0)), 0);
+  const of2 = followups.filter(f => f.status==='open').length;
+  const vips = customers.filter(c => c.status==='vip').length;
+  const to2 = orders.length;
+
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi"><div class="kpi-icon">👥</div><div class="kpi-val c-purple">${tc}</div><div class="kpi-label">مشتریان</div></div>
+    <div class="kpi"><div class="kpi-icon">📦</div><div class="kpi-val c-pink">${to2}</div><div class="kpi-label">سفارشات</div></div>
+    <div class="kpi"><div class="kpi-icon">⭐</div><div class="kpi-val c-orange">${vips}</div><div class="kpi-label">VIP</div></div>
+    <div class="kpi"><div class="kpi-icon">💰</div><div class="kpi-val c-green" style="font-size:12px">${fmt(ts)}</div><div class="kpi-label">کل فروش (ت)</div></div>
+    <div class="kpi"><div class="kpi-icon">⚠️</div><div class="kpi-val c-red" style="font-size:12px">${fmt(td)}</div><div class="kpi-label">بدهی (ت)</div></div>
+    <div class="kpi"><div class="kpi-icon">📞</div><div class="kpi-val c-blue">${of2}</div><div class="kpi-label">پیگیری باز</div></div>`;
+
+  // Top customers
+  const tops = customers.map(c => ({biz:c.biz, total:orders.filter(o=>o.custId===c.id).reduce((a,o)=>a+Number(o.total||0),0)}))
+    .sort((a,b)=>b.total-a.total).slice(0,5);
+  document.getElementById('dashTop').innerHTML = tops.length
+    ? tops.map((c,i)=>`<div class="dash-row"><span>${['🥇','🥈','🥉','4️⃣','5️⃣'][i]} ${c.biz}</span><strong>${fmt(c.total)} ت</strong></div>`).join('')
+    : '<div class="empty">هنوز داده‌ای نیست</div>';
+
+  // Debts
+  const debts = orders.filter(o=>Number(o.total||0)-Number(o.paid||0)>0);
+  document.getElementById('dashDebt').innerHTML = debts.length
+    ? debts.slice(0,5).map(o=>{const c=gc(o.custId);const d=Number(o.total||0)-Number(o.paid||0);return`<div class="dash-row"><span>${c?c.biz:'—'}</span><span class="debt-val">${fmt(d)} ت</span></div>`;}).join('')
+    : '<div class="empty">🎉 هیچ بدهی معوقی ندارید</div>';
+
+  // Open followups
+  const opens = followups.filter(f=>f.status==='open');
+  document.getElementById('dashFup').innerHTML = opens.length
+    ? opens.slice(0,5).map(f=>{const c=gc(f.custId);return`<div class="dash-row"><span>${c?c.biz:'—'}: ${f.subject||''}</span><span style="color:var(--red);font-size:10px">${f.next||'—'}</span></div>`;}).join('')
+    : '<div class="empty">🎉 هیچ پیگیری بازی ندارید</div>';
+
+  // Monthly chart
+  const months = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+  const ms = Array(12).fill(0);
+  orders.forEach(o => {
+    const p = (o.date||'').split('/');
+    if(p.length>=2){const m=parseInt(p[1])-1;if(m>=0&&m<12)ms[m]+=Number(o.total||0);}
+  });
+  const active = ms.map((v,i)=>({v,l:months[i]})).filter(x=>x.v>0);
+  const labels = active.length ? active.map(x=>x.l) : months.slice(0,4);
+  const data = active.length ? active.map(x=>x.v) : [0,0,0,0];
+
+  if(mChart) mChart.destroy();
+  const ctx = document.getElementById('chartMonth').getContext('2d');
+  mChart = new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[{label:'فروش',data,backgroundColor:'rgba(107,33,168,.7)',borderRadius:6,hoverBackgroundColor:'#6B21A8'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{ticks:{callback:v=>Math.round(v/1000000)+'M',font:{size:9,family:'Vazirmatn'}},grid:{color:'rgba(0,0,0,.04)'}},
+              x:{ticks:{font:{size:9,family:'Vazirmatn'}}}}}
+  });
+}
+
+function renderCustomers() {
+  const q = document.getElementById('cq').value.trim();
+  const fType = document.getElementById('cf-type').value;
+  const fStatus = document.getElementById('cf-status').value;
+  const fCity = document.getElementById('cf-city').value;
+
+  // Populate city filter
+  const cities = [...new Set(customers.map(c=>c.city||'').filter(Boolean))];
+  const cityEl = document.getElementById('cf-city');
+  const curCity = cityEl.value;
+  cityEl.innerHTML = `<option value="">همه شهرها</option>` + cities.map(c=>`<option${c===curCity?' selected':''}>${c}</option>`).join('');
+
+  let list = customers;
+  if(q) list = list.filter(c => (c.biz||'').includes(q)||(c.owner||'').includes(q)||(c.city||'').includes(q)||(c.phone||'').includes(q));
+  if(fType) list = list.filter(c => c.type === fType);
+  if(fStatus) list = list.filter(c => c.status === fStatus);
+  if(fCity) list = list.filter(c => c.city === fCity);
+
+  // Update order customer filter
+  const ofCust = document.getElementById('of-cust');
+  ofCust.innerHTML = `<option value="">همه مشتریان</option>` + customers.map(c=>`<option value="${c.id}">${c.biz}</option>`).join('');
+  const ffCust = document.getElementById('ff-cust');
+  ffCust.innerHTML = `<option value="">همه مشتریان</option>` + customers.map(c=>`<option value="${c.id}">${c.biz}</option>`).join('');
+  const ifCust = document.getElementById('if-cust');
+  ifCust.innerHTML = `<option value="">همه مشتریان</option>` + customers.map(c=>`<option value="${c.id}">${c.biz}</option>`).join('');
+
+  const tb = document.getElementById('custBody');
+  if(!list.length) { tb.innerHTML = `<tr><td colspan="8"><div class="empty"><div class="empty-icon">👥</div>مشتری‌ای یافت نشد</div></td></tr>`; return; }
+  tb.innerHTML = list.map(c => {
+    const t = custTotals(c.id);
+    return `<tr>
+      <td><strong>${c.biz||''}</strong><br><span style="font-size:10px;color:var(--gray400)">${c.owner||''}</span></td>
+      <td>${c.city||'—'}</td>
+      <td style="direction:ltr;text-align:right;font-size:10px">${c.phone||'—'}</td>
+      <td>${c.type||''}</td>
+      <td style="font-weight:600">${fmt(t.total)} ت</td>
+      <td style="font-size:11px">${t.lastDate}</td>
+      <td>${sBadge(c.status)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn-icon" onclick="editCustomer('${c.id}')" title="ویرایش">✏️</button>
+        <button class="btn-icon" onclick="deleteCustomer('${c.id}')" title="حذف">🗑️</button>
+      </td></tr>`;
+  }).join('');
+}
+
+function renderOrders() {
+  const q = document.getElementById('oq').value.trim();
+  const fType = document.getElementById('of-type').value;
+  const fStatus = document.getElementById('of-status').value;
+  const fPay = document.getElementById('of-pay').value;
+  const fCust = document.getElementById('of-cust').value;
+
+  let list = orders;
+  if(q) list = list.filter(o => { const c=gc(o.custId); return (c&&(c.biz||'').includes(q))||(o.type||'').includes(q)||(o.id||'').includes(q); });
+  if(fType) list = list.filter(o => o.type === fType);
+  if(fStatus) list = list.filter(o => o.status === fStatus);
+  if(fPay) list = list.filter(o => o.pay === fPay);
+  if(fCust) list = list.filter(o => o.custId === fCust);
+
+  const tb = document.getElementById('ordBody');
+  if(!list.length) { tb.innerHTML = `<tr><td colspan="9"><div class="empty"><div class="empty-icon">📦</div>سفارشی یافت نشد</div></td></tr>`; return; }
+  tb.innerHTML = list.map(o => {
+    const c = gc(o.custId); const debt = Number(o.total||0)-Number(o.paid||0);
+    return `<tr>
+      <td><strong>${c?c.biz:'—'}</strong></td>
+      <td>${o.date||'—'}</td>
+      <td>${o.type||''}</td>
+      <td style="text-align:center">${o.qty||0}</td>
+      <td>${fmt(o.total||0)}</td>
+      <td>${fmt(o.paid||0)}</td>
+      <td class="${debt>0?'debt-val':'green-val'}">${fmt(debt)}</td>
+      <td>${osBadge(o.status)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn-icon" onclick="editOrder('${o.id}')" title="ویرایش">✏️</button>
+        <button class="btn-icon" onclick="deleteOrder('${o.id}')" title="حذف">🗑️</button>
+      </td></tr>`;
+  }).join('');
+}
+
+function renderFollowups() {
+  const q = document.getElementById('fq').value.trim();
+  const fType = document.getElementById('ff-type').value;
+  const fStatus = document.getElementById('ff-status').value;
+  const fPri = document.getElementById('ff-priority').value;
+  const fCust = document.getElementById('ff-cust').value;
+
+  let list = followups;
+  if(q) list = list.filter(f => { const c=gc(f.custId); return (c&&(c.biz||'').includes(q))||(f.subject||'').includes(q)||(f.note||'').includes(q); });
+  if(fType) list = list.filter(f => f.type === fType);
+  if(fStatus) list = list.filter(f => f.status === fStatus);
+  if(fPri) list = list.filter(f => f.priority === fPri);
+  if(fCust) list = list.filter(f => f.custId === fCust);
+
+  const el = document.getElementById('fupList');
+  if(!list.length) { el.innerHTML = `<div class="empty"><div class="empty-icon">📞</div>پیگیری‌ای یافت نشد</div>`; return; }
+  const pc = {high:'#DC2626',mid:'#D97706',low:'#059669'};
+  const sb = s => s==='open'?'bpending ⏳ باز':s==='done'?'bdone ✅ بسته':'bcancel ❌ کنسل';
+  el.innerHTML = list.map(f => {
+    const c = gc(f.custId);
+    const sClass = sb(f.status).split(' ');
+    return `<div class="fup-card">
+      <div class="fup-dot" style="background:${pc[f.priority]||'#888'}"></div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+          <div class="fup-title">${c?c.biz:'—'} — ${f.subject||''}</div>
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+            <span class="badge ${sClass[0]}">${sClass.slice(1).join(' ')}</span>
+            <button class="btn-icon" onclick="editFollowup('${f.id}')" title="ویرایش">✏️</button>
+            <button class="btn-icon" onclick="deleteFollowup('${f.id}')" title="حذف">🗑️</button>
+          </div>
+        </div>
+        <div class="fup-sub">${f.type||''} | ${f.note||'—'}</div>
+        ${f.action?`<div class="fup-sub">➡️ اقدام: ${f.action}</div>`:''}
+        ${f.next?`<div class="fup-date">📅 پیگیری بعدی: ${f.next}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderInvoices() {
+  const q = document.getElementById('iq').value.trim();
+  const fType = document.getElementById('if-type').value;
+  const fCust = document.getElementById('if-cust').value;
+
+  // Populate customer filter
+  const ifCust = document.getElementById('if-cust');
+  const saved = ifCust.value;
+  ifCust.innerHTML = `<option value="">همه مشتریان</option>` + customers.map(c=>`<option value="${c.id}">${c.biz}</option>`).join('');
+  if(saved) ifCust.value = saved;
+
+  let list = invoices;
+  if(q) list = list.filter(i => { const c=gc(i.custId); return (c&&(c.biz||'').includes(q))||(i.num||'').includes(q); });
+  if(fType) list = list.filter(i => i.type === fType);
+  if(fCust) list = list.filter(i => i.custId === fCust);
+
+  const tb = document.getElementById('invBody');
+  if(!list.length) { tb.innerHTML = `<tr><td colspan="9"><div class="empty"><div class="empty-icon">🧾</div>فاکتوری یافت نشد<br><small>با دکمه «+ فاکتور جدید» اولین فاکتور را بسازید</small></div></td></tr>`; return; }
+  tb.innerHTML = list.map(i => {
+    const c = gc(i.custId);
+    const typeLabel = i.type==='proforma'?'<span class="badge bpending">پیش‌فاکتور</span>':'<span class="badge bdone">فاکتور رسمی</span>';
+    return `<tr>
+      <td><strong>${i.num||'—'}</strong></td>
+      <td>${c?c.biz:'—'}</td>
+      <td>${i.date||'—'}</td>
+      <td>${typeLabel}</td>
+      <td>${fmt(i.subtotal||0)} ت</td>
+      <td>${i.disc||0}٪</td>
+      <td style="font-weight:700;color:var(--purple)">${fmt(i.final||0)} ت</td>
+      <td><span class="badge bactive">✅ صادر شد</span></td>
+      <td style="white-space:nowrap">
+        <button class="btn-icon" onclick="viewInvoice('${i.id}')" title="مشاهده">👁️</button>
+        <button class="btn-icon" onclick="deleteInvoice('${i.id}')" title="حذف">🗑️</button>
+      </td></tr>`;
+  }).join('');
+}
+
+function renderAll() {
+  renderCustomers();
+  renderOrders();
+  renderFollowups();
+  renderInvoices();
+  if(document.getElementById('page-dash').classList.contains('active')) renderDash();
+}
+
+// ─────────────────────────────────────────
+// CLOCK
+// ─────────────────────────────────────────
+function updateClock() {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('fa-IR');
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ─────────────────────────────────────────
+// BOOT
+// ─────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  loadLocal();
+  renderAll();
+  initFirebase();
+});
+</script>
+</body>
+</html>
