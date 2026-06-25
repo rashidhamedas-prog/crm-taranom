@@ -29,7 +29,6 @@ initDB();
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/customers', require('./routes/customers'));
-app.use('/api/orders', require('./routes/orders'));
 app.use('/api/followups', require('./routes/followups'));
 app.use('/api/invoices', require('./routes/invoices'));
 app.use('/api/products', require('./routes/products'));
@@ -38,6 +37,7 @@ app.use('/api/messages', require('./routes/messages'));
 app.use('/api/reminders', require('./routes/reminders'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/settings', require('./routes/settings'));
+app.use('/api/accounting', require('./routes/accounting'));
 
 // SPA fallback for non-API GET requests
 app.get('*', (req, res, next) => {

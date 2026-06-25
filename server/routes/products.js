@@ -6,17 +6,31 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
+let sharp = null;
+try { sharp = require('sharp'); } catch (e) { /* optional — falls back to raw storage */ }
+
 const UPLOAD_DIR = path.join(__dirname, '..', 'public', 'uploads', 'products');
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname || '').toLowerCase() || '.jpg';
-    cb(null, 'p_' + Date.now() + '_' + Math.round(Math.random() * 1e6) + ext);
-  }
-});
+const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
+
+async function saveImage(buffer, originalName) {
+  const filename = 'p_' + Date.now() + '_' + Math.round(Math.random() * 1e6) + '.webp';
+  const dest = path.join(UPLOAD_DIR, filename);
+  if (sharp) {
+    await sharp(buffer)
+      .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 82 })
+      .toFile(dest);
+  } else {
+    const ext = path.extname(originalName || '').toLowerCase() || '.jpg';
+    const fallback = 'p_' + Date.now() + '_' + Math.round(Math.random() * 1e6) + ext;
+    fs.writeFileSync(path.join(UPLOAD_DIR, fallback), buffer);
+    return fallback;
+  }
+  return filename;
+}
 const memUpload = multer({ storage: multer.memoryStorage() });
 
 // GET /  — products are GLOBAL: every authenticated user can read all.
@@ -52,11 +66,14 @@ router.get('/categories', auth, (req, res) => {
 });
 
 // Create product (admin only) — multipart form-data for optional image
-router.post('/', auth, adminOnly, upload.single('image'), (req, res) => {
+router.post('/', auth, adminOnly, upload.single('image'), async (req, res) => {
   const { category, code, name, price, stock, stock_alert, unit, note } = req.body;
   if (!name) return res.status(400).json({ error: 'نام محصول الزامی است' });
   const db = getDB();
-  const image = req.file ? req.file.filename : null;
+  let image = null;
+  if (req.file) {
+    try { image = await saveImage(req.file.buffer, req.file.originalname); } catch (e) { image = null; }
+  }
   const result = db.prepare(
     'INSERT INTO products (user_id,category,code,name,price,stock,stock_alert,unit,note,image) VALUES (?,?,?,?,?,?,?,?,?,?)'
   ).run(req.user.id, category || '', code || '', name, parseFloat(price) || 0, parseInt(stock) || 0,
@@ -66,18 +83,17 @@ router.post('/', auth, adminOnly, upload.single('image'), (req, res) => {
 });
 
 // Update product (admin only)
-router.put('/:id', auth, adminOnly, upload.single('image'), (req, res) => {
+router.put('/:id', auth, adminOnly, upload.single('image'), async (req, res) => {
   const db = getDB();
   const prod = db.prepare('SELECT * FROM products WHERE id=?').get(req.params.id);
   if (!prod) return res.status(404).json({ error: 'یافت نشد' });
   const { category, code, name, price, stock, stock_alert, unit, note } = req.body;
   let image = prod.image;
   if (req.file) {
-    image = req.file.filename;
-    // remove old image file
-    if (prod.image) {
-      try { fs.unlinkSync(path.join(UPLOAD_DIR, prod.image)); } catch (e) {}
-    }
+    try {
+      image = await saveImage(req.file.buffer, req.file.originalname);
+      if (prod.image) { try { fs.unlinkSync(path.join(UPLOAD_DIR, prod.image)); } catch (e) {} }
+    } catch (e) { image = prod.image; }
   }
   db.prepare('UPDATE products SET category=?,code=?,name=?,price=?,stock=?,stock_alert=?,unit=?,note=?,image=? WHERE id=?')
     .run(category || '', code || '', name || prod.name, parseFloat(price) || 0, parseInt(stock) || 0,

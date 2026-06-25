@@ -234,6 +234,19 @@ table.tbl tr:hover td{background:#faf8ff}
   .inv-cart{position:static}
   .form-grid{grid-template-columns:1fr}
   .topbar .clock{display:none}
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+}
+@media(max-width:600px){
+  .cards{grid-template-columns:1fr 1fr}
+  .pgrid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+  .overlay{align-items:flex-end;padding:0}
+  .modal{max-height:100vh;border-radius:16px 16px 0 0;position:relative}
+  .inv-layout{grid-template-columns:1fr}
+  table.tbl{font-size:11px}
+  table.tbl th,table.tbl td{padding:7px 8px}
+  .sidebar{width:100%;transform:translateX(100%)}
+  .content{padding:12px}
+  .dp{width:240px}
 }
 @media print{
   .sidebar,.topbar,.btn,.toolbar,.panel-head{display:none!important}
@@ -438,9 +451,11 @@ function renderDP(){
   }
   el('dpRoot').innerHTML = `<div class="dp open">
     <div class="dp-head">
-      <button onclick="dpNav(1)">›</button>
+      <button onclick="dpYearNav(1)" title="سال بعد">»</button>
+      <button onclick="dpNav(1)" title="ماه بعد">›</button>
       <span class="title">${J_MONTHS[DP.m-1]} ${fmt(DP.y)}</span>
-      <button onclick="dpNav(-1)">‹</button>
+      <button onclick="dpNav(-1)" title="ماه قبل">‹</button>
+      <button onclick="dpYearNav(-1)" title="سال قبل">«</button>
     </div>
     <div class="dp-week">${J_WEEK.map(w=>`<span>${w}</span>`).join('')}</div>
     <div class="dp-days">${cells}</div>
@@ -458,6 +473,7 @@ function renderDP(){
   }
 }
 function dpNav(dir){ DP.m+=dir; if(DP.m>12){DP.m=1;DP.y++;} if(DP.m<1){DP.m=12;DP.y--;} renderDP(); }
+function dpYearNav(dir){ DP.y+=dir; renderDP(); }
 function pickDay(d){
   const val = DP.y+'/'+String(DP.m).padStart(2,'0')+'/'+String(d).padStart(2,'0');
   if(DP.input){ DP.input.value=val; DP.input.dispatchEvent(new Event('change')); }
@@ -502,19 +518,18 @@ function logout(){
 const NAV_ADMIN = [
   {id:'dash', icon:'📊', label:'داشبورد'},
   {id:'customers', icon:'👥', label:'مشتریان'},
-  {id:'orders', icon:'📦', label:'سفارشات'},
   {id:'followups', icon:'📞', label:'پیگیری‌ها'},
   {id:'invoices', icon:'🧾', label:'فاکتور'},
   {id:'products', icon:'🛍️', label:'محصولات'},
   {id:'users', icon:'👤', label:'کاربران'},
   {id:'reports', icon:'📈', label:'گزارشات'},
+  {id:'accounting', icon:'💰', label:'حسابداری'},
   {id:'messages', icon:'💬', label:'پیام‌ها'},
   {id:'settings', icon:'⚙️', label:'تنظیمات'},
 ];
 const NAV_SALES = [
   {id:'dash', icon:'🏠', label:'داشبورد'},
   {id:'customers', icon:'👥', label:'مشتریان'},
-  {id:'orders', icon:'📦', label:'سفارشات'},
   {id:'followups', icon:'📞', label:'پیگیری‌ها'},
   {id:'invoices', icon:'🧾', label:'فاکتور'},
   {id:'catalog', icon:'🛍️', label:'کاتالوگ'},
@@ -605,10 +620,9 @@ ROUTES.dash = async function(){
     v.innerHTML = `
       <div class="cards">
         ${statCard('p','👥', fmt(ov.totalCustomers),'کل مشتریان')}
-        ${statCard('b','📦', fmt(ov.totalOrders),'کل سفارشات')}
         ${statCard('g','💰', fmt(ov.totalRevenue),'فروش کل (تومان)')}
-        ${statCard('r','⚠️', fmt(ov.totalDebt),'بدهی کل (تومان)')}
-        ${statCard('o','🧾', fmt(ov.totalInvoices),'فاکتورها')}
+        ${statCard('o','🧾', fmt(ov.totalInvoices),'فاکتور رسمی')}
+        ${statCard('b','📋', fmt(ov.totalProforma),'پیش‌فاکتور')}
         ${statCard('p','🛍️', fmt(ov.totalProducts),'محصولات')}
         ${statCard('b','📞', fmt(ov.openFollowups),'پیگیری باز')}
         ${statCard('r','📉', fmt(ov.lowStock),'موجودی کم')}
@@ -617,31 +631,34 @@ ROUTES.dash = async function(){
         <div class="panel-head"><h4>عملکرد کارشناسان فروش</h4></div>
         <div class="panel-body tbl-wrap">
           <table class="tbl">
-            <thead><tr><th>کارشناس</th><th>مشتریان</th><th>فروش</th><th>بدهی</th><th>پیگیری باز</th></tr></thead>
+            <thead><tr><th>کارشناس</th><th>مشتریان</th><th>فروش (فاکتور رسمی)</th><th>پیگیری باز</th></tr></thead>
             <tbody>${board.map(u=>`<tr>
               <td>${esc(u.name)}</td><td>${fmt(u.custCount)}</td>
-              <td class="mono">${fmt(u.totalSales)}</td><td class="mono" style="color:var(--red)">${fmt(u.totalDebt)}</td>
-              <td>${fmt(u.openFup)}</td></tr>`).join('')||emptyRow(5)}</tbody>
+              <td class="mono">${fmt(u.totalSales)}</td>
+              <td>${fmt(u.openFup)}</td></tr>`).join('')||emptyRow(4)}</tbody>
           </table>
         </div>
       </div>`;
   } else {
     v.innerHTML = '<div class="muted">در حال بارگذاری...</div>';
-    const [orders, followups, invoices] = await Promise.all([
-      api('GET','/orders'), api('GET','/followups'), api('GET','/invoices')
+    const [followups, invoices] = await Promise.all([
+      api('GET','/followups'), api('GET','/invoices')
     ]);
-    CACHE.orders=orders; CACHE.followups=followups; CACHE.invoices=invoices;
-    const sales = orders.reduce((a,o)=>a+(o.total||0),0);
-    const debt = orders.reduce((a,o)=>a+((o.total||0)-(o.paid||0)),0);
+    CACHE.followups=followups; CACHE.invoices=invoices;
+    let myComm = { totalComm:0, commRate:{cash:0,cheque:0} };
+    try { myComm = await api('GET','/accounting/my-commission') || myComm; } catch(e){}
+    const finalInvs = invoices.filter(i=>i.type==='final');
+    const sales = finalInvs.reduce((a,i)=>a+(i.final||0),0);
     const openF = followups.filter(f=>f.status==='open').length;
+    const approvedInvs = finalInvs.filter(i=>i.approved);
     v.innerHTML = `
       <div class="cards">
         ${statCard('p','👥', fmt(CACHE.customers.length),'مشتریان من')}
-        ${statCard('b','📦', fmt(orders.length),'سفارشات')}
-        ${statCard('g','💰', fmt(sales),'فروش (تومان)')}
-        ${statCard('r','⚠️', fmt(debt),'بدهی (تومان)')}
-        ${statCard('o','📞', fmt(openF),'پیگیری باز')}
-        ${statCard('p','🧾', fmt(invoices.length),'فاکتورها')}
+        ${statCard('g','💰', fmt(sales),'فروش کل (تومان)')}
+        ${statCard('o','🧾', fmt(finalInvs.length),'فاکتور رسمی')}
+        ${statCard('b','📋', fmt(invoices.filter(i=>i.type==='proforma').length),'پیش‌فاکتور')}
+        ${statCard('b','📞', fmt(openF),'پیگیری باز')}
+        ${statCard('g','🎯', fmt(Math.round(myComm.totalComm||0)),'کمیسیون تأیید شده (ت)')}
       </div>
       <div class="panel">
         <div class="panel-head"><h4>پیگیری‌های باز</h4><button class="btn sm" onclick="go('followups')">مشاهده همه</button></div>
@@ -671,6 +688,7 @@ ROUTES.customers = function(){
         ${['vip','active','followup','silent','new'].map(s=>`<option value="${s}" ${custFilter.status===s?'selected':''}>${STATUS_LABEL[s]}</option>`).join('')}
       </select>
       <button class="btn" onclick="custModal()">➕ مشتری جدید</button>
+      <button class="btn ghost" onclick="importCustomers()">📤 ورود اکسل</button>
       <button class="btn ghost" onclick="exportExcel('customers')">📥 اکسل</button>
     </div>
     <div class="panel"><div class="panel-body tbl-wrap"><div id="custTable"></div></div></div>`;
@@ -684,7 +702,7 @@ function renderCustTable(){
   if(custFilter.status) rows=rows.filter(c=>c.status===custFilter.status);
   const isAdmin = ME.role==='admin';
   el('custTable').innerHTML = `<table class="tbl"><thead><tr>
-    <th>کسب‌وکار</th><th>مالک</th><th>شهر</th><th>موبایل</th><th>نوع</th><th>وضعیت</th>${isAdmin?'<th>کارشناس</th>':''}<th>عملیات</th>
+    <th>نام فروشگاه</th><th>نام کامل</th><th>شهر</th><th>موبایل</th><th>نوع</th><th>وضعیت</th>${isAdmin?'<th>کارشناس</th>':''}<th>عملیات</th>
   </tr></thead><tbody>${rows.map(c=>`<tr>
     <td>${esc(c.biz)}</td><td>${esc(c.owner||'-')}</td><td>${esc(c.city||'-')}</td>
     <td class="mono">${esc(c.phone||'-')}</td><td>${esc(c.type||'-')}</td><td>${statusTag(c.status)}</td>
@@ -698,8 +716,8 @@ function custModal(id){
   openModal(`
     <div class="modal-head"><h3>${id?'ویرایش مشتری':'مشتری جدید'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="modal-body"><div class="form-grid">
-      <div class="fg full"><label>نام کسب‌وکار *</label><input id="c-biz" value="${esc(c.biz||'')}"></div>
-      <div class="fg"><label>نام مالک</label><input id="c-owner" value="${esc(c.owner||'')}"></div>
+      <div class="fg full"><label>نام فروشگاه *</label><input id="c-biz" value="${esc(c.biz||'')}"></div>
+      <div class="fg"><label>نام کامل</label><input id="c-owner" value="${esc(c.owner||'')}"></div>
       <div class="fg"><label>شهر</label><input id="c-city" value="${esc(c.city||'')}"></div>
       <div class="fg"><label>موبایل</label><input id="c-phone" value="${esc(c.phone||'')}"></div>
       <div class="fg"><label>اینستاگرام</label><input id="c-insta" value="${esc(c.insta||'')}"></div>
@@ -720,82 +738,26 @@ async function saveCust(id){
     phone:el('c-phone').value, insta:el('c-insta').value, type:el('c-type').value,
     status:el('c-status').value, note:el('c-note').value
   };
-  if(!data.biz){ showToast('نام کسب‌وکار الزامی است','error'); return; }
+  if(!data.biz){ showToast('نام فروشگاه الزامی است','error'); return; }
   if(id) await api('PUT','/customers/'+id, data); else await api('POST','/customers', data);
   await reloadCustomers(); closeModal(); renderCustTable(); showToast('ذخیره شد');
 };
 
 /* ============================================================
-   ORDERS
+   CUSTOMER IMPORT
 ============================================================ */
-let orderFilter={q:'',status:''};
-ROUTES.orders = async function(){
-  el('view').innerHTML='<div class="muted">در حال بارگذاری...</div>';
-  CACHE.orders = await api('GET','/orders')||[];
-  el('view').innerHTML = `
-    <div class="toolbar">
-      <input class="search" id="oSearch" placeholder="جستجو..." value="${esc(orderFilter.q)}">
-      <select id="oStatus"><option value="">همه وضعیت‌ها</option>
-        ${['pending','onway','done','cancel'].map(s=>`<option value="${s}" ${orderFilter.status===s?'selected':''}>${STATUS_LABEL[s]}</option>`).join('')}
-      </select>
-      <button class="btn" onclick="orderModal()">➕ سفارش جدید</button>
-    </div>
-    <div class="panel"><div class="panel-body tbl-wrap"><div id="orderTable"></div></div></div>`;
-  el('oSearch').addEventListener('input',e=>{orderFilter.q=e.target.value;renderOrderTable();});
-  el('oStatus').addEventListener('change',e=>{orderFilter.status=e.target.value;renderOrderTable();});
-  renderOrderTable();
-};
-function renderOrderTable(){
-  let rows=CACHE.orders.slice();
-  if(orderFilter.q){const q=orderFilter.q.toLowerCase();rows=rows.filter(o=>((o.cust_biz||'')+' '+(o.type||'')+' '+(o.note||'')).toLowerCase().includes(q));}
-  if(orderFilter.status)rows=rows.filter(o=>o.status===orderFilter.status);
-  const isAdmin=ME.role==='admin';
-  el('orderTable').innerHTML=`<table class="tbl"><thead><tr>
-    <th>مشتری</th><th>تاریخ</th><th>شرح</th><th>تعداد</th><th>مبلغ</th><th>پرداختی</th><th>مانده</th><th>وضعیت</th>${isAdmin?'<th>کارشناس</th>':''}<th>عملیات</th>
-  </tr></thead><tbody>${rows.map(o=>`<tr>
-    <td>${esc(o.cust_biz||'-')}</td><td class="mono">${esc(o.date||'-')}</td><td>${esc(o.type||'-')}</td>
-    <td>${fmt(o.qty)}</td><td class="mono">${fmt(o.total)}</td><td class="mono">${fmt(o.paid)}</td>
-    <td class="mono" style="color:var(--red)">${fmt((o.total||0)-(o.paid||0))}</td><td>${statusTag(o.status)}</td>
-    ${isAdmin?`<td class="muted">${esc(o.salesperson||'-')}</td>`:''}
-    <td><button class="btn sm ghost" onclick="orderModal(${o.id})">✏️</button>
-        <button class="btn sm red" onclick="confirmDelete('orders',${o.id},'سفارش ${esc(o.cust_biz||'')}')">🗑️</button></td>
-  </tr>`).join('')||emptyRow(isAdmin?10:9)}</tbody></table>`;
-}
-function orderModal(id){
-  const o = id ? CACHE.orders.find(x=>x.id===id) : {date:todayJalali()};
-  const custOpts = CACHE.customers.map(c=>`<option value="${c.id}" ${o.cust_id===c.id?'selected':''}>${esc(c.biz)}</option>`).join('');
-  const prodOpts = '<option value="">— بدون محصول —</option>'+CACHE.products.map(p=>`<option value="${p.id}" ${o.product_id===p.id?'selected':''}>${esc(p.name)}</option>`).join('');
-  openModal(`
-    <div class="modal-head"><h3>${id?'ویرایش سفارش':'سفارش جدید'}</h3><button class="x" onclick="closeModal()">×</button></div>
-    <div class="modal-body"><div class="form-grid">
-      <div class="fg"><label>مشتری *</label><select id="o-cust">${custOpts}</select></div>
-      <div class="fg"><label>محصول (اختیاری)</label><select id="o-prod">${prodOpts}</select></div>
-      <div class="fg"><label>تاریخ</label><input id="o-date" data-jdate value="${esc(o.date||'')}"></div>
-      <div class="fg"><label>شرح / نوع</label><input id="o-type" value="${esc(o.type||'')}"></div>
-      <div class="fg"><label>تعداد</label><input id="o-qty" type="number" value="${o.qty||0}"></div>
-      <div class="fg"><label>مبلغ کل (تومان) *</label><input id="o-total" type="number" value="${o.total||0}"></div>
-      <div class="fg"><label>پرداختی</label><input id="o-paid" type="number" value="${o.paid||0}"></div>
-      <div class="fg"><label>نوع پرداخت</label><select id="o-pay">
-        ${['نقد','نسیه','چک','کارت'].map(p=>`<option ${o.pay===p?'selected':''}>${p}</option>`).join('')}</select></div>
-      <div class="fg"><label>تاریخ تحویل</label><input id="o-deliver" data-jdate value="${esc(o.deliver||'')}"></div>
-      <div class="fg"><label>وضعیت</label><select id="o-status">
-        ${['pending','onway','done','cancel'].map(s=>`<option value="${s}" ${o.status===s?'selected':''}>${STATUS_LABEL[s]}</option>`).join('')}</select></div>
-      <div class="fg full"><label>یادداشت</label><textarea id="o-note">${esc(o.note||'')}</textarea></div>
-    </div><p class="muted" style="font-size:12px;margin-top:10px">با وضعیت «تحویل شده» در صورت انتخاب محصول، موجودی به‌صورت خودکار کسر می‌شود.</p></div>
-    <div class="modal-foot"><button class="btn" onclick="saveOrder(${id||0})">💾 ذخیره</button>
-      <button class="btn ghost" onclick="closeModal()">انصراف</button></div>`);
-}
-async function saveOrder(id){
-  const data={
-    cust_id:+el('o-cust').value, product_id:el('o-prod').value?+el('o-prod').value:null,
-    date:el('o-date').value, type:el('o-type').value, qty:+el('o-qty').value,
-    total:+el('o-total').value, paid:+el('o-paid').value, pay:el('o-pay').value,
-    deliver:el('o-deliver').value, status:el('o-status').value, note:el('o-note').value
+function importCustomers(){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='.xlsx,.xls';
+  inp.onchange=async()=>{
+    const fd=new FormData(); fd.append('file',inp.files[0]);
+    try{
+      const r=await api('POST','/customers/import',fd,true);
+      showToast(`${fmt(r.inserted)} مشتری اضافه شد`);
+      await reloadCustomers();
+      if(CURRENT_PAGE==='customers') renderCustTable();
+    }catch(e){}
   };
-  if(!data.cust_id){ showToast('مشتری را انتخاب کنید','error'); return; }
-  if(!data.total){ showToast('مبلغ الزامی است','error'); return; }
-  if(id) await api('PUT','/orders/'+id,data); else await api('POST','/orders',data);
-  CACHE.orders=await api('GET','/orders'); closeModal(); renderOrderTable(); showToast('ذخیره شد');
+  inp.click();
 }
 
 /* ============================================================
@@ -893,11 +855,15 @@ function renderInvTable(){
     <th>شماره</th><th>مشتری</th><th>نوع</th><th>تاریخ</th><th>مبلغ نهایی</th><th>فروشنده</th><th>عملیات</th>
   </tr></thead><tbody>${rows.map(i=>`<tr>
     <td class="mono" style="font-weight:700">${esc(i.num||'-')}</td><td>${esc(i.cust_biz||'-')}</td>
-    <td>${statusTag(i.type)}</td><td class="mono">${esc(i.date||'-')}</td><td class="mono">${fmt(i.final)}</td>
+    <td>${statusTag(i.type)}${i.type==='final'?` <span class="tag ${i.approved?'t-done':'t-pending'}" style="font-size:10px">${i.approved?'✓ تأیید شده':'⏳ در انتظار'}</span>`:''}</td>
+    <td class="mono">${esc(i.date||'-')}</td><td class="mono">${fmt(i.final)}</td>
     <td class="muted">${esc(i.seller_name||'-')}</td>
-    <td><button class="btn sm blue" onclick="printInvoice(${i.id})">🖨️</button>
-        <button class="btn sm ghost" onclick="openInvBuilder(${i.id})">✏️</button>
-        <button class="btn sm red" onclick="confirmDelete('invoices',${i.id},'${esc(i.num||'')}')">🗑️</button></td>
+    <td>
+      ${i.type==='proforma' && !i.converted ? `<button class="btn sm orange" onclick="convertProforma(${i.id})">🔄 تبدیل به فاکتور</button>` : ''}
+      <button class="btn sm blue" onclick="printInvoice(${i.id})">🖨️</button>
+      <button class="btn sm ghost" onclick="openInvBuilder(${i.id})">✏️</button>
+      <button class="btn sm red" onclick="confirmDelete('invoices',${i.id},'${esc(i.num||'')}')">🗑️</button>
+    </td>
   </tr>`).join('')||emptyRow(7)}</tbody></table>`;
 }
 function openInvBuilder(id){
@@ -916,6 +882,17 @@ function openInvBuilder(id){
         <div class="fg"><label>تاریخ</label><input id="inv-date" data-jdate value="${esc(inv?inv.date:todayJalali())}"></div>
         <div class="fg"><label>تخفیف (٪)</label><input id="inv-disc" type="number" value="${inv?inv.disc:0}" oninput="renderCart()"></div>
         <div class="fg full"><label>توضیحات</label><input id="inv-note" value="${esc(inv?inv.note:'')}"></div>
+        <div class="fg"><label>نوع پرداخت</label><select id="inv-pay-type" onchange="toggleChequeFields()">
+          <option value="cash" ${inv&&inv.pay_type==='cheque'?'':'selected'}>نقد</option>
+          <option value="cheque" ${inv&&inv.pay_type==='cheque'?'selected':''}>چک</option>
+        </select></div>
+      </div>
+      <div id="chequeFields" style="${inv&&inv.pay_type==='cheque'?'':'display:none'}">
+        <div class="form-grid" style="margin-bottom:14px">
+          <div class="fg"><label>مدت چک (روز)</label><input id="inv-cheque-dur" type="number" value="${esc(inv&&inv.cheque_duration?inv.cheque_duration:'')}"></div>
+          <div class="fg"><label>تاریخ سررسید</label><input id="inv-cheque-due" data-jdate value="${esc(inv&&inv.cheque_due_date?inv.cheque_due_date:'')}"></div>
+          <div class="fg full"><label>اطلاعات چک</label><input id="inv-cheque-info" value="${esc(inv&&inv.cheque_info?inv.cheque_info:'')}"></div>
+        </div>
       </div>
       <div class="inv-layout">
         <div>
@@ -929,7 +906,7 @@ function openInvBuilder(id){
           <button class="btn green" style="width:100%;margin-top:12px" onclick="saveInvoice(${id||0})">💾 ذخیره فاکتور</button>
         </div>
       </div>
-      ${isAdmin?'<p class="muted" style="font-size:12px;margin-top:10px">شما مدیر هستید و می‌توانید قیمت را تغییر دهید.</p>':'<p class="muted" style="font-size:12px;margin-top:10px">قیمت‌ها از روی محصولات تعیین می‌شوند و قابل تغییر نیستند.</p>'}
+      <p class="muted" style="font-size:12px;margin-top:10px">قیمت‌ها قابل ویرایش هستند.</p>
     </div>`, true);
   renderInvPicker();
   renderCart();
@@ -940,7 +917,7 @@ function renderInvPicker(){
   if(q)prods=prods.filter(p=>((p.name||'')+' '+(p.code||'')).toLowerCase().includes(q));
   el('invPicker').innerHTML = prods.map(p=>`
     <div class="pick-card" onclick="addToCart(${p.id})">
-      <div class="pimg">${p.image?`<img src="/uploads/products/${esc(p.image)}">`:'🧥'}</div>
+      <div class="pimg">${p.image?`<img src="/uploads/products/${esc(p.image)}" loading="lazy" decoding="async">`:'🧥'}</div>
       <div class="pn">${esc(p.name)}</div>
       <div class="pp">${fmt(p.price)} ت</div>
     </div>`).join('') || '<div class="empty">محصولی نیست</div>';
@@ -952,12 +929,11 @@ function addToCart(pid){
   renderCart();
 }
 function renderCart(){
-  const isAdmin = ME.role==='admin';
   el('cartRows').innerHTML = invCart.map((r,i)=>`
     <div class="cart-row">
       <span class="cn">${esc(r.name)}</span>
       <input type="number" min="1" value="${r.qty}" onchange="invCart[${i}].qty=Math.max(1,+this.value||1);renderCart()">
-      <input class="price-in" type="number" value="${r.price}" ${isAdmin?'':'readonly'} onchange="invCart[${i}].price=+this.value||0;renderCart()">
+      <input class="price-in" type="number" value="${r.price}" onchange="invCart[${i}].price=+this.value||0;renderCart()">
       <button class="rm" onclick="invCart.splice(${i},1);renderCart()">×</button>
     </div>`).join('') || '<div class="muted center" style="padding:14px">سبد خالی است</div>';
   const subtotal = invCart.reduce((a,r)=>a+r.qty*r.price,0);
@@ -969,18 +945,37 @@ function renderCart(){
     <div class="l"><span>تخفیف (${fmt(disc)}٪):</span><span class="mono">${fmt(discAmt)} ت</span></div>
     <div class="l final"><span>نهایی:</span><span class="mono">${fmt(final)} ت</span></div>`;
 }
+function toggleChequeFields(){
+  const pt = el('inv-pay-type')?.value;
+  const cf = el('chequeFields');
+  if(cf) cf.style.display = pt==='cheque' ? '' : 'none';
+}
 async function saveInvoice(id){
   const cust_id = +el('inv-cust').value;
   if(!cust_id){ showToast('مشتری را انتخاب کنید','error'); return; }
   if(invCart.length===0){ showToast('حداقل یک محصول اضافه کنید','error'); return; }
+  const pay_type = el('inv-pay-type')?.value || 'cash';
   const data = {
     cust_id, type:el('inv-type').value, date:el('inv-date').value, note:el('inv-note').value,
     disc:+el('inv-disc').value||0,
+    pay_type,
+    cheque_duration: pay_type==='cheque' ? (el('inv-cheque-dur')?.value||'') : '',
+    cheque_due_date: pay_type==='cheque' ? (el('inv-cheque-due')?.value||'') : '',
+    cheque_info: pay_type==='cheque' ? (el('inv-cheque-info')?.value||'') : '',
     rows: invCart.map(r=>({product_id:r.product_id, qty:r.qty, price:r.price}))
   };
   try{
     if(id) await api('PUT','/invoices/'+id,data); else await api('POST','/invoices',data);
     CACHE.invoices=await api('GET','/invoices'); closeModal(); renderInvTable(); showToast('فاکتور ذخیره شد');
+  }catch(e){}
+}
+async function convertProforma(id){
+  if(!confirm('پیش‌فاکتور به فاکتور رسمی تبدیل شود؟')) return;
+  try{
+    await api('POST','/invoices/'+id+'/convert',{});
+    CACHE.invoices = await api('GET','/invoices');
+    renderInvTable();
+    showToast('تبدیل شد');
   }catch(e){}
 }
 async function printInvoice(id){
@@ -1040,7 +1035,7 @@ function renderProdGrid(canEdit){
   el('prodGrid').innerHTML = CACHE.products.map(p=>{
     const low = p.stock<=p.stock_alert;
     return `<div class="pcard">
-      <div class="img">${p.image?`<img src="/uploads/products/${esc(p.image)}">`:'🧥'}</div>
+      <div class="img">${p.image?`<img src="/uploads/products/${esc(p.image)}" loading="lazy" decoding="async">`:'🧥'}</div>
       <div class="body">
         <div class="name">${esc(p.name)}</div>
         <div class="code">${esc(p.code||'')} ${p.category?'· '+esc(p.category):''}</div>
@@ -1149,6 +1144,8 @@ function userModal(id){
       <div class="fg"><label>وضعیت</label><select id="u-active">
         <option value="1" ${u.active?'selected':''}>فعال</option>
         <option value="0" ${!u.active?'selected':''}>غیرفعال</option></select></div>
+      <div class="fg"><label>کمیسیون نقد (٪)</label><input id="u-comm-cash" type="number" step="0.1" value="${u.commission_cash||0}"></div>
+      <div class="fg"><label>کمیسیون چک (٪)</label><input id="u-comm-cheque" type="number" step="0.1" value="${u.commission_cheque||0}"></div>
     </div></div>
     <div class="modal-foot"><button class="btn" onclick="saveUser(${id||0})">💾 ذخیره</button>
       <button class="btn ghost" onclick="closeModal()">انصراف</button></div>`);
@@ -1156,14 +1153,16 @@ function userModal(id){
 async function saveUser(id){
   const name=el('u-name').value.trim(), username=el('u-username').value.trim(),
         pass=el('u-pass').value, role=el('u-role').value,
-        phone=el('u-phone').value, active=+el('u-active').value;
+        phone=el('u-phone').value, active=+el('u-active').value,
+        commission_cash=parseFloat(el('u-comm-cash')?.value||0)||0,
+        commission_cheque=parseFloat(el('u-comm-cheque')?.value||0)||0;
   if(!name){ showToast('نام الزامی است','error'); return; }
   try{
     if(id){
-      await api('PUT','/admin/users/'+id,{name,role,phone,active,password:pass||undefined});
+      await api('PUT','/admin/users/'+id,{name,role,phone,active,password:pass||undefined,commission_cash,commission_cheque});
     } else {
       if(!username||!pass){ showToast('نام کاربری و رمز الزامی است','error'); return; }
-      await api('POST','/admin/users',{name,username,password:pass,phone,role});
+      await api('POST','/admin/users',{name,username,password:pass,phone,role,commission_cash,commission_cheque});
     }
     CACHE.users=await api('GET','/auth/users'); closeModal(); ROUTES.users(); showToast('ذخیره شد');
   }catch(e){}
@@ -1231,6 +1230,169 @@ function drawChart(monthly){
     datasets:[{label:'فروش (تومان)',data:monthly.map(m=>m.revenue),backgroundColor:'#7C3AED',borderRadius:6}]
   },options:{responsive:true,plugins:{legend:{labels:{font:{family:'Vazirmatn'}}}},
     scales:{x:{ticks:{font:{family:'Vazirmatn'}}},y:{ticks:{font:{family:'Vazirmatn'},callback:v=>fmt(v)}}}}});
+}
+
+/* ============================================================
+   ACCOUNTING (admin)
+============================================================ */
+let accTab = 'receivables';
+
+ROUTES.accounting = async function(){
+  el('view').innerHTML='<div class="muted">در حال بارگذاری...</div>';
+  const ov = await api('GET','/accounting/overview');
+  if(!ov) return;
+  el('view').innerHTML = `
+    <div class="cards">
+      ${statCard('g','🧾',fmt(ov.totalInvoiced),'کل فاکتور رسمی (ت)')}
+      ${statCard('b','✅',fmt(ov.totalSettled),'تسویه شده (ت)')}
+      ${statCard('r','⏳',fmt(Math.max(0,ov.outstanding)),'مانده مطالبات (ت)')}
+      ${statCard('o','🔔',fmt(ov.pendingApproval),'منتظر تأیید')}
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h4>💰 حسابداری</h4>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button data-acc-tab="receivables" class="btn ${accTab==='receivables'?'':'ghost'}" onclick="switchAccTab('receivables')">مطالبات</button>
+          <button data-acc-tab="settlements" class="btn ${accTab==='settlements'?'':'ghost'}" onclick="switchAccTab('settlements')">تسویه‌ها</button>
+          <button data-acc-tab="commissions" class="btn ${accTab==='commissions'?'':'ghost'}" onclick="switchAccTab('commissions')">تأیید و کمیسیون</button>
+        </div>
+      </div>
+      <div class="panel-body" id="accBody"><div class="muted">در حال بارگذاری...</div></div>
+    </div>`;
+  loadAccTab(accTab);
+};
+
+function switchAccTab(tab){
+  accTab=tab;
+  document.querySelectorAll('[data-acc-tab]').forEach(b=>{
+    b.classList.toggle('ghost', b.dataset.accTab!==tab);
+  });
+  loadAccTab(tab);
+}
+
+async function loadAccTab(tab){
+  const body=el('accBody'); if(!body) return;
+  body.innerHTML='<div class="muted">در حال بارگذاری...</div>';
+  if(tab==='receivables'){
+    const rows=await api('GET','/accounting/receivables')||[];
+    body.innerHTML=`
+      <div class="tbl-wrap"><table class="tbl"><thead><tr>
+        <th>نام فروشگاه</th><th>نام کامل</th><th>کارشناس</th><th>کل فاکتور (ت)</th><th>تسویه شده (ت)</th><th>مانده (ت)</th><th>عملیات</th>
+      </tr></thead><tbody>${rows.map(r=>{
+        const oc=r.outstanding>0?'var(--red)':'var(--green)';
+        return `<tr>
+          <td>${esc(r.biz)}</td><td>${esc(r.owner||'-')}</td><td class="muted">${esc(r.salesperson||'-')}</td>
+          <td class="mono">${fmt(r.total_invoiced)}</td>
+          <td class="mono" style="color:var(--green)">${fmt(r.total_settled)}</td>
+          <td class="mono" style="color:${oc};font-weight:700">${fmt(r.outstanding)}</td>
+          <td><button class="btn sm green" onclick="settlementModal(${r.id})">💵 ثبت تسویه</button></td>
+        </tr>`;
+      }).join('')||emptyRow(7)}</tbody></table></div>`;
+  } else if(tab==='settlements'){
+    const rows=await api('GET','/accounting/settlements')||[];
+    body.innerHTML=`
+      <div class="toolbar" style="margin-bottom:12px"><button class="btn" onclick="settlementModal()">➕ ثبت تسویه جدید</button></div>
+      <div class="tbl-wrap"><table class="tbl"><thead><tr>
+        <th>تاریخ</th><th>مشتری</th><th>مبلغ (ت)</th><th>نوع پرداخت</th><th>یادداشت</th><th>ثبت‌کننده</th><th>عملیات</th>
+      </tr></thead><tbody>${rows.map(r=>`<tr>
+        <td class="mono">${esc(r.date||'-')}</td>
+        <td>${esc(r.cust_biz||'-')}</td>
+        <td class="mono" style="color:var(--green);font-weight:700">${fmt(r.amount)}</td>
+        <td>${r.pay_type==='cheque'?'چک':'نقد'}</td>
+        <td class="muted">${esc(r.note||'-')}</td>
+        <td class="muted">${esc(r.recorder_name||'-')}</td>
+        <td><button class="btn sm red" onclick="deleteSettlement(${r.id})">🗑️</button></td>
+      </tr>`).join('')||emptyRow(7)}</tbody></table></div>`;
+  } else if(tab==='commissions'){
+    const [pending,comms]=await Promise.all([
+      api('GET','/accounting/pending-approvals'),
+      api('GET','/accounting/commissions')
+    ]);
+    const pendingRows=(pending||[]).map(i=>`<tr>
+      <td class="mono" style="font-weight:700">${esc(i.num)}</td>
+      <td>${esc(i.cust_biz||'-')}</td>
+      <td class="muted">${esc(i.salesperson||'-')}</td>
+      <td class="mono">${esc(i.date||'-')}</td>
+      <td class="mono">${fmt(i.final)}</td>
+      <td>${i.pay_type==='cheque'?'چک':'نقد'}</td>
+      <td><button class="btn sm green" onclick="approveInvoice(${i.id})">✅ تأیید</button></td>
+    </tr>`).join('');
+    const commRows=(comms||[]).map(c=>`<tr>
+      <td>${esc(c.name)}</td>
+      <td class="mono">${fmt(c.commission_cash)}٪</td>
+      <td class="mono">${fmt(c.commission_cheque)}٪</td>
+      <td class="mono">${fmt(c.cashSales)}</td>
+      <td class="mono">${fmt(c.chequeSales)}</td>
+      <td class="mono" style="color:var(--green)">${fmt(Math.round(c.cashComm))}</td>
+      <td class="mono" style="color:var(--green)">${fmt(Math.round(c.chequeComm))}</td>
+      <td class="mono" style="font-weight:800;color:var(--purple)">${fmt(Math.round(c.totalComm))}</td>
+    </tr>`).join('');
+    body.innerHTML=`
+      ${(pending||[]).length ? `
+      <div class="panel" style="margin:0 0 16px">
+        <div class="panel-head"><h4>🔔 فاکتورهای رسمی منتظر تأیید (${pending.length})</h4></div>
+        <div class="panel-body tbl-wrap"><table class="tbl"><thead><tr>
+          <th>شماره</th><th>مشتری</th><th>کارشناس</th><th>تاریخ</th><th>مبلغ (ت)</th><th>نوع پرداخت</th><th>عملیات</th>
+        </tr></thead><tbody>${pendingRows}</tbody></table></div>
+      </div>` : `<div class="muted" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;margin-bottom:16px">✅ همه فاکتورهای رسمی تأیید شده‌اند</div>`}
+      <div class="panel">
+        <div class="panel-head"><h4>📊 گزارش کمیسیون کارشناسان فروش</h4></div>
+        <div class="panel-body tbl-wrap"><table class="tbl"><thead><tr>
+          <th>کارشناس</th><th>نرخ نقد</th><th>نرخ چک</th><th>فروش نقد تأیید شده</th><th>فروش چک تأیید شده</th><th>کمیسیون نقد</th><th>کمیسیون چک</th><th>جمع کمیسیون</th>
+        </tr></thead><tbody>${commRows||emptyRow(8)}</tbody></table></div>
+      </div>`;
+  }
+}
+
+async function approveInvoice(id){
+  if(!confirm('این فاکتور تأیید و در محاسبه کمیسیون لحاظ شود؟')) return;
+  try{
+    await api('POST','/accounting/invoices/'+id+'/approve',{});
+    showToast('فاکتور با موفقیت تأیید شد');
+    ROUTES.accounting();
+  }catch(e){}
+}
+
+function settlementModal(custId){
+  const custOpts=CACHE.customers.map(c=>`<option value="${c.id}" ${custId===c.id?'selected':''}>${esc(c.biz)}</option>`).join('');
+  openModal(`
+    <div class="modal-head"><h3>ثبت تسویه حساب</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="fg full"><label>مشتری *</label><select id="st-cust">${custOpts}</select></div>
+      <div class="fg"><label>مبلغ تسویه (تومان) *</label><input id="st-amount" type="number" min="1" placeholder="0"></div>
+      <div class="fg"><label>نوع پرداخت</label><select id="st-paytype">
+        <option value="cash">نقد</option><option value="cheque">چک</option></select></div>
+      <div class="fg"><label>تاریخ</label><input id="st-date" data-jdate value="${todayJalali()}"></div>
+      <div class="fg full"><label>یادداشت</label><textarea id="st-note" placeholder="توضیحات اختیاری..."></textarea></div>
+    </div></div>
+    <div class="modal-foot">
+      <button class="btn green" onclick="saveSettlement()">💾 ثبت تسویه</button>
+      <button class="btn ghost" onclick="closeModal()">انصراف</button>
+    </div>`);
+}
+
+async function saveSettlement(){
+  const cust_id=+el('st-cust').value, amount=+el('st-amount').value;
+  if(!cust_id||!amount){ showToast('مشتری و مبلغ الزامی است','error'); return; }
+  try{
+    await api('POST','/accounting/settlements',{
+      cust_id, amount,
+      pay_type:el('st-paytype').value,
+      date:el('st-date').value,
+      note:el('st-note').value
+    });
+    closeModal(); showToast('تسویه ثبت شد');
+    loadAccTab(accTab);
+  }catch(e){}
+}
+
+async function deleteSettlement(id){
+  if(!confirm('این تسویه حذف شود؟')) return;
+  try{
+    await api('DELETE','/accounting/settlements/'+id);
+    showToast('حذف شد');
+    loadAccTab('settlements');
+  }catch(e){}
 }
 
 /* ============================================================
@@ -1355,7 +1517,6 @@ async function doDelete(entity,id){
   closeModal(); showToast('حذف شد');
   // refresh whatever is open
   if(entity==='customers'){ await reloadCustomers(); if(CURRENT_PAGE==='customers')renderCustTable(); }
-  else if(entity==='orders'){ CACHE.orders=await api('GET','/orders'); renderOrderTable(); }
   else if(entity==='followups'){ CACHE.followups=await api('GET','/followups'); renderFupTable(); }
   else if(entity==='invoices'){ CACHE.invoices=await api('GET','/invoices'); renderInvTable(); }
   else if(entity==='products'){ await loadProductsFiltered(); renderProdGrid(true); }

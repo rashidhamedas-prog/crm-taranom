@@ -3,37 +3,37 @@ const bcrypt = require('bcryptjs');
 const { getDB, audit } = require('../db');
 const { auth, adminOnly } = require('../middleware/auth');
 
-// Get all users
+// Get all users (include commission fields)
 router.get('/users', auth, adminOnly, (req, res) => {
   const db = getDB();
-  const users = db.prepare('SELECT id,name,username,role,phone,active,last_login,created_at FROM users ORDER BY created_at DESC').all();
+  const users = db.prepare('SELECT id,name,username,role,phone,active,last_login,commission_cash,commission_cheque,created_at FROM users ORDER BY created_at DESC').all();
   res.json(users);
 });
 
 // Create user (salesperson or admin)
 router.post('/users', auth, adminOnly, (req, res) => {
-  const { name, username, password, phone, role = 'salesperson' } = req.body;
+  const { name, username, password, phone, role = 'salesperson', commission_cash = 0, commission_cheque = 0 } = req.body;
   if (!name || !username || !password) return res.status(400).json({ error: 'اطلاعات ناقص' });
   const db = getDB();
   const exists = db.prepare('SELECT id FROM users WHERE username=?').get(username);
   if (exists) return res.status(400).json({ error: 'این نام کاربری قبلاً ثبت شده' });
   const hash = bcrypt.hashSync(password, 10);
-  const result = db.prepare('INSERT INTO users (name,username,password,phone,role) VALUES (?,?,?,?,?)')
-    .run(name, username, hash, phone || '', role);
+  const result = db.prepare('INSERT INTO users (name,username,password,phone,role,commission_cash,commission_cheque) VALUES (?,?,?,?,?,?,?)')
+    .run(name, username, hash, phone || '', role, parseFloat(commission_cash) || 0, parseFloat(commission_cheque) || 0);
   audit(req.user.id, 'create', 'user', result.lastInsertRowid, `ساخت کاربر ${name}`);
-  res.json({ id: result.lastInsertRowid, name, username, phone: phone || '', role });
+  res.json({ id: result.lastInsertRowid, name, username, phone: phone || '', role, commission_cash: parseFloat(commission_cash) || 0, commission_cheque: parseFloat(commission_cheque) || 0 });
 });
 
 // Update user
 router.put('/users/:id', auth, adminOnly, (req, res) => {
-  const { name, password, active, role, phone } = req.body;
+  const { name, password, active, role, phone, commission_cash = 0, commission_cheque = 0 } = req.body;
   const db = getDB();
   if (password) {
-    db.prepare('UPDATE users SET name=?,active=?,role=?,phone=?,password=? WHERE id=?')
-      .run(name, active, role, phone || '', bcrypt.hashSync(password, 10), req.params.id);
+    db.prepare('UPDATE users SET name=?,active=?,role=?,phone=?,password=?,commission_cash=?,commission_cheque=? WHERE id=?')
+      .run(name, active, role, phone || '', bcrypt.hashSync(password, 10), parseFloat(commission_cash) || 0, parseFloat(commission_cheque) || 0, req.params.id);
   } else {
-    db.prepare('UPDATE users SET name=?,active=?,role=?,phone=? WHERE id=?')
-      .run(name, active, role, phone || '', req.params.id);
+    db.prepare('UPDATE users SET name=?,active=?,role=?,phone=?,commission_cash=?,commission_cheque=? WHERE id=?')
+      .run(name, active, role, phone || '', parseFloat(commission_cash) || 0, parseFloat(commission_cheque) || 0, req.params.id);
   }
   audit(req.user.id, 'update', 'user', req.params.id, `ویرایش کاربر ${name}`);
   res.json({ ok: true });
@@ -49,33 +49,33 @@ router.delete('/users/:id', auth, adminOnly, (req, res) => {
   res.json({ ok: true });
 });
 
-// Admin dashboard - per-salesperson stats
+// Admin dashboard - per-salesperson stats (using final invoices for revenue)
 router.get('/dashboard', auth, adminOnly, (req, res) => {
   const db = getDB();
   const users = db.prepare("SELECT id,name,username FROM users WHERE active=1").all();
   const stats = users.map(u => {
     const custCount = db.prepare('SELECT COUNT(*) as c FROM customers WHERE user_id=?').get(u.id).c;
-    const totalSales = db.prepare('SELECT COALESCE(SUM(total),0) as s FROM orders WHERE user_id=?').get(u.id).s;
-    const totalDebt = db.prepare('SELECT COALESCE(SUM(total-paid),0) as d FROM orders WHERE user_id=?').get(u.id).d;
+    const totalSales = db.prepare("SELECT COALESCE(SUM(final),0) as s FROM invoices WHERE user_id=? AND type='final'").get(u.id).s;
+    const totalDebt = 0; // no orders module anymore; debt tracked via invoices if needed
     const openFup = db.prepare("SELECT COUNT(*) as c FROM followups WHERE user_id=? AND status='open'").get(u.id).c;
     return { ...u, custCount, totalSales, totalDebt, openFup };
   });
   res.json(stats);
 });
 
-// Aggregate overview across ALL users
+// Aggregate overview across ALL users (revenue from final invoices only)
 router.get('/stats/overview', auth, adminOnly, (req, res) => {
   const db = getDB();
   const totalCustomers = db.prepare('SELECT COUNT(*) c FROM customers').get().c;
-  const totalOrders = db.prepare('SELECT COUNT(*) c FROM orders').get().c;
-  const totalRevenue = db.prepare('SELECT COALESCE(SUM(total),0) s FROM orders').get().s;
-  const totalPaid = db.prepare('SELECT COALESCE(SUM(paid),0) s FROM orders').get().s;
-  const totalDebt = db.prepare('SELECT COALESCE(SUM(total-paid),0) s FROM orders').get().s;
-  const totalInvoices = db.prepare('SELECT COUNT(*) c FROM invoices').get().c;
+  const totalRevenue = db.prepare("SELECT COALESCE(SUM(final),0) s FROM invoices WHERE type='final'").get().s;
+  const totalInvoices = db.prepare("SELECT COUNT(*) c FROM invoices WHERE type='final'").get().c;
+  const totalProforma = db.prepare("SELECT COUNT(*) c FROM invoices WHERE type='proforma'").get().c;
   const totalProducts = db.prepare('SELECT COUNT(*) c FROM products').get().c;
   const openFollowups = db.prepare("SELECT COUNT(*) c FROM followups WHERE status='open'").get().c;
   const lowStock = db.prepare('SELECT COUNT(*) c FROM products WHERE stock<=stock_alert').get().c;
-  res.json({ totalCustomers, totalOrders, totalRevenue, totalPaid, totalDebt, totalInvoices, totalProducts, openFollowups, lowStock });
+  res.json({ totalCustomers, totalRevenue, totalInvoices, totalProforma, totalProducts, openFollowups, lowStock,
+             // legacy fields kept for compatibility
+             totalOrders: 0, totalPaid: 0, totalDebt: 0 });
 });
 
 // Data for a specific salesperson (admin)
@@ -83,9 +83,8 @@ router.get('/user-data/:userId', auth, adminOnly, (req, res) => {
   const db = getDB();
   const uid = req.params.userId;
   const customers = db.prepare('SELECT * FROM customers WHERE user_id=? ORDER BY created_at DESC').all(uid);
-  const orders = db.prepare('SELECT * FROM orders WHERE user_id=? ORDER BY created_at DESC').all(uid);
   const followups = db.prepare('SELECT * FROM followups WHERE user_id=? ORDER BY created_at DESC').all(uid);
-  res.json({ customers, orders, followups });
+  res.json({ customers, followups });
 });
 
 // Paginated audit log with filters
