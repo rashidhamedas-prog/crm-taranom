@@ -1,0 +1,59 @@
+name: Deploy CRM ترنم
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          port: 22
+          script: |
+            set -e
+
+            DEPLOY_PATH="/root/crm-taranom"
+            REPO="https://github.com/rashidhamedas-prog/crm-taranom.git"
+
+            # Clone if first time, otherwise pull
+            if [ ! -d "$DEPLOY_PATH/.git" ]; then
+              echo "==> First deploy: cloning repo..."
+              git clone "$REPO" "$DEPLOY_PATH"
+            else
+              echo "==> Pulling latest changes..."
+              cd "$DEPLOY_PATH"
+              git fetch origin main
+              git checkout main
+              git reset --hard origin/main
+            fi
+
+            cd "$DEPLOY_PATH/server"
+
+            # Install dependencies
+            echo "==> Installing dependencies..."
+            npm install --production
+
+            # Create uploads directory
+            mkdir -p public/uploads/products
+
+            # Install PM2 globally if not installed
+            if ! command -v pm2 &> /dev/null; then
+              echo "==> Installing PM2..."
+              npm install -g pm2
+            fi
+
+            # Start or restart the app
+            echo "==> Starting/restarting app..."
+            pm2 describe crm-taranom > /dev/null 2>&1 && \
+              pm2 restart crm-taranom || \
+              pm2 start ecosystem.config.js
+
+            pm2 save
+
+            echo "==> Deploy complete!"
+            pm2 status
