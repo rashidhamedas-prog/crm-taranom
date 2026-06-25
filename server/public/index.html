@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>CRM ترنم</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#6B21A8">
+<link rel="apple-touch-icon" href="/logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --purple:#6B21A8; --purple2:#7C3AED; --purple-light:#EDE9FE;
+  --green:#059669; --red:#DC2626; --orange:#D97706; --blue:#2563EB;
+  --bg:#f5f3fa; --card:#ffffff; --text:#1f2937; --muted:#6b7280; --border:#e5e7eb;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Vazirmatn',sans-serif}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-size:14px;line-height:1.7}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;font-family:inherit}
+input,select,textarea{font-family:inherit;font-size:14px}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#cbb8e8;border-radius:8px}
+
+/* ===== Login ===== */
+#login{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--purple),var(--purple2));padding:20px;z-index:1000}
+.login-card{background:#fff;border-radius:20px;padding:38px 30px;width:100%;max-width:380px;
+  box-shadow:0 20px 60px rgba(0,0,0,.25);text-align:center}
+.login-card .logo{font-size:54px;margin-bottom:8px}
+.login-card h1{color:var(--purple);font-size:24px;margin-bottom:4px}
+.login-card p{color:var(--muted);font-size:13px;margin-bottom:24px}
+.login-card .field{text-align:right;margin-bottom:14px}
+.login-card label{display:block;font-size:13px;margin-bottom:6px;color:var(--muted)}
+.login-card input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;outline:none}
+.login-card input:focus{border-color:var(--purple2)}
+.login-card button{width:100%;background:var(--purple);color:#fff;border:none;padding:13px;border-radius:10px;
+  font-size:15px;font-weight:600;margin-top:8px}
+.login-card button:hover{background:var(--purple2)}
+.login-err{color:var(--red);font-size:13px;margin-top:10px;min-height:18px}
+.login-hint{margin-top:18px;font-size:11px;color:#9ca3af}
+
+/* ===== Layout ===== */
+#app{display:none}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:240px;background:linear-gradient(180deg,var(--purple),var(--purple2));color:#fff;
+  position:fixed;top:0;right:0;bottom:0;display:flex;flex-direction:column;z-index:50;transition:.25s}
+.sidebar .brand{padding:22px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.15)}
+.sidebar .brand .emoji{font-size:30px}
+.sidebar .brand h2{font-size:18px}
+.sidebar .brand small{font-size:11px;opacity:.8;display:block}
+.nav{flex:1;overflow-y:auto;padding:12px 0}
+.nav a{display:flex;align-items:center;gap:12px;padding:12px 22px;color:rgba(255,255,255,.85);font-size:14px;position:relative}
+.nav a .ico{font-size:18px;width:24px;text-align:center}
+.nav a:hover{background:rgba(255,255,255,.1);color:#fff}
+.nav a.active{background:rgba(255,255,255,.18);color:#fff;font-weight:600}
+.nav a.active::before{content:'';position:absolute;right:0;top:0;bottom:0;width:4px;background:#fff}
+.nav .badge{position:absolute;left:18px;background:var(--red);color:#fff;font-size:10px;
+  min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.sidebar .foot{padding:14px 20px;border-top:1px solid rgba(255,255,255,.15);font-size:12px}
+.sidebar .foot button{width:100%;background:rgba(255,255,255,.15);color:#fff;border:none;padding:9px;border-radius:8px;margin-top:8px}
+.sidebar .foot button:hover{background:rgba(255,255,255,.28)}
+
+.main{flex:1;margin-right:240px;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:#fff;border-bottom:1px solid var(--border);padding:12px 24px;display:flex;
+  align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
+.topbar .left{display:flex;align-items:center;gap:14px}
+.topbar .menu-btn{display:none;background:var(--purple-light);color:var(--purple);border:none;
+  width:38px;height:38px;border-radius:10px;font-size:20px}
+.topbar h3{font-size:17px;color:var(--purple)}
+.topbar .right{display:flex;align-items:center;gap:16px}
+.topbar .clock{font-size:13px;color:var(--muted);background:var(--purple-light);padding:6px 12px;border-radius:8px;font-weight:600}
+.topbar .user{display:flex;align-items:center;gap:8px;font-size:13px}
+.topbar .avatar{width:34px;height:34px;border-radius:50%;background:var(--purple);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-weight:700}
+.content{padding:22px;flex:1}
+
+/* ===== Cards / Generic ===== */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:22px}
+.stat{background:var(--card);border-radius:14px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.05);
+  border:1px solid var(--border);display:flex;align-items:center;gap:14px}
+.stat .ic{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px}
+.stat .v{font-size:20px;font-weight:800}
+.stat .l{font-size:12px;color:var(--muted)}
+.ic.p{background:var(--purple-light);color:var(--purple)}
+.ic.g{background:#d1fae5;color:var(--green)}
+.ic.r{background:#fee2e2;color:var(--red)}
+.ic.o{background:#fef3c7;color:var(--orange)}
+.ic.b{background:#dbeafe;color:var(--blue)}
+
+.panel{background:var(--card);border-radius:14px;border:1px solid var(--border);
+  box-shadow:0 1px 4px rgba(0,0,0,.05);margin-bottom:20px;overflow:hidden}
+.panel-head{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;
+  align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.panel-head h4{font-size:15px;color:var(--purple)}
+.panel-body{padding:18px}
+
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.toolbar input,.toolbar select{padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;outline:none;background:#fff}
+.toolbar input:focus,.toolbar select:focus{border-color:var(--purple2)}
+.search{flex:1;min-width:180px}
+
+.btn{background:var(--purple);color:#fff;border:none;padding:9px 16px;border-radius:9px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--purple2)}
+.btn.green{background:var(--green)}.btn.red{background:var(--red)}.btn.blue{background:var(--blue)}.btn.orange{background:var(--orange)}
+.btn.ghost{background:#fff;color:var(--purple);border:1.5px solid var(--purple)}
+.btn.ghost:hover{background:var(--purple-light)}
+.btn.sm{padding:6px 10px;font-size:12px}
+.btn.icon{padding:6px 9px}
+
+/* ===== Table ===== */
+.tbl-wrap{overflow-x:auto}
+table.tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:600px}
+table.tbl th{background:#f9f7fd;color:var(--purple);text-align:right;padding:11px 12px;font-weight:600;border-bottom:2px solid var(--border);white-space:nowrap}
+table.tbl td{padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+table.tbl tr:hover td{background:#faf8ff}
+.empty{text-align:center;color:var(--muted);padding:36px 10px}
+
+.tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.t-vip{background:#fef3c7;color:#92400e}.t-active{background:#d1fae5;color:#065f46}
+.t-followup{background:#dbeafe;color:#1e40af}.t-silent{background:#fee2e2;color:#991b1b}
+.t-new{background:var(--purple-light);color:var(--purple)}
+.t-pending{background:#fef3c7;color:#92400e}.t-onway{background:#dbeafe;color:#1e40af}
+.t-done{background:#d1fae5;color:#065f46}.t-cancel{background:#fee2e2;color:#991b1b}
+.t-open{background:#dbeafe;color:#1e40af}
+.t-high{background:#fee2e2;color:#991b1b}.t-mid{background:#fef3c7;color:#92400e}.t-low{background:#d1fae5;color:#065f46}
+.t-proforma{background:var(--purple-light);color:var(--purple)}.t-final{background:#d1fae5;color:#065f46}
+
+/* ===== Modal ===== */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;
+  justify-content:center;z-index:200;padding:16px}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;
+  box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal.lg{max-width:820px}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:2}
+.modal-head h3{font-size:17px;color:var(--purple)}
+.modal-head .x{background:#f3f4f6;border:none;width:32px;height:32px;border-radius:8px;font-size:18px;color:var(--muted)}
+.modal-body{padding:20px}
+.modal-foot{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-start;position:sticky;bottom:0;background:#fff}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fg{display:flex;flex-direction:column;gap:6px}
+.fg.full{grid-column:1/-1}
+.fg label{font-size:13px;color:var(--muted)}
+.fg input,.fg select,.fg textarea{padding:10px 12px;border:1.5px solid var(--border);border-radius:9px;outline:none;background:#fff}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--purple2)}
+.fg textarea{resize:vertical;min-height:70px}
+.fg input[readonly]{background:#f3f4f6;color:var(--muted)}
+
+/* ===== Jalali datepicker ===== */
+.dp{position:absolute;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.2);
+  padding:12px;width:280px;z-index:500;display:none}
+.dp.open{display:block}
+.dp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.dp-head button{background:var(--purple-light);color:var(--purple);border:none;width:30px;height:30px;border-radius:8px;font-size:16px}
+.dp-head .title{font-weight:700;color:var(--purple);font-size:14px}
+.dp-week,.dp-days{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.dp-week span{text-align:center;font-size:11px;color:var(--muted);padding:4px 0}
+.dp-days button{aspect-ratio:1;border:none;background:#f9f7fd;border-radius:7px;font-size:12px;color:var(--text)}
+.dp-days button:hover{background:var(--purple-light)}
+.dp-days button.today{border:1.5px solid var(--purple2)}
+.dp-days button.sel{background:var(--purple);color:#fff}
+.dp-days button.empty{background:transparent;cursor:default}
+.dp-foot{margin-top:8px;display:flex;gap:6px}
+.dp-foot button{flex:1;font-size:12px;padding:7px;border:none;border-radius:8px}
+.dp-foot .today-btn{background:var(--green);color:#fff}
+.dp-foot .clear-btn{background:#f3f4f6;color:var(--muted)}
+
+/* ===== Product grid ===== */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px}
+.pcard{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05);transition:.15s}
+.pcard:hover{box-shadow:0 6px 18px rgba(107,33,168,.15);transform:translateY(-2px)}
+.pcard .img{height:140px;background:var(--purple-light);display:flex;align-items:center;justify-content:center;font-size:42px;overflow:hidden}
+.pcard .img img{width:100%;height:100%;object-fit:cover}
+.pcard .body{padding:12px}
+.pcard .name{font-weight:600;font-size:14px;margin-bottom:4px}
+.pcard .code{font-size:11px;color:var(--muted);margin-bottom:8px}
+.pcard .price{color:var(--green);font-weight:700;font-size:15px}
+.pcard .stock{font-size:12px;margin-top:6px}
+.pcard .stock.low{color:var(--red);font-weight:600}
+.pcard .acts{display:flex;gap:6px;margin-top:10px}
+.pcard .acts button{flex:1;font-size:12px;padding:6px;border:none;border-radius:7px}
+
+/* ===== Invoice builder ===== */
+.inv-layout{display:grid;grid-template-columns:1fr 380px;gap:18px}
+.inv-products{max-height:560px;overflow-y:auto}
+.inv-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.pick-card{border:1px solid var(--border);border-radius:10px;padding:8px;cursor:pointer;text-align:center;background:#fff}
+.pick-card:hover{border-color:var(--purple2);background:var(--purple-light)}
+.pick-card .pimg{height:80px;background:var(--purple-light);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:30px;overflow:hidden;margin-bottom:6px}
+.pick-card .pimg img{width:100%;height:100%;object-fit:cover}
+.pick-card .pn{font-size:12px;font-weight:600;min-height:32px}
+.pick-card .pp{font-size:12px;color:var(--green);font-weight:700}
+.inv-cart{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;position:sticky;top:80px;align-self:start}
+.cart-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px dashed var(--border);font-size:13px}
+.cart-row .cn{flex:1}
+.cart-row input{width:54px;padding:5px;text-align:center;border:1px solid var(--border);border-radius:6px}
+.cart-row .price-in{width:84px}
+.cart-row .rm{background:#fee2e2;color:var(--red);border:none;width:26px;height:26px;border-radius:6px}
+.cart-tot{margin-top:12px;font-size:13px}
+.cart-tot .l{display:flex;justify-content:space-between;padding:5px 0}
+.cart-tot .final{font-weight:800;font-size:16px;color:var(--green);border-top:1px solid var(--border);padding-top:8px;margin-top:4px}
+
+/* ===== Messages ===== */
+.msg-tabs{display:flex;gap:8px;margin-bottom:14px}
+.msg-tabs button{padding:8px 16px;border:none;border-radius:9px;background:#f3f4f6;color:var(--muted);font-weight:600}
+.msg-tabs button.active{background:var(--purple);color:#fff}
+.msg{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.msg.unread{border-right:4px solid var(--purple);background:#faf8ff}
+.msg .mh{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px}
+.msg .mb{font-size:14px}
+
+/* ===== Toast ===== */
+#toasts{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:900;display:flex;flex-direction:column;gap:8px;align-items:center}
+.toast{background:#1f2937;color:#fff;padding:12px 22px;border-radius:10px;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.25);animation:slideup .25s}
+.toast.success{background:var(--green)}.toast.error{background:var(--red)}.toast.info{background:var(--blue)}
+@keyframes slideup{from{opacity:0;transform:translateY(20px)}to{opacity:1}}
+
+.muted{color:var(--muted)}
+.right{text-align:right}.center{text-align:center}.left{text-align:left}
+.mono{font-variant-numeric:tabular-nums}
+.flex{display:flex}.gap{gap:10px}.wrap{flex-wrap:wrap}
+.hide{display:none!important}
+
+/* ===== Responsive ===== */
+@media(max-width:900px){
+  .sidebar{transform:translateX(100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-right:0}
+  .topbar .menu-btn{display:flex;align-items:center;justify-content:center}
+  .inv-layout{grid-template-columns:1fr}
+  .inv-cart{position:static}
+  .form-grid{grid-template-columns:1fr}
+  .topbar .clock{display:none}
+}
+@media print{
+  .sidebar,.topbar,.btn,.toolbar,.panel-head{display:none!important}
+  .main{margin:0}.content{padding:0}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="login">
+  <div class="login-card">
+    <div class="logo">🌸</div>
+    <h1>CRM ترنم</h1>
+    <p>سامانه مدیریت مشتریان پوشاک ترنم</p>
+    <form id="loginForm">
+      <div class="field">
+        <label>نام کاربری</label>
+        <input id="loginUser" autocomplete="username" placeholder="admin">
+      </div>
+      <div class="field">
+        <label>رمز عبور</label>
+        <input id="loginPass" type="password" autocomplete="current-password" placeholder="••••••••">
+      </div>
+      <button type="submit">ورود به سامانه</button>
+      <div class="login-err" id="loginErr"></div>
+    </form>
+    <div class="login-hint">نسخه ۳ · پوشاک ترنم مشهد</div>
+  </div>
+</div>
+
+<!-- ===== APP ===== -->
+<div id="app">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <span class="emoji">🌸</span>
+        <div><h2>CRM ترنم</h2><small id="brandRole">پنل مدیریت</small></div>
+      </div>
+      <nav class="nav" id="nav"></nav>
+      <div class="foot">
+        <div id="footUser" class="muted" style="color:rgba(255,255,255,.85)"></div>
+        <button onclick="openChangePass()">🔑 تغییر رمز</button>
+        <button onclick="logout()">🚪 خروج</button>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="left">
+          <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+          <h3 id="pageTitle">داشبورد</h3>
+        </div>
+        <div class="right">
+          <span class="clock" id="clock"></span>
+          <div class="user">
+            <div class="avatar" id="avatar">؟</div>
+            <div><div id="userName" style="font-weight:600"></div><div class="muted" id="userRole" style="font-size:11px"></div></div>
+          </div>
+        </div>
+      </header>
+      <main class="content" id="view"></main>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL ROOT ===== -->
+<div id="modalRoot"></div>
+
+<!-- ===== Jalali datepicker root ===== -->
+<div id="dpRoot"></div>
+
+<!-- ===== Toasts ===== -->
+<div id="toasts"></div>
+
+<script>
+/* ============================================================
+   STATE & API
+============================================================ */
+let ME = null;
+let CACHE = { customers:[], products:[], users:[], orders:[], followups:[], invoices:[], settings:{} };
+let mChart = null;
+
+async function api(method, path, data, isFormData){
+  const opts = { method, headers:{} };
+  const token = localStorage.getItem('crm_token');
+  if(token) opts.headers['Authorization'] = 'Bearer ' + token;
+  if(data && !isFormData){ opts.headers['Content-Type']='application/json'; opts.body=JSON.stringify(data); }
+  else if(isFormData) opts.body = data;
+  let r;
+  try { r = await fetch('/api'+path, opts); }
+  catch(e){ showToast('خطای ارتباط با سرور','error'); throw e; }
+  if(r.status === 401){ logout(); return null; }
+  const ct = r.headers.get('content-type')||'';
+  if(ct.includes('application/json')){
+    const j = await r.json();
+    if(!r.ok){ showToast(j.error || 'خطا رخ داد','error'); throw new Error(j.error||'error'); }
+    return j;
+  }
+  if(!r.ok){ showToast('خطا رخ داد','error'); throw new Error('error'); }
+  return r;
+}
+
+/* ============================================================
+   UTILITIES
+============================================================ */
+function fmt(n){ return Number(n||0).toLocaleString('fa-IR'); }
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function el(id){ return document.getElementById(id); }
+
+function showToast(msg, type='success'){
+  const t = document.createElement('div');
+  t.className = 'toast '+type;
+  t.textContent = msg;
+  el('toasts').appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; t.style.transition='.3s'; setTimeout(()=>t.remove(),300); }, 2800);
+}
+
+const STATUS_LABEL = {
+  vip:'ویژه', active:'فعال', followup:'پیگیری', silent:'خاموش', new:'جدید',
+  pending:'در انتظار', onway:'در راه', done:'تحویل شده', cancel:'لغو شده',
+  open:'باز', high:'بالا', mid:'متوسط', low:'پایین',
+  proforma:'پیش‌فاکتور', final:'فاکتور رسمی'
+};
+function statusTag(s){ return `<span class="tag t-${esc(s)}">${esc(STATUS_LABEL[s]||s)}</span>`; }
+
+/* ============================================================
+   JALALI DATE CONVERSION
+============================================================ */
+function _g2j(gy,gm,gd){
+  var g2=[0,31,59,90,120,151,181,212,243,273,304,334],leap=(gy%4===0&&(gy%100!==0||gy%400===0));
+  var gDN=365*(gy-1)+Math.floor((gy-1)/4)-Math.floor((gy-1)/100)+Math.floor((gy-1)/400)+g2[gm-1]+(gm>2&&leap?1:0)+gd;
+  var jDN=gDN-1948320;
+  var j_np=Math.floor(jDN/1029983);var jDN2=jDN%1029983;
+  var jy,jd;
+  if(jDN2===1029982){jy=2820;}else{var a=Math.floor(jDN2/366);var b=jDN2%366;jy=Math.floor((2134*a+2816*b+2815)/(1028522))+a;}
+  jy+=2820*j_np+474;
+  if(jy<=0)jy--;
+  jd=jDN-(_jDFE(jy,1,1))+1;
+  var jm;for(jm=1;jm<=12;jm++){var dim=_jDIM(jm,jy);if(jd<=dim)break;jd-=dim;}
+  return[jy,jm,jd];
+}
+function _jIsLeap(y){return((((y-474)%2820)+474+38)*682)%2816<682;}
+function _jDIM(m,y){return m<=6?31:m<=11?30:_jIsLeap(y)?30:29;}
+function _jDFE(jy,jm,jd){
+  var y=jy-474;var yy=474+((y%2820)+2820)%2820;
+  return jd+Math.floor((yy*682-110)/2816)+Math.floor(yy/4)*1461+Math.floor(y/2820)*1029983+(yy-1)*365+(jm<=6?(jm-1)*31:Math.floor((jm-7)*30+186))+1948320-1;
+}
+function _j2g(jy,jm,jd){
+  var jDN=_jDFE(jy,jm,jd);
+  var L=jDN+68569;var N=Math.floor(4*L/146097);L-=Math.floor((146097*N+3)/4);
+  var I=Math.floor(4000*(L+1)/1461001);L-=Math.floor(1461*I/4)-31;
+  var J=Math.floor(80*L/2447);var gd=L-Math.floor(2447*J/80);
+  L=Math.floor(J/11);var gm=J+2-12*L;var gy=100*(N-49)+I+L;
+  return[gy,gm,gd];
+}
+const J_MONTHS = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+const J_WEEK = ['ش','ی','د','س','چ','پ','ج'];
+function todayJalali(){
+  const d=new Date(); const [y,m,dd]=_g2j(d.getFullYear(),d.getMonth()+1,d.getDate());
+  return y+'/'+String(m).padStart(2,'0')+'/'+String(dd).padStart(2,'0');
+}
+
+/* ---- Datepicker popup ---- */
+let DP = { input:null, y:0, m:0, sel:null };
+function attachDatepickers(scope){
+  (scope||document).querySelectorAll('input[data-jdate]').forEach(inp=>{
+    if(inp.dataset.dpBound) return;
+    inp.dataset.dpBound='1';
+    inp.readOnly = true;
+    inp.style.cursor='pointer';
+    inp.addEventListener('click', (e)=>{ e.stopPropagation(); openDP(inp); });
+  });
+}
+function openDP(inp){
+  DP.input = inp;
+  let parts = (inp.value||'').split('/').map(x=>parseInt(x));
+  if(parts.length===3 && parts[0]){ DP.y=parts[0]; DP.m=parts[1]; DP.sel=inp.value; }
+  else { const t=todayJalali().split('/'); DP.y=+t[0]; DP.m=+t[1]; DP.sel=null; }
+  renderDP();
+  const root = el('dpRoot');
+  const dp = root.querySelector('.dp');
+  const r = inp.getBoundingClientRect();
+  dp.style.top = (r.bottom + window.scrollY + 4)+'px';
+  dp.style.right = (window.innerWidth - r.right)+'px';
+  dp.classList.add('open');
+}
+function closeDP(){ const dp=el('dpRoot').querySelector('.dp'); if(dp) dp.classList.remove('open'); DP.input=null; }
+function renderDP(){
+  const firstG = _j2g(DP.y, DP.m, 1);
+  const fd = new Date(firstG[0], firstG[1]-1, firstG[2]);
+  let startW = (fd.getDay()+1)%7; // shamsi: Sat=0
+  const dim = _jDIM(DP.m, DP.y);
+  const tj = todayJalali();
+  let cells='';
+  for(let i=0;i<startW;i++) cells+='<button class="empty"></button>';
+  for(let d=1;d<=dim;d++){
+    const val = DP.y+'/'+String(DP.m).padStart(2,'0')+'/'+String(d).padStart(2,'0');
+    let cls=''; if(val===tj)cls+=' today'; if(val===DP.sel)cls+=' sel';
+    cells+=`<button class="${cls}" onclick="pickDay(${d})">${fmt(d)}</button>`;
+  }
+  el('dpRoot').innerHTML = `<div class="dp open">
+    <div class="dp-head">
+      <button onclick="dpNav(1)">›</button>
+      <span class="title">${J_MONTHS[DP.m-1]} ${fmt(DP.y)}</span>
+      <button onclick="dpNav(-1)">‹</button>
+    </div>
+    <div class="dp-week">${J_WEEK.map(w=>`<span>${w}</span>`).join('')}</div>
+    <div class="dp-days">${cells}</div>
+    <div class="dp-foot">
+      <button class="today-btn" onclick="pickToday()">امروز</button>
+      <button class="clear-btn" onclick="pickClear()">پاک کردن</button>
+    </div>
+  </div>`;
+  // reposition after re-render
+  const dp = el('dpRoot').querySelector('.dp');
+  if(DP.input){
+    const r=DP.input.getBoundingClientRect();
+    dp.style.top=(r.bottom+window.scrollY+4)+'px';
+    dp.style.right=(window.innerWidth-r.right)+'px';
+  }
+}
+function dpNav(dir){ DP.m+=dir; if(DP.m>12){DP.m=1;DP.y++;} if(DP.m<1){DP.m=12;DP.y--;} renderDP(); }
+function pickDay(d){
+  const val = DP.y+'/'+String(DP.m).padStart(2,'0')+'/'+String(d).padStart(2,'0');
+  if(DP.input){ DP.input.value=val; DP.input.dispatchEvent(new Event('change')); }
+  closeDP();
+}
+function pickToday(){ if(DP.input){ DP.input.value=todayJalali(); DP.input.dispatchEvent(new Event('change')); } closeDP(); }
+function pickClear(){ if(DP.input){ DP.input.value=''; DP.input.dispatchEvent(new Event('change')); } closeDP(); }
+document.addEventListener('click',(e)=>{ if(!e.target.closest('.dp') && !e.target.dataset?.jdate) { /* handled per-input */ } });
+document.addEventListener('click',(e)=>{ const dp=el('dpRoot').querySelector('.dp'); if(dp && dp.classList.contains('open') && !e.target.closest('.dp') && e.target!==DP.input) closeDP(); });
+
+/* ============================================================
+   AUTH
+============================================================ */
+el('loginForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  el('loginErr').textContent='';
+  const username = el('loginUser').value.trim();
+  const password = el('loginPass').value;
+  if(!username || !password){ el('loginErr').textContent='نام کاربری و رمز را وارد کنید'; return; }
+  try{
+    const r = await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
+    const j = await r.json();
+    if(!r.ok){ el('loginErr').textContent = j.error || 'خطا در ورود'; return; }
+    localStorage.setItem('crm_token', j.token);
+    localStorage.setItem('crm_user', JSON.stringify(j.user));
+    ME = j.user;
+    await boot();
+  }catch(err){ el('loginErr').textContent='خطای ارتباط با سرور'; }
+});
+
+function logout(){
+  localStorage.removeItem('crm_token');
+  localStorage.removeItem('crm_user');
+  ME=null;
+  el('app').style.display='none';
+  el('login').style.display='flex';
+}
+
+/* ============================================================
+   NAV / ROUTING
+============================================================ */
+const NAV_ADMIN = [
+  {id:'dash', icon:'📊', label:'داشبورد'},
+  {id:'customers', icon:'👥', label:'مشتریان'},
+  {id:'orders', icon:'📦', label:'سفارشات'},
+  {id:'followups', icon:'📞', label:'پیگیری‌ها'},
+  {id:'invoices', icon:'🧾', label:'فاکتور'},
+  {id:'products', icon:'🛍️', label:'محصولات'},
+  {id:'users', icon:'👤', label:'کاربران'},
+  {id:'reports', icon:'📈', label:'گزارشات'},
+  {id:'messages', icon:'💬', label:'پیام‌ها'},
+  {id:'settings', icon:'⚙️', label:'تنظیمات'},
+];
+const NAV_SALES = [
+  {id:'dash', icon:'🏠', label:'داشبورد'},
+  {id:'customers', icon:'👥', label:'مشتریان'},
+  {id:'orders', icon:'📦', label:'سفارشات'},
+  {id:'followups', icon:'📞', label:'پیگیری‌ها'},
+  {id:'invoices', icon:'🧾', label:'فاکتور'},
+  {id:'catalog', icon:'🛍️', label:'کاتالوگ'},
+  {id:'messages', icon:'💬', label:'پیام‌ها'},
+];
+let CURRENT_PAGE = 'dash';
+
+function buildNav(){
+  const items = ME.role==='admin' ? NAV_ADMIN : NAV_SALES;
+  el('nav').innerHTML = items.map(it=>`
+    <a href="#" data-page="${it.id}" onclick="go('${it.id}');return false;">
+      <span class="ico">${it.icon}</span><span>${it.label}</span>
+      ${it.id==='messages'?'<span class="badge hide" id="msgBadge">0</span>':''}
+    </a>`).join('');
+}
+
+function go(page){
+  CURRENT_PAGE = page;
+  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active', a.dataset.page===page));
+  const items = ME.role==='admin'?NAV_ADMIN:NAV_SALES;
+  const it = items.find(x=>x.id===page);
+  el('pageTitle').textContent = it?it.label:'';
+  if(window.innerWidth<=900) el('sidebar').classList.remove('open');
+  ROUTES[page] ? ROUTES[page]() : (el('view').innerHTML='');
+}
+function toggleSidebar(){ el('sidebar').classList.toggle('open'); }
+
+/* ============================================================
+   BOOT
+============================================================ */
+async function boot(){
+  el('login').style.display='none';
+  el('app').style.display='block';
+  ME = JSON.parse(localStorage.getItem('crm_user')||'null');
+  el('userName').textContent = ME.name;
+  el('userRole').textContent = ME.role==='admin'?'مدیر سیستم':'کارشناس فروش';
+  el('brandRole').textContent = ME.role==='admin'?'پنل مدیریت':'پنل فروش';
+  el('avatar').textContent = (ME.name||'؟').trim().charAt(0);
+  el('footUser').textContent = ME.name + ' · @' + ME.username;
+  buildNav();
+  await loadInitial();
+  go('dash');
+  refreshMsgBadge();
+  setInterval(refreshMsgBadge, 30000);
+}
+
+async function loadInitial(){
+  try{
+    const [customers, products] = await Promise.all([
+      api('GET','/customers'),
+      api('GET','/products')
+    ]);
+    CACHE.customers = customers||[];
+    CACHE.products = products||[];
+    if(ME.role==='admin'){
+      CACHE.users = await api('GET','/auth/users') || [];
+      CACHE.settings = await api('GET','/settings') || {};
+    } else {
+      CACHE.users = [];
+    }
+  }catch(e){ console.error(e); }
+}
+
+async function reloadCustomers(){ CACHE.customers = await api('GET','/customers')||[]; }
+async function reloadProducts(q=''){ CACHE.products = await api('GET','/products'+q)||[]; }
+
+/* ============================================================
+   MODAL HELPERS
+============================================================ */
+function openModal(html, lg){
+  el('modalRoot').innerHTML = `<div class="overlay open" onclick="if(event.target===this)closeModal()">
+    <div class="modal ${lg?'lg':''}">${html}</div></div>`;
+  attachDatepickers(el('modalRoot'));
+}
+function closeModal(){ el('modalRoot').innerHTML=''; }
+
+/* ============================================================
+   DASHBOARD
+============================================================ */
+const ROUTES = {};
+
+ROUTES.dash = async function(){
+  const v = el('view');
+  if(ME.role==='admin'){
+    v.innerHTML = '<div class="muted">در حال بارگذاری...</div>';
+    const ov = await api('GET','/admin/stats/overview');
+    const board = await api('GET','/admin/dashboard');
+    v.innerHTML = `
+      <div class="cards">
+        ${statCard('p','👥', fmt(ov.totalCustomers),'کل مشتریان')}
+        ${statCard('b','📦', fmt(ov.totalOrders),'کل سفارشات')}
+        ${statCard('g','💰', fmt(ov.totalRevenue),'فروش کل (تومان)')}
+        ${statCard('r','⚠️', fmt(ov.totalDebt),'بدهی کل (تومان)')}
+        ${statCard('o','🧾', fmt(ov.totalInvoices),'فاکتورها')}
+        ${statCard('p','🛍️', fmt(ov.totalProducts),'محصولات')}
+        ${statCard('b','📞', fmt(ov.openFollowups),'پیگیری باز')}
+        ${statCard('r','📉', fmt(ov.lowStock),'موجودی کم')}
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h4>عملکرد کارشناسان فروش</h4></div>
+        <div class="panel-body tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th>کارشناس</th><th>مشتریان</th><th>فروش</th><th>بدهی</th><th>پیگیری باز</th></tr></thead>
+            <tbody>${board.map(u=>`<tr>
+              <td>${esc(u.name)}</td><td>${fmt(u.custCount)}</td>
+              <td class="mono">${fmt(u.totalSales)}</td><td class="mono" style="color:var(--red)">${fmt(u.totalDebt)}</td>
+              <td>${fmt(u.openFup)}</td></tr>`).join('')||emptyRow(5)}</tbody>
+          </table>
+        </div>
+      </div>`;
+  } else {
+    v.innerHTML = '<div class="muted">در حال بارگذاری...</div>';
+    const [orders, followups, invoices] = await Promise.all([
+      api('GET','/orders'), api('GET','/followups'), api('GET','/invoices')
+    ]);
+    CACHE.orders=orders; CACHE.followups=followups; CACHE.invoices=invoices;
+    const sales = orders.reduce((a,o)=>a+(o.total||0),0);
+    const debt = orders.reduce((a,o)=>a+((o.total||0)-(o.paid||0)),0);
+    const openF = followups.filter(f=>f.status==='open').length;
+    v.innerHTML = `
+      <div class="cards">
+        ${statCard('p','👥', fmt(CACHE.customers.length),'مشتریان من')}
+        ${statCard('b','📦', fmt(orders.length),'سفارشات')}
+        ${statCard('g','💰', fmt(sales),'فروش (تومان)')}
+        ${statCard('r','⚠️', fmt(debt),'بدهی (تومان)')}
+        ${statCard('o','📞', fmt(openF),'پیگیری باز')}
+        ${statCard('p','🧾', fmt(invoices.length),'فاکتورها')}
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h4>پیگیری‌های باز</h4><button class="btn sm" onclick="go('followups')">مشاهده همه</button></div>
+        <div class="panel-body tbl-wrap">
+          <table class="tbl"><thead><tr><th>مشتری</th><th>موضوع</th><th>تاریخ</th><th>اولویت</th></tr></thead>
+          <tbody>${followups.filter(f=>f.status==='open').slice(0,8).map(f=>`<tr>
+            <td>${esc(f.cust_biz||'-')}</td><td>${esc(f.subject||'-')}</td><td class="mono">${esc(f.date||'-')}</td><td>${statusTag(f.priority)}</td>
+          </tr>`).join('')||emptyRow(4)}</tbody></table>
+        </div>
+      </div>`;
+  }
+};
+function statCard(c,ic,v,l){ return `<div class="stat"><div class="ic ${c}">${ic}</div><div><div class="v mono">${v}</div><div class="l">${l}</div></div></div>`; }
+function emptyRow(cols){ return `<tr><td colspan="${cols}" class="empty">موردی یافت نشد</td></tr>`; }
+
+/* ============================================================
+   CUSTOMERS
+============================================================ */
+let custFilter = {q:'', status:''};
+ROUTES.customers = function(){
+  const v = el('view');
+  v.innerHTML = `
+    <div class="toolbar">
+      <input class="search" id="cSearch" placeholder="جستجوی مشتری..." value="${esc(custFilter.q)}">
+      <select id="cStatus">
+        <option value="">همه وضعیت‌ها</option>
+        ${['vip','active','followup','silent','new'].map(s=>`<option value="${s}" ${custFilter.status===s?'selected':''}>${STATUS_LABEL[s]}</option>`).join('')}
+      </select>
+      <button class="btn" onclick="custModal()">➕ مشتری جدید</button>
+      <button class="btn ghost" onclick="exportExcel('customers')">📥 اکسل</button>
+    </div>
+    <div class="panel"><div class="panel-body tbl-wrap"><div id="custTable"></div></div></div>`;
+  el('cSearch').addEventListener('input', e=>{ custFilter.q=e.target.value; renderCustTable(); });
+  el('cStatus').addEventListener('change', e=>{ custFilter.status=e.target.value; renderCustTable(); });
+  renderCustTable();
+};
+function renderCustTable(){
+  let rows = CACHE.customers.slice();
+  if(custFilter.q){ const q=custFilter.q.toLowerCase(); rows=rows.filter(c=>(c.biz+' '+(c.owner||'')+' '+(c.city||'')+' '+(c.phone||'')).toLowerCase().includes(q)); }
+  if(custFilter.status) rows=rows.filter(c=>c.status===custFilter.status);
+  const isAdmin = ME.role==='admin';
+  el('custTable').innerHTML = `<table class="tbl"><thead><tr>
+    <th>کسب‌وکار</th><th>مالک</th><th>شهر</th><th>موبایل</th><th>نوع</th><th>وضعیت</th>${isAdmin?'<th>کارشناس</th>':''}<th>عملیات</th>
+  </tr></thead><tbody>${rows.map(c=>`<tr>
+    <td>${esc(c.biz)}</td><td>${esc(c.owner||'-')}</td><td>${esc(c.city||'-')}</td>
+    <td class="mono">${esc(c.phone||'-')}</td><td>${esc(c.type||'-')}</td><td>${statusTag(c.status)}</td>
+    ${isAdmin?`<td class="muted">${esc(c.salesperson||'-')}</td>`:''}
+    <td><button class="btn sm ghost" onclick="custModal(${c.id})">✏️</button>
+        <button class="btn sm red" onclick="confirmDelete('customers',${c.id},'${esc(c.biz)}')">🗑️</button></td>
+  </tr>`).join('')||emptyRow(isAdmin?8:7)}</tbody></table>`;
+}
+function custModal(id){
+  const c = id ? CACHE.customers.find(x=>x.id===id) : {};
+  openModal(`
+    <div class="modal-head"><h3>${id?'ویرایش مشتری':'مشتری جدید'}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="fg full"><label>نام کسب‌وکار *</label><input id="c-biz" value="${esc(c.biz||'')}"></div>
+      <div class="fg"><label>نام مالک</label><input id="c-owner" value="${esc(c.owner||'')}"></div>
+      <div class="fg"><label>شهر</label><input id="c-city" value="${esc(c.city||'')}"></div>
+      <div class="fg"><label>موبایل</label><input id="c-phone" value="${esc(c.phone||'')}"></div>
+      <div class="fg"><label>اینستاگرام</label><input id="c-insta" value="${esc(c.insta||'')}"></div>
+      <div class="fg"><label>نوع</label><select id="c-type">
+        ${['بوتیک','عمده‌فروش','تولیدی','فروشگاه','آنلاین'].map(t=>`<option ${c.type===t?'selected':''}>${t}</option>`).join('')}
+      </select></div>
+      <div class="fg"><label>وضعیت</label><select id="c-status">
+        ${['new','active','vip','followup','silent'].map(s=>`<option value="${s}" ${c.status===s?'selected':''}>${STATUS_LABEL[s]}</option>`).join('')}
+      </select></div>
+      <div class="fg full"><label>یادداشت</label><textarea id="c-note">${esc(c.note||'')}</textarea></div>
+    </div></div>
+    <div class="modal-foot"><button class="btn" onclick="saveCust(${id||0})">💾 ذخیره</button>
+      <button class="btn ghost" onclick="closeModal()">انصراف</button></div>`);
+}
+async function saveCust(id){
+  const data = {
+    biz:el('c-biz').value.trim(), owner:el('c-owner').value, city:el('c-city').value,
+    phone:el('c-phone').value, insta:el('c-insta').value, type:el('c-type').value,
+    status:el('c-status').value, note:el('c-note').value
+  };
+  if(!data.biz){ showToast('نام کسب‌وکار الزامی است','error'); return; }
+  if(id) await api('PUT','/customers/'+id, data); else await api('POST','/customers', data);
+  await reloadCustomers(); closeModal(); renderCustTable(); showToast('ذخیره شد');
+};
+
+/* ============================================================
+   ORDERS
+============================================================ */
+let orderFilter={q:'',status:''};
+ROUTES.orders = async function(){
+  el('view').innerHTML='<div class="muted">در حال بارگذاری...</div>';
+  CACHE.orders = await api('GET','/orders')||[];
+  el('view').innerHTML = `
+    <div class="toolbar">
+      <input class="search" id="oSearch" placeholder="جستجو..." value="${esc(orderFilter.q)}">
+      <select id="oStatus"><option value="">همه وضعیت‌ها</option>
+        ${['pending','onway','done','cancel'].map(s=>`<option value="${s}" ${orderFilter.status===s?'selected':''}>${STATUS_LABEL[s]}</option>`).join('')}
+      </select>
+      <button class="btn" onclick="orderModal()">➕ سفارش جدید</button>
+    </div>
+    <div class="panel"><div class="panel-body tbl-wrap"><div id="orderTable"></div></div></div>`;
+  el('oSearch').addEventListener('input',e=>{orderFilter.q=e.target.value;renderOrderTable();});
+  el('oStatus').addEventListener('change',e=>{orderFilter.status=e.target.value;renderOrderTable();});
+  renderOrderTable();
+};
+function renderOrderTable(){
+  let rows=CACHE.orders.slice();
+  if(orderFilter.q){const q=orderFilter.q.toLowerCase();rows=rows.filter(o=>((o.cust_biz||'')+' '+(o.type||'')+' '+(o.note||'')).toLowerCase().includes(q));}
+  if(orderFilter.status)rows=rows.filter(o=>o.status===orderFilter.status);
+  const isAdmin=ME.role==='admin';
+  el('orderTable').innerHTML=`<table class="tbl"><thead><tr>
+    <th>مشتری</th><th>تاریخ</th><th>شرح</th><th>تعداد</th><th>مبلغ</th><th>پرداختی</th><th>مانده</th><th>وضعیت</th>${isAdmin?'<th>کارشناس</th>':''}<th>عملیات</th>
+  </tr></thead><tbody>${rows.map(o=>`<tr>
+    <td>${esc(o.cust_biz||'-')}</td><td class="mono">${esc(o.date||'-')}</td><td>${esc(o.type||'-')}</td>
+    <td>${fmt(o.qty)}</td><td class="mono">${fmt(o.total)}</td><td class="mono">${fmt(o.paid)}</td>
+    <td class="mono" style="color:var(--red)">${fmt((o.total||0)-(o.paid||0))}</td><td>${statusTag(o.status)}</td>
+    ${isAdmin?`<td class="muted">${esc(o.salesperson||'-')}</td>`:''}
+    <td><button class="btn sm ghost" onclick="orderModal(${o.id})">✏️</button>
+        <button class="btn sm red" onclick="confirmDelete('orders',${o.id},'سفارش ${esc(o.cust_biz||'')}')">🗑️</button></td>
+  </tr>`).join('')||emptyRow(isAdmin?10:9)}</tbody></table>`;
+}
+function orderModal(id){
+  const o = id ? CACHE.orders.find(x=>x.id===id) : {date:todayJalali()};
+  const custOpts = CACHE.customers.map(c=>`<option value="${c.id}" ${o.cust_id===c.id?'selected':''}>${esc(c.biz)}</option>`).join('');
+  const prodOpts = '<option value="">— بدون محصول —</option>'+CACHE.products.map(p=>`<option value="${p.id}" ${o.product_id===p.id?'selected':''}>${esc(p.name)}</option>`).join('');
+  openModal(`
+    <div class="modal-head"><h3>${id?'ویرایش سفارش':'سفارش جدید'}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="fg"><label>مشتری *</label><select id="o-cust">${custOpts}</select></div>
+      <div class="fg"><label>محصول (اختیاری)</label><select id="o-prod">${prodOpts}</select></div>
+      <div class="fg"><label>تاریخ</label><input id="o-date" data-jdate value="${esc(o.date||'')}"></div>
+      <div class="fg"><label>شرح / نوع</label><input id="o-type" value="${esc(o.type||'')}"></div>
+      <div class="fg"><label>تعداد</label><input id="o-qty" type="number" value="${o.qty||0}"></div>
+      <div class="fg"><label>مبلغ کل (تومان) *</label><input id="o-total" type="number" value="${o.total||0}"></div>
+      <div class="fg"><label>پرداختی</label><input id="o-paid" type="number" value="${o.paid||0}"></div>
+      <div class="fg"><label>نوع پرداخت</label><select id="o-pay">
+        ${['نقد','نسیه','چک','کارت'].map(p=>`<option ${o.pay===p?'selected':''}>${p}</option>`).join('')}</select></div>
+      <div class="fg"><label>تاریخ تحویل</label><input id="o-deliver" data-jdate value="${esc(o.deliver||'')}"></div>
+      <div class="fg"><label>وضعیت</label><select id="o-status">
+        ${['pending','onway','done','cancel'].map(s=>`<option value="${s}" ${o.status===s?'selected':''}>${STATUS_LABEL[s]}</option>`).join('')}</select></div>
+      <div class="fg full"><label>یادداشت</label><textarea id="o-note">${esc(o.note||'')}</textarea></div>
+    </div><p class="muted" style="font-size:12px;margin-top:10px">با وضعیت «تحویل شده» در صورت انتخاب محصول، موجودی به‌صورت خودکار کسر می‌شود.</p></div>
+    <div class="modal-foot"><button class="btn" onclick="saveOrder(${id||0})">💾 ذخیره</button>
+      <button class="btn ghost" onclick="closeModal()">انصراف</button></div>`);
+}
+async function saveOrder(id){
+  const data={
+    cust_id:+el('o-cust').value, product_id:el('o-prod').value?+el('o-prod').value:null,
+    date:el('o-date').value, type:el('o-type').value, qty:+el('o-qty').value,
+    total:+el('o-total').value, paid:+el('o-paid').value, pay:el('o-pay').value,
+    deliver:el('o-deliver').value, status:el('o-status').value, note:el('o-note').value
+  };
+  if(!data.cust_id){ showToast('مشتری را انتخاب کنید','error'); return; }
+  if(!data.total){ showToast('مبلغ الزامی است','error'); return; }
+  if(id) await api('PUT','/orders/'+id,data); else await api('POST','/orders',data);
+  CACHE.orders=await api('GET','/orders'); closeModal(); renderOrderTable(); showToast('ذخیره شد');
+}
+
+/* ============================================================
+   FOLLOWUPS
+============================================================ */
+let fupFilter={q:'',status:''};
+ROUTES.followups = async function(){
+  el('view').innerHTML='<div class="muted">در حال بارگذاری...</div>';
+  CACHE.followups=await api('GET','/followups')||[];
+  el('view').innerHTML=`
+    <div class="toolbar">
+      <input class="search" id="fSearch" placeholder="جستجو..." value="${esc(fupFilter.q)}">
+      <select id="fStatus"><option value="">همه وضعیت‌ها</option>
+        ${['open','done','cancel'].map(s=>`<option value="${s}" ${fupFilter.status===s?'selected':''}>${STATUS_LABEL[s]||s}</option>`).join('')}
+      </select>
+      <button class="btn" onclick="fupModal()">➕ پیگیری جدید</button>
+      <button class="btn ghost" onclick="exportExcel('followups')">📥 اکسل</button>
+    </div>
+    <div class="panel"><div class="panel-body tbl-wrap"><div id="fupTable"></div></div></div>`;
+  el('fSearch').addEventListener('input',e=>{fupFilter.q=e.target.value;renderFupTable();});
+  el('fStatus').addEventListener('change',e=>{fupFilter.status=e.target.value;renderFupTable();});
+  renderFupTable();
+};
+function renderFupTable(){
+  let rows=CACHE.followups.slice();
+  if(fupFilter.q){const q=fupFilter.q.toLowerCase();rows=rows.filter(f=>((f.cust_biz||'')+' '+(f.subject||'')+' '+(f.note||'')).toLowerCase().includes(q));}
+  if(fupFilter.status)rows=rows.filter(f=>f.status===fupFilter.status);
+  const isAdmin=ME.role==='admin';
+  el('fupTable').innerHTML=`<table class="tbl"><thead><tr>
+    <th>مشتری</th><th>تاریخ</th><th>ساعت</th><th>نوع</th><th>موضوع</th><th>پیگیری بعدی</th><th>اولویت</th><th>وضعیت</th>${isAdmin?'<th>کارشناس</th>':''}<th>عملیات</th>
+  </tr></thead><tbody>${rows.map(f=>`<tr>
+    <td>${esc(f.cust_biz||'-')}</td><td class="mono">${esc(f.date||'-')}</td><td class="mono">${esc(f.time||'-')}</td>
+    <td>${esc(f.type||'-')}</td><td>${esc(f.subject||'-')}</td><td class="mono">${esc(f.next_date||'-')}</td>
+    <td>${statusTag(f.priority)}</td><td>${statusTag(f.status)}</td>
+    ${isAdmin?`<td class="muted">${esc(f.salesperson||'-')}</td>`:''}
+    <td><button class="btn sm ghost" onclick="fupModal(${f.id})">✏️</button>
+        <button class="btn sm red" onclick="confirmDelete('followups',${f.id},'پیگیری')">🗑️</button></td>
+  </tr>`).join('')||emptyRow(isAdmin?10:9)}</tbody></table>`;
+}
+function fupModal(id){
+  const f = id ? CACHE.followups.find(x=>x.id===id) : {date:todayJalali()};
+  const custOpts = CACHE.customers.map(c=>`<option value="${c.id}" ${f.cust_id===c.id?'selected':''}>${esc(c.biz)}</option>`).join('');
+  openModal(`
+    <div class="modal-head"><h3>${id?'ویرایش پیگیری':'پیگیری جدید'}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="fg"><label>مشتری *</label><select id="f-cust">${custOpts}</select></div>
+      <div class="fg"><label>تاریخ ${id?'':'(پیش‌فرض امروز)'}</label><input id="f-date" data-jdate value="${esc(f.date||'')}"></div>
+      <div class="fg"><label>نوع تماس</label><select id="f-type">
+        ${['📱 تلفن','💬 واتساپ','📸 اینستاگرام','🏪 حضوری','✉️ پیامک'].map(t=>`<option ${f.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="fg"><label>اولویت</label><select id="f-priority">
+        ${['high','mid','low'].map(p=>`<option value="${p}" ${f.priority===p?'selected':''}>${STATUS_LABEL[p]}</option>`).join('')}</select></div>
+      <div class="fg full"><label>موضوع</label><input id="f-subject" value="${esc(f.subject||'')}"></div>
+      <div class="fg full"><label>نتیجه / یادداشت</label><textarea id="f-note">${esc(f.note||'')}</textarea></div>
+      <div class="fg full"><label>اقدام بعدی</label><input id="f-action" value="${esc(f.action||'')}"></div>
+      <div class="fg"><label>تاریخ پیگیری بعدی</label><input id="f-next" data-jdate value="${esc(f.next_date||'')}"></div>
+      <div class="fg"><label>وضعیت</label><select id="f-status">
+        ${['open','done','cancel'].map(s=>`<option value="${s}" ${f.status===s?'selected':''}>${STATUS_LABEL[s]||s}</option>`).join('')}</select></div>
+    </div><p class="muted" style="font-size:12px;margin-top:10px">ساعت ثبت به‌صورت خودکار توسط سیستم ذخیره می‌شود.</p></div>
+    <div class="modal-foot"><button class="btn" onclick="saveFup(${id||0})">💾 ذخیره</button>
+      <button class="btn ghost" onclick="closeModal()">انصراف</button></div>`);
+}
+async function saveFup(id){
+  const data={
+    cust_id:+el('f-cust').value, date:el('f-date').value, type:el('f-type').value,
+    priority:el('f-priority').value, subject:el('f-subject').value, note:el('f-note').value,
+    action:el('f-action').value, next_date:el('f-next').value, status:el('f-status').value
+  };
+  if(!data.cust_id){ showToast('مشتری را انتخاب کنید','error'); return; }
+  if(id) await api('PUT','/followups/'+id,data); else await api('POST','/followups',data);
+  CACHE.followups=await api('GET','/followups'); closeModal(); renderFupTable(); showToast('ذخیره شد');
+}
+
+/* ============================================================
+   INVOICES
+============================================================ */
+let invCart = [];
+ROUTES.invoices = async function(){
+  el('view').innerHTML='<div class="muted">در حال بارگذاری...</div>';
+  CACHE.invoices=await api('GET','/invoices')||[];
+  el('view').innerHTML=`
+    <div class="toolbar">
+      <input class="search" id="iSearch" placeholder="جستجوی فاکتور...">
+      <button class="btn" onclick="openInvBuilder()">➕ فاکتور جدید</button>
+    </div>
+    <div class="panel"><div class="panel-body tbl-wrap"><div id="invTable"></div></div></div>`;
+  el('iSearch').addEventListener('input',renderInvTable);
+  renderInvTable();
+};
+function renderInvTable(){
+  const q=(el('iSearch')?.value||'').toLowerCase();
+  let rows=CACHE.invoices.slice();
+  if(q)rows=rows.filter(i=>((i.num||'')+' '+(i.cust_biz||'')).toLowerCase().includes(q));
+  const isAdmin=ME.role==='admin';
+  el('invTable').innerHTML=`<table class="tbl"><thead><tr>
+    <th>شماره</th><th>مشتری</th><th>نوع</th><th>تاریخ</th><th>مبلغ نهایی</th><th>فروشنده</th><th>عملیات</th>
+  </tr></thead><tbody>${rows.map(i=>`<tr>
+    <td class="mono" style="font-weight:700">${esc(i.num||'-')}</td><td>${esc(i.cust_biz||'-')}</td>
+    <td>${statusTag(i.type)}</td><td class="mono">${esc(i.date||'-')}</td><td class="mono">${fmt(i.final)}</td>
+    <td class="muted">${esc(i.seller_name||'-')}</td>
+    <td><button class="btn sm blue" onclick="printInvoice(${i.id})">🖨️</button>
+        <button class="btn sm ghost" onclick="openInvBuilder(${i.id})">✏️</button>
+        <button class="btn sm red" onclick="confirmDelete('invoices',${i.id},'${esc(i.num||'')}')">🗑️</button></td>
+  </tr>`).join('')||emptyRow(7)}</tbody></table>`;
+}
+function openInvBuilder(id){
+  const inv = id ? CACHE.invoices.find(x=>x.id===id) : null;
+  invCart = inv ? inv.rows.map(r=>({product_id:r.product_id,name:r.name,qty:r.qty,price:r.price})) : [];
+  const custOpts = CACHE.customers.map(c=>`<option value="${c.id}" ${inv&&inv.cust_id===c.id?'selected':''}>${esc(c.biz)}</option>`).join('');
+  const isAdmin = ME.role==='admin';
+  openModal(`
+    <div class="modal-head"><h3>${id?'ویرایش فاکتور':'فاکتور جدید'}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid" style="margin-bottom:14px">
+        <div class="fg"><label>مشتری *</label><select id="inv-cust">${custOpts}</select></div>
+        <div class="fg"><label>نوع</label><select id="inv-type">
+          <option value="proforma" ${inv&&inv.type==='proforma'?'selected':''}>پیش‌فاکتور</option>
+          <option value="final" ${inv&&inv.type==='final'?'selected':''}>فاکتور رسمی</option></select></div>
+        <div class="fg"><label>تاریخ</label><input id="inv-date" data-jdate value="${esc(inv?inv.date:todayJalali())}"></div>
+        <div class="fg"><label>تخفیف (٪)</label><input id="inv-disc" type="number" value="${inv?inv.disc:0}" oninput="renderCart()"></div>
+        <div class="fg full"><label>توضیحات</label><input id="inv-note" value="${esc(inv?inv.note:'')}"></div>
+      </div>
+      <div class="inv-layout">
+        <div>
+          <input class="search" id="invProdSearch" placeholder="جستجوی محصول..." style="margin-bottom:10px;width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px" oninput="renderInvPicker()">
+          <div class="inv-products"><div class="inv-pick" id="invPicker"></div></div>
+        </div>
+        <div class="inv-cart">
+          <h4 style="color:var(--purple);margin-bottom:10px">اقلام فاکتور</h4>
+          <div id="cartRows"></div>
+          <div class="cart-tot" id="cartTot"></div>
+          <button class="btn green" style="width:100%;margin-top:12px" onclick="saveInvoice(${id||0})">💾 ذخیره فاکتور</button>
+        </div>
+      </div>
+      ${isAdmin?'<p class="muted" style="font-size:12px;margin-top:10px">شما مدیر هستید و می‌توانید قیمت را تغییر دهید.</p>':'<p class="muted" style="font-size:12px;margin-top:10px">قیمت‌ها از روی محصولات تعیین می‌شوند و قابل تغییر نیستند.</p>'}
+    </div>`, true);
+  renderInvPicker();
+  renderCart();
+}
+function renderInvPicker(){
+  const q=(el('invProdSearch')?.value||'').toLowerCase();
+  let prods=CACHE.products.slice();
+  if(q)prods=prods.filter(p=>((p.name||'')+' '+(p.code||'')).toLowerCase().includes(q));
+  el('invPicker').innerHTML = prods.map(p=>`
+    <div class="pick-card" onclick="addToCart(${p.id})">
+      <div class="pimg">${p.image?`<img src="/uploads/products/${esc(p.image)}">`:'🧥'}</div>
+      <div class="pn">${esc(p.name)}</div>
+      <div class="pp">${fmt(p.price)} ت</div>
+    </div>`).join('') || '<div class="empty">محصولی نیست</div>';
+}
+function addToCart(pid){
+  const p = CACHE.products.find(x=>x.id===pid); if(!p) return;
+  const ex = invCart.find(r=>r.product_id===pid);
+  if(ex) ex.qty++; else invCart.push({product_id:pid,name:p.name,qty:1,price:p.price});
+  renderCart();
+}
+function renderCart(){
+  const isAdmin = ME.role==='admin';
+  el('cartRows').innerHTML = invCart.map((r,i)=>`
+    <div class="cart-row">
+      <span class="cn">${esc(r.name)}</span>
+      <input type="number" min="1" value="${r.qty}" onchange="invCart[${i}].qty=Math.max(1,+this.value||1);renderCart()">
+      <input class="price-in" type="number" value="${r.price}" ${isAdmin?'':'readonly'} onchange="invCart[${i}].price=+this.value||0;renderCart()">
+      <button class="rm" onclick="invCart.splice(${i},1);renderCart()">×</button>
+    </div>`).join('') || '<div class="muted center" style="padding:14px">سبد خالی است</div>';
+  const subtotal = invCart.reduce((a,r)=>a+r.qty*r.price,0);
+  const disc = +(el('inv-disc')?.value||0);
+  const discAmt = Math.round(subtotal*disc/100);
+  const final = subtotal-discAmt;
+  el('cartTot').innerHTML = `
+    <div class="l"><span>جمع کل:</span><span class="mono">${fmt(subtotal)} ت</span></div>
+    <div class="l"><span>تخفیف (${fmt(disc)}٪):</span><span class="mono">${fmt(discAmt)} ت</span></div>
+    <div class="l final"><span>نهایی:</span><span class="mono">${fmt(final)} ت</span></div>`;
+}
+async function saveInvoice(id){
+  const cust_id = +el('inv-cust').value;
+  if(!cust_id){ showToast('مشتری را انتخاب کنید','error'); return; }
+  if(invCart.length===0){ showToast('حداقل یک محصول اضافه کنید','error'); return; }
+  const data = {
+    cust_id, type:el('inv-type').value, date:el('inv-date').value, note:el('inv-note').value,
+    disc:+el('inv-disc').value||0,
+    rows: invCart.map(r=>({product_id:r.product_id, qty:r.qty, price:r.price}))
+  };
+  try{
+    if(id) await api('PUT','/invoices/'+id,data); else await api('POST','/invoices',data);
+    CACHE.invoices=await api('GET','/invoices'); closeModal(); renderInvTable(); showToast('فاکتور ذخیره شد');
+  }catch(e){}
+}
+async function printInvoice(id){
+  const token = localStorage.getItem('crm_token');
+  try{
+    const r = await fetch('/api/invoices/'+id+'/print',{headers:{'Authorization':'Bearer '+token}});
+    if(!r.ok){ showToast('خطا در دریافت فاکتور','error'); return; }
+    const html = await r.text();
+    const w = window.open('','_blank');
+    w.document.write(html); w.document.close();
+  }catch(e){ showToast('خطا در چاپ','error'); }
+}
+
+/* ============================================================
+   PRODUCTS (admin)  /  CATALOG (salesperson)
+============================================================ */
+let prodFilter={category:'',search:'',stock_status:'all'};
+async function loadProductsFiltered(){
+  const qs = new URLSearchParams();
+  if(prodFilter.category) qs.set('category',prodFilter.category);
+  if(prodFilter.search) qs.set('search',prodFilter.search);
+  if(prodFilter.stock_status) qs.set('stock_status',prodFilter.stock_status);
+  CACHE.products = await api('GET','/products?'+qs.toString())||[];
+}
+ROUTES.products = function(){ productsPage(true); };
+ROUTES.catalog = function(){ productsPage(false); };
+
+async function productsPage(canEdit){
+  el('view').innerHTML='<div class="muted">در حال بارگذاری...</div>';
+  const cats = await api('GET','/products/categories')||[];
+  await loadProductsFiltered();
+  el('view').innerHTML=`
+    <div class="toolbar">
+      <input class="search" id="pSearch" placeholder="جستجو نام یا کد..." value="${esc(prodFilter.search)}">
+      <select id="pCat"><option value="">همه دسته‌ها</option>
+        ${cats.map(c=>`<option value="${esc(c)}" ${prodFilter.category===c?'selected':''}>${esc(c)}</option>`).join('')}</select>
+      <select id="pStock">
+        <option value="all" ${prodFilter.stock_status==='all'?'selected':''}>همه موجودی</option>
+        <option value="ok" ${prodFilter.stock_status==='ok'?'selected':''}>موجود</option>
+        <option value="low" ${prodFilter.stock_status==='low'?'selected':''}>موجودی کم</option>
+      </select>
+      ${canEdit?`<button class="btn" onclick="prodModal()">➕ محصول</button>
+        <button class="btn ghost" onclick="importProducts()">📤 ورود اکسل</button>
+        <button class="btn ghost" onclick="downloadTemplate()">📄 قالب</button>
+        <button class="btn ghost" onclick="exportExcel('products')">📥 خروجی</button>`:''}
+    </div>
+    <div id="prodGrid" class="pgrid"></div>`;
+  el('pSearch').addEventListener('input',()=>{prodFilter.search=el('pSearch').value;debounceProd(canEdit);});
+  el('pCat').addEventListener('change',()=>{prodFilter.category=el('pCat').value;refreshProd(canEdit);});
+  el('pStock').addEventListener('change',()=>{prodFilter.stock_status=el('pStock').value;refreshProd(canEdit);});
+  renderProdGrid(canEdit);
+}
+let prodTimer;
+function debounceProd(canEdit){ clearTimeout(prodTimer); prodTimer=setTimeout(()=>refreshProd(canEdit),300); }
+async function refreshProd(canEdit){ await loadProductsFiltered(); renderProdGrid(canEdit); }
+function renderProdGrid(canEdit){
+  el('prodGrid').innerHTML = CACHE.products.map(p=>{
+    const low = p.stock<=p.stock_alert;
+    return `<div class="pcard">
+      <div class="img">${p.image?`<img src="/uploads/products/${esc(p.image)}">`:'🧥'}</div>
+      <div class="body">
+        <div class="name">${esc(p.name)}</div>
+        <div class="code">${esc(p.code||'')} ${p.category?'· '+esc(p.category):''}</div>
+        <div class="price">${fmt(p.price)} تومان</div>
+        <div class="stock ${low?'low':''}">موجودی: ${fmt(p.stock)} ${esc(p.unit||'')} ${low?'⚠️':''}</div>
+        ${canEdit?`<div class="acts">
+          <button class="btn sm ghost" onclick="prodModal(${p.id})">✏️</button>
+          <button class="btn sm red" onclick="confirmDelete('products',${p.id},'${esc(p.name)}')">🗑️</button>
+        </div>`:''}
+      </div></div>`;
+  }).join('') || '<div class="empty">محصولی یافت نشد</div>';
+}
+function prodModal(id){
+  const p = id ? CACHE.products.find(x=>x.id===id) : {};
+  openModal(`
+    <div class="modal-head"><h3>${id?'ویرایش محصول':'محصول جدید'}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="fg full"><label>نام محصول *</label><input id="p-name" value="${esc(p.name||'')}"></div>
+      <div class="fg"><label>دسته‌بندی</label><input id="p-cat" value="${esc(p.category||'')}"></div>
+      <div class="fg"><label>کد محصول</label><input id="p-code" value="${esc(p.code||'')}"></div>
+      <div class="fg"><label>قیمت (تومان)</label><input id="p-price" type="number" value="${p.price||0}"></div>
+      <div class="fg"><label>موجودی</label><input id="p-stock" type="number" value="${p.stock||0}"></div>
+      <div class="fg"><label>هشدار موجودی</label><input id="p-alert" type="number" value="${p.stock_alert||5}"></div>
+      <div class="fg"><label>واحد</label><input id="p-unit" value="${esc(p.unit||'عدد')}"></div>
+      <div class="fg full"><label>تصویر محصول</label><input id="p-image" type="file" accept="image/*"></div>
+      <div class="fg full"><label>یادداشت</label><textarea id="p-note">${esc(p.note||'')}</textarea></div>
+      ${p.image?`<div class="fg full"><img src="/uploads/products/${esc(p.image)}" style="height:90px;border-radius:8px"></div>`:''}
+    </div></div>
+    <div class="modal-foot"><button class="btn" onclick="saveProduct(${id||0})">💾 ذخیره</button>
+      <button class="btn ghost" onclick="closeModal()">انصراف</button></div>`);
+}
+async function saveProduct(id){
+  const name = el('p-name').value.trim();
+  if(!name){ showToast('نام محصول الزامی است','error'); return; }
+  const fd = new FormData();
+  fd.append('name',name);
+  fd.append('category',el('p-cat').value);
+  fd.append('code',el('p-code').value);
+  fd.append('price',el('p-price').value||0);
+  fd.append('stock',el('p-stock').value||0);
+  fd.append('stock_alert',el('p-alert').value||5);
+  fd.append('unit',el('p-unit').value||'عدد');
+  fd.append('note',el('p-note').value);
+  const f = el('p-image').files[0];
+  if(f) fd.append('image',f);
+  try{
+    if(id) await api('PUT','/products/'+id,fd,true); else await api('POST','/products',fd,true);
+    await loadProductsFiltered(); closeModal(); renderProdGrid(true); showToast('ذخیره شد');
+  }catch(e){}
+}
+function importProducts(){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='.xlsx,.xls';
+  inp.onchange=async()=>{
+    const fd=new FormData(); fd.append('file',inp.files[0]);
+    try{ const r=await api('POST','/products/import',fd,true); showToast(`${fmt(r.inserted)} محصول اضافه شد`); await refreshProd(true); }catch(e){}
+  };
+  inp.click();
+}
+function downloadTemplate(){ downloadAuth('/products/template','products-template.xlsx'); }
+function exportExcel(entity){ downloadAuth('/'+entity+'/export/excel', entity+'.xlsx'); }
+async function downloadAuth(path,filename){
+  const token=localStorage.getItem('crm_token');
+  try{
+    const r=await fetch('/api'+path,{headers:{'Authorization':'Bearer '+token}});
+    if(!r.ok){ showToast('خطا در دانلود','error'); return; }
+    const blob=await r.blob();
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click();
+    URL.revokeObjectURL(a.href);
+  }catch(e){ showToast('خطا در دانلود','error'); }
+}
+
+/* ============================================================
+   USERS (admin)
+============================================================ */
+ROUTES.users = async function(){
+  el('view').innerHTML='<div class="muted">در حال بارگذاری...</div>';
+  CACHE.users=await api('GET','/auth/users')||[];
+  el('view').innerHTML=`
+    <div class="toolbar"><button class="btn" onclick="userModal()">➕ کاربر جدید</button></div>
+    <div class="panel"><div class="panel-body tbl-wrap">
+      <table class="tbl"><thead><tr><th>نام</th><th>نام کاربری</th><th>نقش</th><th>تلفن</th><th>آخرین ورود</th><th>وضعیت</th><th>عملیات</th></tr></thead>
+      <tbody>${CACHE.users.map(u=>`<tr>
+        <td>${esc(u.name)}</td><td class="mono">@${esc(u.username)}</td>
+        <td>${u.role==='admin'?'<span class="tag t-vip">مدیر</span>':'<span class="tag t-active">فروش</span>'}</td>
+        <td class="mono">${esc(u.phone||'-')}</td>
+        <td class="muted">${u.last_login?new Date(u.last_login*1000).toLocaleDateString('fa-IR'):'هرگز'}</td>
+        <td>${u.active?'<span class="tag t-done">فعال</span>':'<span class="tag t-cancel">غیرفعال</span>'}</td>
+        <td><button class="btn sm ghost" onclick="userModal(${u.id})">✏️</button>
+            <button class="btn sm orange" onclick="resetPass(${u.id},'${esc(u.name)}')">🔑</button>
+            ${u.id!==ME.id?`<button class="btn sm red" onclick="confirmDelete('admin/users',${u.id},'${esc(u.name)}')">🗑️</button>`:''}</td>
+      </tr>`).join('')||emptyRow(7)}</tbody></table>
+    </div></div>`;
+};
+function userModal(id){
+  const u = id ? CACHE.users.find(x=>x.id===id) : {role:'salesperson',active:1};
+  openModal(`
+    <div class="modal-head"><h3>${id?'ویرایش کاربر':'کاربر جدید'}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="fg"><label>نام *</label><input id="u-name" value="${esc(u.name||'')}"></div>
+      <div class="fg"><label>نام کاربری *</label><input id="u-username" value="${esc(u.username||'')}" ${id?'readonly':''}></div>
+      <div class="fg"><label>تلفن</label><input id="u-phone" value="${esc(u.phone||'')}"></div>
+      <div class="fg"><label>نقش</label><select id="u-role">
+        <option value="salesperson" ${u.role==='salesperson'?'selected':''}>کارشناس فروش</option>
+        <option value="admin" ${u.role==='admin'?'selected':''}>مدیر</option></select></div>
+      <div class="fg"><label>${id?'رمز جدید (خالی = بدون تغییر)':'رمز عبور *'}</label><input id="u-pass" type="password"></div>
+      <div class="fg"><label>وضعیت</label><select id="u-active">
+        <option value="1" ${u.active?'selected':''}>فعال</option>
+        <option value="0" ${!u.active?'selected':''}>غیرفعال</option></select></div>
+    </div></div>
+    <div class="modal-foot"><button class="btn" onclick="saveUser(${id||0})">💾 ذخیره</button>
+      <button class="btn ghost" onclick="closeModal()">انصراف</button></div>`);
+}
+async function saveUser(id){
+  const name=el('u-name').value.trim(), username=el('u-username').value.trim(),
+        pass=el('u-pass').value, role=el('u-role').value,
+        phone=el('u-phone').value, active=+el('u-active').value;
+  if(!name){ showToast('نام الزامی است','error'); return; }
+  try{
+    if(id){
+      await api('PUT','/admin/users/'+id,{name,role,phone,active,password:pass||undefined});
+    } else {
+      if(!username||!pass){ showToast('نام کاربری و رمز الزامی است','error'); return; }
+      await api('POST','/admin/users',{name,username,password:pass,phone,role});
+    }
+    CACHE.users=await api('GET','/auth/users'); closeModal(); ROUTES.users(); showToast('ذخیره شد');
+  }catch(e){}
+}
+async function resetPass(id,name){
+  const np = prompt('رمز جدید برای '+name+':');
+  if(!np) return;
+  await api('POST','/auth/reset-password',{user_id:id,new_pass:np});
+  showToast('رمز بازنشانی شد');
+}
+
+/* ============================================================
+   REPORTS (admin)
+============================================================ */
+let repRange={from:'',to:''};
+ROUTES.reports = async function(){
+  el('view').innerHTML=`
+    <div class="toolbar">
+      <label class="muted">از تاریخ</label><input id="rep-from" data-jdate value="${esc(repRange.from)}" placeholder="از">
+      <label class="muted">تا تاریخ</label><input id="rep-to" data-jdate value="${esc(repRange.to)}" placeholder="تا">
+      <button class="btn" onclick="loadReports()">📊 اعمال</button>
+    </div>
+    <div id="repBody"><div class="muted">در حال بارگذاری...</div></div>`;
+  attachDatepickers(el('view'));
+  el('rep-from').addEventListener('change',()=>repRange.from=el('rep-from').value);
+  el('rep-to').addEventListener('change',()=>repRange.to=el('rep-to').value);
+  loadReports();
+};
+async function loadReports(){
+  repRange.from=el('rep-from')?.value||''; repRange.to=el('rep-to')?.value||'';
+  const qs=new URLSearchParams(); if(repRange.from)qs.set('from',repRange.from); if(repRange.to)qs.set('to',repRange.to);
+  const [summary, monthly, sales, top] = await Promise.all([
+    api('GET','/reports/summary?'+qs.toString()),
+    api('GET','/reports/monthly'),
+    api('GET','/reports/salesperson'),
+    api('GET','/reports/top-customers')
+  ]);
+  el('repBody').innerHTML=`
+    <div class="cards">
+      ${statCard('g','💰',fmt(summary.revenue),'فروش کل (تومان)')}
+      ${statCard('b','📦',fmt(summary.orders),'تعداد سفارش')}
+      ${statCard('p','👥',fmt(summary.customers),'مشتریان فعال')}
+      ${statCard('r','⚠️',fmt(summary.debt),'بدهی معوق (تومان)')}
+    </div>
+    <div class="panel"><div class="panel-head"><h4>نمودار فروش ماهانه</h4></div>
+      <div class="panel-body"><canvas id="repChart" height="90"></canvas></div></div>
+    <div class="panel"><div class="panel-head"><h4>مقایسه کارشناسان فروش</h4></div>
+      <div class="panel-body tbl-wrap"><table class="tbl"><thead><tr>
+        <th>کارشناس</th><th>مشتریان</th><th>سفارشات</th><th>فروش</th><th>بدهی</th><th>پیگیری باز</th><th>فاکتور</th></tr></thead>
+        <tbody>${sales.map(s=>`<tr><td>${esc(s.name)}</td><td>${fmt(s.customers)}</td><td>${fmt(s.orders)}</td>
+          <td class="mono">${fmt(s.revenue)}</td><td class="mono" style="color:var(--red)">${fmt(s.debt)}</td>
+          <td>${fmt(s.openFollowups)}</td><td>${fmt(s.invoices)}</td></tr>`).join('')||emptyRow(7)}</tbody></table></div></div>
+    <div class="panel"><div class="panel-head"><h4>۱۰ مشتری برتر</h4></div>
+      <div class="panel-body tbl-wrap"><table class="tbl"><thead><tr>
+        <th>مشتری</th><th>شهر</th><th>تعداد سفارش</th><th>مجموع خرید</th><th>بدهی</th></tr></thead>
+        <tbody>${top.map(t=>`<tr><td>${esc(t.biz)}</td><td>${esc(t.city||'-')}</td><td>${fmt(t.orders)}</td>
+          <td class="mono">${fmt(t.total)}</td><td class="mono" style="color:var(--red)">${fmt(t.debt)}</td></tr>`).join('')||emptyRow(5)}</tbody></table></div></div>`;
+  drawChart(monthly);
+}
+function drawChart(monthly){
+  const ctx=el('repChart'); if(!ctx)return;
+  if(mChart)mChart.destroy();
+  mChart=new Chart(ctx,{type:'bar',data:{
+    labels:monthly.map(m=>m.ym),
+    datasets:[{label:'فروش (تومان)',data:monthly.map(m=>m.revenue),backgroundColor:'#7C3AED',borderRadius:6}]
+  },options:{responsive:true,plugins:{legend:{labels:{font:{family:'Vazirmatn'}}}},
+    scales:{x:{ticks:{font:{family:'Vazirmatn'}}},y:{ticks:{font:{family:'Vazirmatn'},callback:v=>fmt(v)}}}}});
+}
+
+/* ============================================================
+   MESSAGES
+============================================================ */
+let msgTab='inbox', MSGS=[];
+ROUTES.messages = async function(){
+  el('view').innerHTML='<div class="muted">در حال بارگذاری...</div>';
+  MSGS=await api('GET','/messages')||[];
+  el('view').innerHTML=`
+    <div class="msg-tabs">
+      <button id="tabInbox" class="${msgTab==='inbox'?'active':''}" onclick="switchMsgTab('inbox')">📥 دریافتی</button>
+      <button id="tabSent" class="${msgTab==='sent'?'active':''}" onclick="switchMsgTab('sent')">📤 ارسالی</button>
+      <button class="btn ghost" onclick="markAllRead()">✔️ همه خوانده شد</button>
+      <button class="btn" onclick="composeMsg()">✉️ پیام جدید</button>
+    </div>
+    <div id="msgList"></div>`;
+  renderMsgs();
+  await markVisibleRead();
+};
+function switchMsgTab(t){ msgTab=t; document.getElementById('tabInbox').classList.toggle('active',t==='inbox');
+  document.getElementById('tabSent').classList.toggle('active',t==='sent'); renderMsgs(); }
+function renderMsgs(){
+  let list = MSGS.filter(m=> msgTab==='inbox' ? m.direction==='received' : m.direction==='sent');
+  el('msgList').innerHTML = list.map(m=>`
+    <div class="msg ${(msgTab==='inbox'&&!m.is_read)?'unread':''}">
+      <div class="mh">
+        <span>${msgTab==='inbox'?'از: '+esc(m.from_name||'سیستم'):'به: '+esc(m.to_name||'همه')}</span>
+        <span>${new Date(m.created_at*1000).toLocaleString('fa-IR')}</span>
+      </div>
+      <div class="mb">${esc(m.body)}</div>
+    </div>`).join('') || '<div class="empty">پیامی نیست</div>';
+}
+async function markVisibleRead(){
+  // mark inbox unread as read after viewing
+  setTimeout(async()=>{ await api('POST','/messages/read-all'); refreshMsgBadge(); }, 800);
+}
+async function markAllRead(){ await api('POST','/messages/read-all'); MSGS=await api('GET','/messages'); renderMsgs(); refreshMsgBadge(); showToast('همه خوانده شد'); }
+function composeMsg(){
+  // salesperson can only message admins; admin can message anyone
+  let recipients = CACHE.users.filter(u=>u.active && u.id!==ME.id);
+  if(ME.role!=='admin') recipients = recipients.filter(u=>u.role==='admin');
+  // if salesperson has no users cache, fetch admins lazily via simple option
+  const opts = recipients.length
+    ? recipients.map(u=>`<option value="${u.id}">${esc(u.name)} (${u.role==='admin'?'مدیر':'فروش'})</option>`).join('')
+    : '<option value="">مدیر سیستم</option>';
+  openModal(`
+    <div class="modal-head"><h3>پیام جدید</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="fg full"><label>گیرنده</label><select id="m-to">${ME.role==='admin'?'<option value="">📢 همه کاربران</option>':''}${opts}</select></div>
+      <div class="fg full"><label>متن پیام</label><textarea id="m-body" style="min-height:110px"></textarea></div>
+    </div></div>
+    <div class="modal-foot"><button class="btn" onclick="sendMsg()">📤 ارسال</button>
+      <button class="btn ghost" onclick="closeModal()">انصراف</button></div>`);
+}
+async function sendMsg(){
+  const to_id = el('m-to').value ? +el('m-to').value : null;
+  const body = el('m-body').value.trim();
+  if(!body){ showToast('متن پیام الزامی است','error'); return; }
+  await api('POST','/messages',{to_id,body});
+  closeModal(); MSGS=await api('GET','/messages'); renderMsgs(); showToast('پیام ارسال شد');
+}
+async function refreshMsgBadge(){
+  try{
+    const r=await api('GET','/messages/unread-count');
+    const b=el('msgBadge'); if(!b)return;
+    if(r.count>0){ b.textContent=fmt(r.count); b.classList.remove('hide'); }
+    else b.classList.add('hide');
+  }catch(e){}
+}
+// ensure salesperson has admin list for compose recipients
+async function ensureUsersForMsg(){
+  if(CACHE.users.length===0 && ME.role!=='admin'){
+    // salespeople cannot list users; messaging defaults to broadcast→admin path handled server-side (to_id null reaches admins via broadcast)
+  }
+}
+
+/* ============================================================
+   SETTINGS (admin)
+============================================================ */
+ROUTES.settings = async function(){
+  CACHE.settings = await api('GET','/settings')||{};
+  const s = CACHE.settings;
+  el('view').innerHTML=`
+    <div class="panel"><div class="panel-head"><h4>اطلاعات شرکت</h4></div><div class="panel-body"><div class="form-grid">
+      <div class="fg"><label>نام شرکت</label><input id="s-company_name" value="${esc(s.company_name||'')}"></div>
+      <div class="fg"><label>تلفن شرکت</label><input id="s-company_phone" value="${esc(s.company_phone||'')}"></div>
+      <div class="fg full"><label>آدرس شرکت</label><input id="s-company_address" value="${esc(s.company_address||'')}"></div>
+    </div></div></div>
+    <div class="panel"><div class="panel-head"><h4>تلگرام</h4></div><div class="panel-body"><div class="form-grid">
+      <div class="fg"><label>Bot Token</label><input id="s-telegram_bot_token" value="${esc(s.telegram_bot_token||'')}"></div>
+      <div class="fg"><label>Chat ID</label><input id="s-telegram_chat_id" value="${esc(s.telegram_chat_id||'')}"></div>
+    </div></div></div>
+    <div class="panel"><div class="panel-head"><h4>پیامک (SMS)</h4></div><div class="panel-body"><div class="form-grid">
+      <div class="fg"><label>سرویس‌دهنده</label><select id="s-sms_provider">
+        <option value="melipayamak" ${s.sms_provider==='melipayamak'?'selected':''}>ملی‌پیامک</option>
+        <option value="niksms" ${s.sms_provider==='niksms'?'selected':''}>نیک‌اس‌ام‌اس</option></select></div>
+      <div class="fg"><label>کلید API</label><input id="s-sms_api_key" value="${esc(s.sms_api_key||'')}"></div>
+      <div class="fg"><label>شماره فرستنده</label><input id="s-sms_from" value="${esc(s.sms_from||'')}"></div>
+    </div></div></div>
+    <button class="btn green" onclick="saveSettings()">💾 ذخیره تنظیمات</button>`;
+};
+async function saveSettings(){
+  const keys=['company_name','company_phone','company_address','telegram_bot_token','telegram_chat_id','sms_provider','sms_api_key','sms_from'];
+  const data={}; keys.forEach(k=>{ const e=el('s-'+k); if(e)data[k]=e.value; });
+  CACHE.settings = await api('PUT','/settings',data);
+  showToast('تنظیمات ذخیره شد');
+}
+
+/* ============================================================
+   DELETE CONFIRM + CHANGE PASSWORD
+============================================================ */
+function confirmDelete(entity, id, label){
+  openModal(`
+    <div class="modal-head"><h3>تأیید حذف</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body"><p>آیا از حذف <b>${esc(label)}</b> مطمئن هستید؟ این عمل قابل بازگشت نیست.</p></div>
+    <div class="modal-foot"><button class="btn red" onclick="doDelete('${entity}',${id})">🗑️ حذف</button>
+      <button class="btn ghost" onclick="closeModal()">انصراف</button></div>`);
+}
+async function doDelete(entity,id){
+  await api('DELETE','/'+entity+'/'+id);
+  closeModal(); showToast('حذف شد');
+  // refresh whatever is open
+  if(entity==='customers'){ await reloadCustomers(); if(CURRENT_PAGE==='customers')renderCustTable(); }
+  else if(entity==='orders'){ CACHE.orders=await api('GET','/orders'); renderOrderTable(); }
+  else if(entity==='followups'){ CACHE.followups=await api('GET','/followups'); renderFupTable(); }
+  else if(entity==='invoices'){ CACHE.invoices=await api('GET','/invoices'); renderInvTable(); }
+  else if(entity==='products'){ await loadProductsFiltered(); renderProdGrid(true); }
+  else if(entity==='admin/users'){ CACHE.users=await api('GET','/auth/users'); ROUTES.users(); }
+}
+function openChangePass(){
+  openModal(`
+    <div class="modal-head"><h3>تغییر رمز عبور</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="fg full"><label>رمز فعلی</label><input id="cp-old" type="password"></div>
+      <div class="fg full"><label>رمز جدید</label><input id="cp-new" type="password"></div>
+    </div></div>
+    <div class="modal-foot"><button class="btn" onclick="doChangePass()">💾 تغییر</button>
+      <button class="btn ghost" onclick="closeModal()">انصراف</button></div>`);
+}
+async function doChangePass(){
+  const oldPass=el('cp-old').value, newPass=el('cp-new').value;
+  if(!newPass){ showToast('رمز جدید الزامی است','error'); return; }
+  await api('POST','/auth/change-password',{oldPass,newPass});
+  closeModal(); showToast('رمز تغییر کرد');
+}
+
+/* ============================================================
+   CLOCK + SW + INIT
+============================================================ */
+setInterval(()=>{ const c=el('clock'); if(c) c.textContent=new Date().toLocaleTimeString('fa-IR'); }, 1000);
+
+window.addEventListener('DOMContentLoaded', async ()=>{
+  if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('/sw.js'); }catch(e){} }
+  const token = localStorage.getItem('crm_token');
+  if(token){
+    try{ ME = JSON.parse(localStorage.getItem('crm_user')); await boot(); }
+    catch(e){ logout(); }
+  }
+});
+</script>
+</body>
+</html>
