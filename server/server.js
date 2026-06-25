@@ -37,6 +37,7 @@ app.use('/api/messages', require('./routes/messages'));
 app.use('/api/reminders', require('./routes/reminders'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/settings', require('./routes/settings'));
+app.use('/api/accounting', require('./routes/accounting'));
 
 // SPA fallback for non-API GET requests
 app.get('*', (req, res, next) => {

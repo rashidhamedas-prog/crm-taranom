@@ -185,6 +185,20 @@ function initDB() {
       created_at INTEGER DEFAULT (strftime('%s','now'))
     );
 
+    CREATE TABLE IF NOT EXISTS settlements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      cust_id INTEGER NOT NULL,
+      invoice_id INTEGER,
+      amount REAL DEFAULT 0,
+      pay_type TEXT DEFAULT 'cash',
+      date TEXT,
+      note TEXT,
+      created_at INTEGER DEFAULT (strftime('%s','now')),
+      FOREIGN KEY(user_id) REFERENCES users(id),
+      FOREIGN KEY(cust_id) REFERENCES customers(id)
+    );
+
     CREATE TABLE IF NOT EXISTS settings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       key TEXT UNIQUE NOT NULL,
@@ -210,6 +224,9 @@ function initDB() {
   ensureColumn(db, 'invoices', 'cheque_due_date', "TEXT DEFAULT ''");
   ensureColumn(db, 'invoices', 'cheque_info', "TEXT DEFAULT ''");
   ensureColumn(db, 'invoices', 'stock_deducted', 'INTEGER DEFAULT 0');
+  ensureColumn(db, 'invoices', 'approved', 'INTEGER DEFAULT 0');
+  ensureColumn(db, 'invoices', 'approved_at', 'INTEGER');
+  ensureColumn(db, 'invoices', 'approved_by', 'INTEGER');
   ensureColumn(db, 'orders', 'product_id', 'INTEGER');
   ensureColumn(db, 'orders', 'stock_deducted', 'INTEGER DEFAULT 0');
 

@@ -523,6 +523,7 @@ const NAV_ADMIN = [
   {id:'products', icon:'🛍️', label:'محصولات'},
   {id:'users', icon:'👤', label:'کاربران'},
   {id:'reports', icon:'📈', label:'گزارشات'},
+  {id:'accounting', icon:'💰', label:'حسابداری'},
   {id:'messages', icon:'💬', label:'پیام‌ها'},
   {id:'settings', icon:'⚙️', label:'تنظیمات'},
 ];
@@ -644,16 +645,20 @@ ROUTES.dash = async function(){
       api('GET','/followups'), api('GET','/invoices')
     ]);
     CACHE.followups=followups; CACHE.invoices=invoices;
+    let myComm = { totalComm:0, commRate:{cash:0,cheque:0} };
+    try { myComm = await api('GET','/accounting/my-commission') || myComm; } catch(e){}
     const finalInvs = invoices.filter(i=>i.type==='final');
     const sales = finalInvs.reduce((a,i)=>a+(i.final||0),0);
     const openF = followups.filter(f=>f.status==='open').length;
+    const approvedInvs = finalInvs.filter(i=>i.approved);
     v.innerHTML = `
       <div class="cards">
         ${statCard('p','👥', fmt(CACHE.customers.length),'مشتریان من')}
-        ${statCard('g','💰', fmt(sales),'فروش (تومان)')}
+        ${statCard('g','💰', fmt(sales),'فروش کل (تومان)')}
         ${statCard('o','🧾', fmt(finalInvs.length),'فاکتور رسمی')}
         ${statCard('b','📋', fmt(invoices.filter(i=>i.type==='proforma').length),'پیش‌فاکتور')}
         ${statCard('b','📞', fmt(openF),'پیگیری باز')}
+        ${statCard('g','🎯', fmt(Math.round(myComm.totalComm||0)),'کمیسیون تأیید شده (ت)')}
       </div>
       <div class="panel">
         <div class="panel-head"><h4>پیگیری‌های باز</h4><button class="btn sm" onclick="go('followups')">مشاهده همه</button></div>
@@ -850,7 +855,8 @@ function renderInvTable(){
     <th>شماره</th><th>مشتری</th><th>نوع</th><th>تاریخ</th><th>مبلغ نهایی</th><th>فروشنده</th><th>عملیات</th>
   </tr></thead><tbody>${rows.map(i=>`<tr>
     <td class="mono" style="font-weight:700">${esc(i.num||'-')}</td><td>${esc(i.cust_biz||'-')}</td>
-    <td>${statusTag(i.type)}</td><td class="mono">${esc(i.date||'-')}</td><td class="mono">${fmt(i.final)}</td>
+    <td>${statusTag(i.type)}${i.type==='final'?` <span class="tag ${i.approved?'t-done':'t-pending'}" style="font-size:10px">${i.approved?'✓ تأیید شده':'⏳ در انتظار'}</span>`:''}</td>
+    <td class="mono">${esc(i.date||'-')}</td><td class="mono">${fmt(i.final)}</td>
     <td class="muted">${esc(i.seller_name||'-')}</td>
     <td>
       ${i.type==='proforma' && !i.converted ? `<button class="btn sm orange" onclick="convertProforma(${i.id})">🔄 تبدیل به فاکتور</button>` : ''}
@@ -911,7 +917,7 @@ function renderInvPicker(){
   if(q)prods=prods.filter(p=>((p.name||'')+' '+(p.code||'')).toLowerCase().includes(q));
   el('invPicker').innerHTML = prods.map(p=>`
     <div class="pick-card" onclick="addToCart(${p.id})">
-      <div class="pimg">${p.image?`<img src="/uploads/products/${esc(p.image)}">`:'🧥'}</div>
+      <div class="pimg">${p.image?`<img src="/uploads/products/${esc(p.image)}" loading="lazy" decoding="async">`:'🧥'}</div>
       <div class="pn">${esc(p.name)}</div>
       <div class="pp">${fmt(p.price)} ت</div>
     </div>`).join('') || '<div class="empty">محصولی نیست</div>';
@@ -1029,7 +1035,7 @@ function renderProdGrid(canEdit){
   el('prodGrid').innerHTML = CACHE.products.map(p=>{
     const low = p.stock<=p.stock_alert;
     return `<div class="pcard">
-      <div class="img">${p.image?`<img src="/uploads/products/${esc(p.image)}">`:'🧥'}</div>
+      <div class="img">${p.image?`<img src="/uploads/products/${esc(p.image)}" loading="lazy" decoding="async">`:'🧥'}</div>
       <div class="body">
         <div class="name">${esc(p.name)}</div>
         <div class="code">${esc(p.code||'')} ${p.category?'· '+esc(p.category):''}</div>
@@ -1224,6 +1230,169 @@ function drawChart(monthly){
     datasets:[{label:'فروش (تومان)',data:monthly.map(m=>m.revenue),backgroundColor:'#7C3AED',borderRadius:6}]
   },options:{responsive:true,plugins:{legend:{labels:{font:{family:'Vazirmatn'}}}},
     scales:{x:{ticks:{font:{family:'Vazirmatn'}}},y:{ticks:{font:{family:'Vazirmatn'},callback:v=>fmt(v)}}}}});
+}
+
+/* ============================================================
+   ACCOUNTING (admin)
+============================================================ */
+let accTab = 'receivables';
+
+ROUTES.accounting = async function(){
+  el('view').innerHTML='<div class="muted">در حال بارگذاری...</div>';
+  const ov = await api('GET','/accounting/overview');
+  if(!ov) return;
+  el('view').innerHTML = `
+    <div class="cards">
+      ${statCard('g','🧾',fmt(ov.totalInvoiced),'کل فاکتور رسمی (ت)')}
+      ${statCard('b','✅',fmt(ov.totalSettled),'تسویه شده (ت)')}
+      ${statCard('r','⏳',fmt(Math.max(0,ov.outstanding)),'مانده مطالبات (ت)')}
+      ${statCard('o','🔔',fmt(ov.pendingApproval),'منتظر تأیید')}
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h4>💰 حسابداری</h4>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button data-acc-tab="receivables" class="btn ${accTab==='receivables'?'':'ghost'}" onclick="switchAccTab('receivables')">مطالبات</button>
+          <button data-acc-tab="settlements" class="btn ${accTab==='settlements'?'':'ghost'}" onclick="switchAccTab('settlements')">تسویه‌ها</button>
+          <button data-acc-tab="commissions" class="btn ${accTab==='commissions'?'':'ghost'}" onclick="switchAccTab('commissions')">تأیید و کمیسیون</button>
+        </div>
+      </div>
+      <div class="panel-body" id="accBody"><div class="muted">در حال بارگذاری...</div></div>
+    </div>`;
+  loadAccTab(accTab);
+};
+
+function switchAccTab(tab){
+  accTab=tab;
+  document.querySelectorAll('[data-acc-tab]').forEach(b=>{
+    b.classList.toggle('ghost', b.dataset.accTab!==tab);
+  });
+  loadAccTab(tab);
+}
+
+async function loadAccTab(tab){
+  const body=el('accBody'); if(!body) return;
+  body.innerHTML='<div class="muted">در حال بارگذاری...</div>';
+  if(tab==='receivables'){
+    const rows=await api('GET','/accounting/receivables')||[];
+    body.innerHTML=`
+      <div class="tbl-wrap"><table class="tbl"><thead><tr>
+        <th>نام فروشگاه</th><th>نام کامل</th><th>کارشناس</th><th>کل فاکتور (ت)</th><th>تسویه شده (ت)</th><th>مانده (ت)</th><th>عملیات</th>
+      </tr></thead><tbody>${rows.map(r=>{
+        const oc=r.outstanding>0?'var(--red)':'var(--green)';
+        return `<tr>
+          <td>${esc(r.biz)}</td><td>${esc(r.owner||'-')}</td><td class="muted">${esc(r.salesperson||'-')}</td>
+          <td class="mono">${fmt(r.total_invoiced)}</td>
+          <td class="mono" style="color:var(--green)">${fmt(r.total_settled)}</td>
+          <td class="mono" style="color:${oc};font-weight:700">${fmt(r.outstanding)}</td>
+          <td><button class="btn sm green" onclick="settlementModal(${r.id})">💵 ثبت تسویه</button></td>
+        </tr>`;
+      }).join('')||emptyRow(7)}</tbody></table></div>`;
+  } else if(tab==='settlements'){
+    const rows=await api('GET','/accounting/settlements')||[];
+    body.innerHTML=`
+      <div class="toolbar" style="margin-bottom:12px"><button class="btn" onclick="settlementModal()">➕ ثبت تسویه جدید</button></div>
+      <div class="tbl-wrap"><table class="tbl"><thead><tr>
+        <th>تاریخ</th><th>مشتری</th><th>مبلغ (ت)</th><th>نوع پرداخت</th><th>یادداشت</th><th>ثبت‌کننده</th><th>عملیات</th>
+      </tr></thead><tbody>${rows.map(r=>`<tr>
+        <td class="mono">${esc(r.date||'-')}</td>
+        <td>${esc(r.cust_biz||'-')}</td>
+        <td class="mono" style="color:var(--green);font-weight:700">${fmt(r.amount)}</td>
+        <td>${r.pay_type==='cheque'?'چک':'نقد'}</td>
+        <td class="muted">${esc(r.note||'-')}</td>
+        <td class="muted">${esc(r.recorder_name||'-')}</td>
+        <td><button class="btn sm red" onclick="deleteSettlement(${r.id})">🗑️</button></td>
+      </tr>`).join('')||emptyRow(7)}</tbody></table></div>`;
+  } else if(tab==='commissions'){
+    const [pending,comms]=await Promise.all([
+      api('GET','/accounting/pending-approvals'),
+      api('GET','/accounting/commissions')
+    ]);
+    const pendingRows=(pending||[]).map(i=>`<tr>
+      <td class="mono" style="font-weight:700">${esc(i.num)}</td>
+      <td>${esc(i.cust_biz||'-')}</td>
+      <td class="muted">${esc(i.salesperson||'-')}</td>
+      <td class="mono">${esc(i.date||'-')}</td>
+      <td class="mono">${fmt(i.final)}</td>
+      <td>${i.pay_type==='cheque'?'چک':'نقد'}</td>
+      <td><button class="btn sm green" onclick="approveInvoice(${i.id})">✅ تأیید</button></td>
+    </tr>`).join('');
+    const commRows=(comms||[]).map(c=>`<tr>
+      <td>${esc(c.name)}</td>
+      <td class="mono">${fmt(c.commission_cash)}٪</td>
+      <td class="mono">${fmt(c.commission_cheque)}٪</td>
+      <td class="mono">${fmt(c.cashSales)}</td>
+      <td class="mono">${fmt(c.chequeSales)}</td>
+      <td class="mono" style="color:var(--green)">${fmt(Math.round(c.cashComm))}</td>
+      <td class="mono" style="color:var(--green)">${fmt(Math.round(c.chequeComm))}</td>
+      <td class="mono" style="font-weight:800;color:var(--purple)">${fmt(Math.round(c.totalComm))}</td>
+    </tr>`).join('');
+    body.innerHTML=`
+      ${(pending||[]).length ? `
+      <div class="panel" style="margin:0 0 16px">
+        <div class="panel-head"><h4>🔔 فاکتورهای رسمی منتظر تأیید (${pending.length})</h4></div>
+        <div class="panel-body tbl-wrap"><table class="tbl"><thead><tr>
+          <th>شماره</th><th>مشتری</th><th>کارشناس</th><th>تاریخ</th><th>مبلغ (ت)</th><th>نوع پرداخت</th><th>عملیات</th>
+        </tr></thead><tbody>${pendingRows}</tbody></table></div>
+      </div>` : `<div class="muted" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;margin-bottom:16px">✅ همه فاکتورهای رسمی تأیید شده‌اند</div>`}
+      <div class="panel">
+        <div class="panel-head"><h4>📊 گزارش کمیسیون کارشناسان فروش</h4></div>
+        <div class="panel-body tbl-wrap"><table class="tbl"><thead><tr>
+          <th>کارشناس</th><th>نرخ نقد</th><th>نرخ چک</th><th>فروش نقد تأیید شده</th><th>فروش چک تأیید شده</th><th>کمیسیون نقد</th><th>کمیسیون چک</th><th>جمع کمیسیون</th>
+        </tr></thead><tbody>${commRows||emptyRow(8)}</tbody></table></div>
+      </div>`;
+  }
+}
+
+async function approveInvoice(id){
+  if(!confirm('این فاکتور تأیید و در محاسبه کمیسیون لحاظ شود؟')) return;
+  try{
+    await api('POST','/accounting/invoices/'+id+'/approve',{});
+    showToast('فاکتور با موفقیت تأیید شد');
+    ROUTES.accounting();
+  }catch(e){}
+}
+
+function settlementModal(custId){
+  const custOpts=CACHE.customers.map(c=>`<option value="${c.id}" ${custId===c.id?'selected':''}>${esc(c.biz)}</option>`).join('');
+  openModal(`
+    <div class="modal-head"><h3>ثبت تسویه حساب</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="fg full"><label>مشتری *</label><select id="st-cust">${custOpts}</select></div>
+      <div class="fg"><label>مبلغ تسویه (تومان) *</label><input id="st-amount" type="number" min="1" placeholder="0"></div>
+      <div class="fg"><label>نوع پرداخت</label><select id="st-paytype">
+        <option value="cash">نقد</option><option value="cheque">چک</option></select></div>
+      <div class="fg"><label>تاریخ</label><input id="st-date" data-jdate value="${todayJalali()}"></div>
+      <div class="fg full"><label>یادداشت</label><textarea id="st-note" placeholder="توضیحات اختیاری..."></textarea></div>
+    </div></div>
+    <div class="modal-foot">
+      <button class="btn green" onclick="saveSettlement()">💾 ثبت تسویه</button>
+      <button class="btn ghost" onclick="closeModal()">انصراف</button>
+    </div>`);
+}
+
+async function saveSettlement(){
+  const cust_id=+el('st-cust').value, amount=+el('st-amount').value;
+  if(!cust_id||!amount){ showToast('مشتری و مبلغ الزامی است','error'); return; }
+  try{
+    await api('POST','/accounting/settlements',{
+      cust_id, amount,
+      pay_type:el('st-paytype').value,
+      date:el('st-date').value,
+      note:el('st-note').value
+    });
+    closeModal(); showToast('تسویه ثبت شد');
+    loadAccTab(accTab);
+  }catch(e){}
+}
+
+async function deleteSettlement(id){
+  if(!confirm('این تسویه حذف شود؟')) return;
+  try{
+    await api('DELETE','/accounting/settlements/'+id);
+    showToast('حذف شد');
+    loadAccTab('settlements');
+  }catch(e){}
 }
 
 /* ============================================================
