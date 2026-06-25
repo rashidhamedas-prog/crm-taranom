@@ -64,13 +64,22 @@ router.get('/settlements', auth, adminOnly, (req, res) => {
 
 // Add settlement
 router.post('/settlements', auth, adminOnly, (req, res) => {
-  const { cust_id, invoice_id, amount, pay_type, date, note, cheque_bank, cheque_sayadi, cheque_due } = req.body;
+  const { cust_id, invoice_id, amount, pay_type, date, note,
+          cheque_bank, cheque_sayadi, cheque_number, cheque_account,
+          cheque_amount, cheque_owner, cheque_due, cheque_status } = req.body;
   if (!cust_id || !amount) return res.status(400).json({ error: 'مشتری و مبلغ الزامی است' });
   const db = getDB();
   const result = db.prepare(
-    'INSERT INTO settlements (user_id,cust_id,invoice_id,amount,pay_type,date,note,cheque_bank,cheque_sayadi,cheque_due) VALUES (?,?,?,?,?,?,?,?,?,?)'
-  ).run(req.user.id, cust_id, invoice_id || null, parseFloat(amount), pay_type || 'cash', date || '', note || '',
-       cheque_bank || '', cheque_sayadi || '', cheque_due || '');
+    `INSERT INTO settlements
+      (user_id,cust_id,invoice_id,amount,pay_type,date,note,
+       cheque_bank,cheque_sayadi,cheque_number,cheque_account,
+       cheque_amount,cheque_owner,cheque_due,cheque_status)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+  ).run(req.user.id, cust_id, invoice_id || null, parseFloat(amount), pay_type || 'cash',
+        date || '', note || '',
+        cheque_bank || '', cheque_sayadi || '', cheque_number || '', cheque_account || '',
+        parseFloat(cheque_amount || 0), cheque_owner || '', cheque_due || '',
+        cheque_status || 'pending');
   audit(req.user.id, 'create', 'settlement', result.lastInsertRowid, `تسویه ${amount} تومان - مشتری ${cust_id}`);
   res.json({ id: result.lastInsertRowid, ok: true });
 });
@@ -80,6 +89,41 @@ router.delete('/settlements/:id', auth, adminOnly, (req, res) => {
   const db = getDB();
   db.prepare('DELETE FROM settlements WHERE id=?').run(req.params.id);
   audit(req.user.id, 'delete', 'settlement', req.params.id, 'حذف تسویه');
+  res.json({ ok: true });
+});
+
+// Cheque management list
+router.get('/cheques', auth, adminOnly, (req, res) => {
+  const db = getDB();
+  const { from, to, status, bank } = req.query;
+  const where = ["s.pay_type='cheque'"];
+  const params = [];
+  if (from) { where.push('s.cheque_due >= ?'); params.push(from); }
+  if (to)   { where.push('s.cheque_due <= ?'); params.push(to); }
+  if (status) { where.push('s.cheque_status = ?'); params.push(status); }
+  if (bank)   { where.push('s.cheque_bank LIKE ?'); params.push('%' + bank + '%'); }
+  const rows = db.prepare(`
+    SELECT s.*, c.biz as cust_biz, u.name as salesperson_name
+    FROM settlements s
+    LEFT JOIN customers c ON s.cust_id=c.id
+    LEFT JOIN users u ON c.user_id=u.id
+    WHERE ${where.join(' AND ')}
+    ORDER BY s.cheque_due ASC, s.created_at DESC
+    LIMIT 500
+  `).all(...params);
+  res.json(rows);
+});
+
+// Update cheque status (pending → received/bounced/cancelled)
+router.patch('/cheques/:id/status', auth, adminOnly, (req, res) => {
+  const { status } = req.body;
+  const allowed = ['pending', 'received', 'bounced', 'cancelled'];
+  if (!allowed.includes(status)) return res.status(400).json({ error: 'وضعیت نامعتبر' });
+  const db = getDB();
+  const row = db.prepare('SELECT * FROM settlements WHERE id=? AND pay_type=?').get(req.params.id, 'cheque');
+  if (!row) return res.status(404).json({ error: 'چک یافت نشد' });
+  db.prepare('UPDATE settlements SET cheque_status=? WHERE id=?').run(status, req.params.id);
+  audit(req.user.id, 'update', 'cheque', req.params.id, `وضعیت چک: ${status}`);
   res.json({ ok: true });
 });
 

@@ -196,7 +196,12 @@ function initDB() {
       note TEXT,
       cheque_bank TEXT DEFAULT '',
       cheque_sayadi TEXT DEFAULT '',
+      cheque_number TEXT DEFAULT '',
+      cheque_account TEXT DEFAULT '',
+      cheque_amount REAL DEFAULT 0,
+      cheque_owner TEXT DEFAULT '',
       cheque_due TEXT DEFAULT '',
+      cheque_status TEXT DEFAULT 'pending',
       created_at INTEGER DEFAULT (strftime('%s','now')),
       FOREIGN KEY(user_id) REFERENCES users(id),
       FOREIGN KEY(cust_id) REFERENCES customers(id)
@@ -234,7 +239,12 @@ function initDB() {
   ensureColumn(db, 'orders', 'stock_deducted', 'INTEGER DEFAULT 0');
   ensureColumn(db, 'settlements', 'cheque_bank', "TEXT DEFAULT ''");
   ensureColumn(db, 'settlements', 'cheque_sayadi', "TEXT DEFAULT ''");
+  ensureColumn(db, 'settlements', 'cheque_number', "TEXT DEFAULT ''");
+  ensureColumn(db, 'settlements', 'cheque_account', "TEXT DEFAULT ''");
+  ensureColumn(db, 'settlements', 'cheque_amount', 'REAL DEFAULT 0');
+  ensureColumn(db, 'settlements', 'cheque_owner', "TEXT DEFAULT ''");
   ensureColumn(db, 'settlements', 'cheque_due', "TEXT DEFAULT ''");
+  ensureColumn(db, 'settlements', 'cheque_status', "TEXT DEFAULT 'pending'");
 
   // ---- Indexes ----
   db.exec(`

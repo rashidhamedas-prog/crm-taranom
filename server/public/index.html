@@ -17,7 +17,7 @@
   --bg:#f4f7f5; --card:#ffffff; --text:#1f2937; --muted:#6b7280; --border:#e5e7eb;
 }
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Vazirmatn',sans-serif}
-html,body{height:100%}
+html,body{height:100%;overflow-x:hidden}
 body{background:var(--bg);color:var(--text);font-size:14px;line-height:1.7}
 a{color:inherit;text-decoration:none}
 button{cursor:pointer;font-family:inherit}
@@ -151,8 +151,8 @@ table.tbl tr:hover td{background:#faf8ff}
 .fg input[readonly]{background:#f3f4f6;color:var(--muted)}
 
 /* ===== Jalali datepicker ===== */
-.dp{position:absolute;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.2);
-  padding:12px;width:280px;z-index:500;display:none}
+.dp{position:fixed;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.2);
+  padding:12px;width:290px;z-index:600;display:none}
 .dp.open{display:block}
 .dp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .dp-head button{background:var(--purple-light);color:var(--purple);border:none;width:30px;height:30px;border-radius:8px;font-size:16px}
@@ -225,40 +225,57 @@ table.tbl tr:hover td{background:#faf8ff}
 .flex{display:flex}.gap{gap:10px}.wrap{flex-wrap:wrap}
 .hide{display:none!important}
 
+/* ===== Mobile sidebar backdrop ===== */
+#sidebarBackdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
+#sidebarBackdrop.show{display:block}
+
 /* ===== Responsive ===== */
 @media(max-width:900px){
-  .sidebar{transform:translateX(100%);transition:transform .25s}
+  .sidebar{transform:translateX(110%);transition:transform .28s cubic-bezier(.4,0,.2,1);will-change:transform}
   .sidebar.open{transform:translateX(0)}
-  .main{margin-right:0}
+  .main{margin-right:0!important}
   .topbar .menu-btn{display:flex;align-items:center;justify-content:center}
   .inv-layout{grid-template-columns:1fr}
   .inv-cart{position:static}
-  .form-grid{grid-template-columns:1fr}
+  .form-grid{grid-template-columns:1fr 1fr}
   .topbar .clock{display:none}
   .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .cards{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+  .cards{grid-template-columns:repeat(2,1fr);gap:12px}
+  .stat{padding:14px 10px}
+  .stat .ic{width:40px;height:40px;font-size:20px}
+  .stat .v{font-size:16px}
+  .stat .l{font-size:11px}
+  .content{padding:16px}
 }
 @media(max-width:600px){
-  .cards{grid-template-columns:1fr 1fr}
+  .cards{grid-template-columns:1fr 1fr;gap:8px}
+  .stat{padding:12px 8px;gap:10px}
+  .stat .ic{width:36px;height:36px;font-size:18px}
+  .stat .v{font-size:14px}
+  .stat .l{font-size:10px}
   .pgrid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
   .overlay{align-items:flex-end;padding:0}
-  .modal{max-height:96vh;border-radius:16px 16px 0 0;position:relative}
+  .modal{max-height:96vh;border-radius:16px 16px 0 0}
+  .modal.lg{max-width:100%;border-radius:16px 16px 0 0}
   .inv-layout{grid-template-columns:1fr}
-  table.tbl{font-size:11px}
-  table.tbl th,table.tbl td{padding:7px 8px}
-  .sidebar{width:100%;transform:translateX(100%)}
+  table.tbl{font-size:12px}
+  table.tbl th,table.tbl td{padding:8px 6px}
+  .sidebar{width:280px;transform:translateX(110%)}
   .content{padding:12px}
-  .dp{width:240px}
-  .topbar{padding:10px 14px}
-  .topbar h3{font-size:15px}
-  .toolbar{gap:7px}
-  .toolbar input,.toolbar select{font-size:13px;padding:8px 10px}
+  .dp{width:calc(100vw - 24px);max-width:300px}
+  .dp-days button{font-size:13px}
+  .topbar{padding:8px 12px}
+  .topbar h3{font-size:14px}
+  .toolbar{gap:6px;flex-wrap:wrap}
+  .toolbar input,.toolbar select{font-size:13px;padding:8px 10px;min-width:0;flex:1}
   .btn{padding:8px 12px;font-size:12px}
-  .stat{padding:14px}
-  .stat .v{font-size:17px}
-  .panel-head{padding:12px 14px}
+  .btn.sm{padding:6px 8px;font-size:11px}
+  .panel-head{padding:12px 14px;flex-direction:column;align-items:flex-start;gap:8px}
   .panel-body{padding:12px}
   .modal-body{padding:14px}
+  .form-grid{grid-template-columns:1fr}
+  .inv-pick{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
+  .topbar .user span:last-child{display:none}
 }
 @media print{
   .sidebar,.topbar,.btn,.toolbar,.panel-head{display:none!important}
@@ -344,6 +361,9 @@ table.tbl tr:hover td{background:#faf8ff}
 
 <!-- ===== Jalali datepicker root ===== -->
 <div id="dpRoot"></div>
+
+<!-- ===== Mobile Sidebar Backdrop ===== -->
+<div id="sidebarBackdrop" onclick="closeSidebar()"></div>
 
 <!-- ===== PWA Install Banner ===== -->
 <div id="installBanner">
@@ -457,16 +477,17 @@ function attachDatepickers(scope){
 }
 function openDP(inp){
   DP.input = inp;
+  const today = todayJalali().split('/');
   let parts = (inp.value||'').split('/').map(x=>parseInt(x));
-  if(parts.length===3 && parts[0]){ DP.y=parts[0]; DP.m=parts[1]; DP.sel=inp.value; }
-  else { const t=todayJalali().split('/'); DP.y=+t[0]; DP.m=+t[1]; DP.sel=null; }
+  if(parts.length===3 && parts[0]>=1300 && parts[0]<=1500 && parts[1]>=1 && parts[1]<=12){
+    DP.y=parts[0]; DP.m=parts[1]; DP.sel=inp.value;
+  } else {
+    DP.y=+today[0]; DP.m=+today[1]; DP.sel=null;
+  }
+  DP.y=Math.max(1300,Math.min(1500,DP.y));
+  DP.m=Math.max(1,Math.min(12,DP.m));
   renderDP();
-  const root = el('dpRoot');
-  const dp = root.querySelector('.dp');
-  const r = inp.getBoundingClientRect();
-  dp.style.top = (r.bottom + window.scrollY + 4)+'px';
-  dp.style.right = (window.innerWidth - r.right)+'px';
-  dp.classList.add('open');
+  positionDP(inp);
 }
 function closeDP(){ const dp=el('dpRoot').querySelector('.dp'); if(dp) dp.classList.remove('open'); DP.input=null; }
 function renderDP(){
@@ -497,15 +518,29 @@ function renderDP(){
       <button class="clear-btn" onclick="pickClear()">پاک کردن</button>
     </div>
   </div>`;
-  // reposition after re-render
-  const dp = el('dpRoot').querySelector('.dp');
-  if(DP.input){
-    const r=DP.input.getBoundingClientRect();
-    dp.style.top=(r.bottom+window.scrollY+4)+'px';
-    dp.style.right=(window.innerWidth-r.right)+'px';
-  }
+  if(DP.input) positionDP(DP.input);
 }
-function dpNav(dir){ DP.m+=dir; if(DP.m>12){DP.m=1;DP.y++;} if(DP.m<1){DP.m=12;DP.y--;} renderDP(); }
+function positionDP(inp){
+  const dp=el('dpRoot').querySelector('.dp'); if(!dp||!inp) return;
+  const r=inp.getBoundingClientRect();
+  const dpW=290, dpH=dp.offsetHeight||300;
+  // Right edge aligned with input (RTL), clamped to viewport
+  let right=window.innerWidth-r.right;
+  if(right<8) right=8;
+  if(right+dpW>window.innerWidth) right=Math.max(8,window.innerWidth-dpW-8);
+  // Below input, but flip above if not enough space
+  let top;
+  if(r.bottom+dpH+6>window.innerHeight && r.top-dpH-6>0) top=r.top-dpH-6;
+  else top=r.bottom+4;
+  if(top<8) top=8;
+  dp.style.right=right+'px'; dp.style.top=top+'px'; dp.style.left='auto';
+}
+function dpNav(dir){
+  DP.m+=dir;
+  if(DP.m>12){DP.m=1;DP.y=Math.min(1500,DP.y+1);}
+  if(DP.m<1){DP.m=12;DP.y=Math.max(1300,DP.y-1);}
+  renderDP();
+}
 function dpYearNav(dir){ DP.y=Math.max(1300,Math.min(1500,DP.y+dir)); renderDP(); }
 function pickDay(d){
   const val = DP.y+'/'+String(DP.m).padStart(2,'0')+'/'+String(d).padStart(2,'0');
@@ -585,10 +620,17 @@ function go(page){
   const items = ME.role==='admin'?NAV_ADMIN:NAV_SALES;
   const it = items.find(x=>x.id===page);
   el('pageTitle').textContent = it?it.label:'';
-  if(window.innerWidth<=900) el('sidebar').classList.remove('open');
+  if(window.innerWidth<=900) closeSidebar();
   ROUTES[page] ? ROUTES[page]() : (el('view').innerHTML='');
 }
-function toggleSidebar(){ el('sidebar').classList.toggle('open'); }
+function toggleSidebar(){
+  const open = el('sidebar').classList.toggle('open');
+  el('sidebarBackdrop').classList.toggle('show', open);
+}
+function closeSidebar(){
+  el('sidebar').classList.remove('open');
+  el('sidebarBackdrop').classList.remove('show');
+}
 
 /* ============================================================
    BOOT
@@ -1288,6 +1330,7 @@ ROUTES.accounting = async function(){
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
           <button data-acc-tab="receivables" class="btn ${accTab==='receivables'?'':'ghost'}" onclick="switchAccTab('receivables')">مطالبات</button>
           <button data-acc-tab="settlements" class="btn ${accTab==='settlements'?'':'ghost'}" onclick="switchAccTab('settlements')">تسویه‌ها</button>
+          <button data-acc-tab="cheques" class="btn ${accTab==='cheques'?'':'ghost'}" onclick="switchAccTab('cheques')">🧾 چک‌ها</button>
           <button data-acc-tab="commissions" class="btn ${accTab==='commissions'?'':'ghost'}" onclick="switchAccTab('commissions')">تأیید و کمیسیون</button>
           <div style="display:flex;gap:6px;align-items:center;border-right:1px solid var(--border);padding-right:8px;margin-right:2px">
             <input id="accFrom" data-jdate placeholder="از تاریخ" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;width:120px;font-size:12px" value="${accDateFrom}" onchange="accDateFrom=this.value">
@@ -1341,11 +1384,60 @@ async function loadAccTab(tab){
         <td>${esc(r.cust_biz||'-')}</td>
         <td class="mono" style="color:var(--green);font-weight:700">${fmt(r.amount)}</td>
         <td>${r.pay_type==='cheque'?'🧾 چک':'💵 نقد'}</td>
-        <td class="muted" style="font-size:12px">${r.pay_type==='cheque'?(esc(r.cheque_bank||'')+' | '+esc(r.cheque_sayadi||'')+' | سررسید: '+esc(r.cheque_due||'-')):'-'}</td>
+        <td class="muted" style="font-size:12px">${r.pay_type==='cheque'?(esc(r.cheque_bank||'')+' | '+esc(r.cheque_sayadi||'')+' | '+esc(r.cheque_owner||'')+(r.cheque_due?' | سررسید: '+esc(r.cheque_due):'')):'-'}</td>
         <td class="muted">${esc(r.note||'-')}</td>
         <td class="muted">${esc(r.recorder_name||'-')}</td>
         <td><button class="btn sm red" onclick="deleteSettlement(${r.id})">🗑️</button></td>
       </tr>`).join('')||emptyRow(8)}</tbody></table></div>`;
+  } else if(tab==='cheques'){
+    const statusFilter=el('chqStatus')?.value||'';
+    const bankFilter=el('chqBank')?.value||'';
+    let qp=''; const qps=[];
+    if(accDateFrom) qps.push('from='+encodeURIComponent(accDateFrom));
+    if(accDateTo)   qps.push('to='+encodeURIComponent(accDateTo));
+    if(statusFilter) qps.push('status='+encodeURIComponent(statusFilter));
+    if(bankFilter)   qps.push('bank='+encodeURIComponent(bankFilter));
+    if(qps.length) qp='?'+qps.join('&');
+    const rows=await api('GET','/accounting/cheques'+qp)||[];
+    const statusLabel={'pending':'در جریان','received':'وصول شده','bounced':'برگشت خورده','cancelled':'ابطال'};
+    const statusColor={'pending':'var(--orange)','received':'var(--green)','bounced':'var(--red)','cancelled':'var(--muted)'};
+    const today=todayJalali();
+    body.innerHTML=`
+      <div class="toolbar" style="margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <select id="chqStatus" onchange="loadAccTab('cheques')" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px">
+          <option value="">همه وضعیت‌ها</option>
+          <option value="pending" ${statusFilter==='pending'?'selected':''}>در جریان</option>
+          <option value="received" ${statusFilter==='received'?'selected':''}>وصول شده</option>
+          <option value="bounced" ${statusFilter==='bounced'?'selected':''}>برگشت خورده</option>
+          <option value="cancelled" ${statusFilter==='cancelled'?'selected':''}>ابطال</option>
+        </select>
+        <input id="chqBank" placeholder="فیلتر بانک..." value="${esc(bankFilter)}" onchange="loadAccTab('cheques')" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;width:140px">
+      </div>
+      <div class="tbl-wrap"><table class="tbl"><thead><tr>
+        <th>مشتری</th><th>کارشناس</th><th>مبلغ چک (ت)</th><th>بانک</th><th>شماره صیادی</th><th>شماره چک</th><th>نام صادرکننده</th><th>سررسید</th><th>وضعیت</th><th>عملیات</th>
+      </tr></thead><tbody>${rows.map(r=>{
+        const overdue=r.cheque_status==='pending' && r.cheque_due && r.cheque_due<today;
+        return `<tr ${overdue?'style="background:#fff5f5"':''}>
+          <td>${esc(r.cust_biz||'-')}</td>
+          <td class="muted">${esc(r.salesperson_name||'-')}</td>
+          <td class="mono" style="font-weight:700">${fmt(r.cheque_amount||r.amount)}</td>
+          <td>${esc(r.cheque_bank||'-')}</td>
+          <td class="mono">${esc(r.cheque_sayadi||'-')}</td>
+          <td class="mono">${esc(r.cheque_number||'-')}</td>
+          <td>${esc(r.cheque_owner||'-')}</td>
+          <td class="mono" ${overdue?'style="color:var(--red);font-weight:700"':''}>${esc(r.cheque_due||'-')}</td>
+          <td><span style="color:${statusColor[r.cheque_status]||'var(--muted)'};font-weight:600">${statusLabel[r.cheque_status]||r.cheque_status}</span></td>
+          <td style="white-space:nowrap">
+            <select onchange="updateChequeStatus(${r.id},this.value)" style="padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px">
+              <option value="">تغییر وضعیت</option>
+              <option value="received">وصول شده</option>
+              <option value="bounced">برگشت خورده</option>
+              <option value="cancelled">ابطال</option>
+              <option value="pending">در جریان</option>
+            </select>
+          </td>
+        </tr>`;
+      }).join('')||emptyRow(10)}</tbody></table></div>`;
   } else if(tab==='commissions'){
     const [pending,comms]=await Promise.all([
       api('GET','/accounting/pending-approvals'),
@@ -1396,6 +1488,15 @@ async function approveInvoice(id){
   }catch(e){}
 }
 
+async function updateChequeStatus(id, status){
+  if(!status) return;
+  try{
+    await api('PATCH','/accounting/cheques/'+id+'/status',{status});
+    showToast('وضعیت چک بروز شد');
+    loadAccTab('cheques');
+  }catch(e){}
+}
+
 function settlementModal(custId){
   const custOpts=CACHE.customers.map(c=>`<option value="${c.id}" ${custId===c.id?'selected':''}>${esc(c.biz)}</option>`).join('');
   openModal(`
@@ -1407,10 +1508,14 @@ function settlementModal(custId){
         <option value="cash">نقد</option><option value="cheque">چک</option></select></div>
       <div class="fg"><label>تاریخ</label><input id="st-date" data-jdate value="${todayJalali()}"></div>
       <div class="fg full"><label>یادداشت</label><textarea id="st-note" placeholder="توضیحات اختیاری..."></textarea></div>
-      <div id="chequeFields" class="fg full hide" style="display:none">
+      <div id="chequeFields" class="fg full" style="display:none">
         <div class="form-grid">
-          <div class="fg"><label>نام بانک *</label><input id="st-cbank" placeholder="مثال: ملی"></div>
+          <div class="fg"><label>نام بانک *</label><input id="st-cbank" placeholder="مثال: ملی، صادرات"></div>
           <div class="fg"><label>شماره صیادی *</label><input id="st-csayadi" placeholder="شماره صیادی چک"></div>
+          <div class="fg"><label>شماره چک</label><input id="st-cnum" placeholder="شماره چک (اختیاری)"></div>
+          <div class="fg"><label>شماره حساب</label><input id="st-caccnum" placeholder="شماره حساب (اختیاری)"></div>
+          <div class="fg"><label>مبلغ چک (تومان)</label><input id="st-camount" type="number" min="0" placeholder="در صورت تفاوت با مبلغ تسویه"></div>
+          <div class="fg"><label>نام صادرکننده</label><input id="st-cowner" placeholder="نام صاحب چک"></div>
           <div class="fg full"><label>تاریخ سررسید *</label><input id="st-cdue" data-jdate></div>
         </div>
       </div>
@@ -1442,7 +1547,12 @@ async function saveSettlement(){
       note:el('st-note').value,
       cheque_bank:pay_type==='cheque'?(el('st-cbank')?.value||''):'',
       cheque_sayadi:pay_type==='cheque'?(el('st-csayadi')?.value||''):'',
-      cheque_due:pay_type==='cheque'?(el('st-cdue')?.value||''):''
+      cheque_number:pay_type==='cheque'?(el('st-cnum')?.value||''):'',
+      cheque_account:pay_type==='cheque'?(el('st-caccnum')?.value||''):'',
+      cheque_amount:pay_type==='cheque'?(parseFloat(el('st-camount')?.value||'0')||amount):0,
+      cheque_owner:pay_type==='cheque'?(el('st-cowner')?.value||''):'',
+      cheque_due:pay_type==='cheque'?(el('st-cdue')?.value||''):'',
+      cheque_status:'pending'
     });
     closeModal(); showToast('تسویه ثبت شد');
     loadAccTab(accTab);
