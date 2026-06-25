@@ -15,13 +15,23 @@ router.get('/overview', auth, adminOnly, (req, res) => {
 // Receivables per customer (only customers with at least one final invoice)
 router.get('/receivables', auth, adminOnly, (req, res) => {
   const db = getDB();
+  const { from, to } = req.query;
+  // Validate date strings to only allow digits and slashes (Jalali dates like 1403/04/01)
+  const safeDate = v => (v && /^[\d/]+$/.test(v)) ? v : null;
+  const sf = safeDate(from), st = safeDate(to);
+  const dateFilter = (sf || st)
+    ? ` AND i.date >= '${sf || ''}' AND i.date <= '${st || '9999'}'`
+    : '';
+  const settDateFilter = (sf || st)
+    ? ` AND s.date >= '${sf || ''}' AND s.date <= '${st || '9999'}'`
+    : '';
   const rows = db.prepare(`
     SELECT c.id, c.biz, c.owner, c.city, c.phone,
       u.name as salesperson,
       COALESCE(SUM(i.final),0) as total_invoiced,
-      COALESCE((SELECT SUM(s.amount) FROM settlements s WHERE s.cust_id=c.id),0) as total_settled
+      COALESCE((SELECT SUM(s.amount) FROM settlements s WHERE s.cust_id=c.id${settDateFilter}),0) as total_settled
     FROM customers c
-    LEFT JOIN invoices i ON i.cust_id=c.id AND i.type='final'
+    LEFT JOIN invoices i ON i.cust_id=c.id AND i.type='final'${dateFilter}
     LEFT JOIN users u ON c.user_id=u.id
     GROUP BY c.id
     HAVING total_invoiced > 0
@@ -34,25 +44,33 @@ router.get('/receivables', auth, adminOnly, (req, res) => {
 // Settlements list
 router.get('/settlements', auth, adminOnly, (req, res) => {
   const db = getDB();
+  const { from, to } = req.query;
+  const where = [];
+  const params = [];
+  if (from) { where.push("s.date >= ?"); params.push(from); }
+  if (to) { where.push("s.date <= ?"); params.push(to); }
+  const whereSql = where.length ? 'WHERE ' + where.join(' AND ') : '';
   const rows = db.prepare(`
     SELECT s.*, c.biz as cust_biz, u.name as recorder_name
     FROM settlements s
     LEFT JOIN customers c ON s.cust_id=c.id
     LEFT JOIN users u ON s.user_id=u.id
+    ${whereSql}
     ORDER BY s.created_at DESC
     LIMIT 300
-  `).all();
+  `).all(...params);
   res.json(rows);
 });
 
 // Add settlement
 router.post('/settlements', auth, adminOnly, (req, res) => {
-  const { cust_id, invoice_id, amount, pay_type, date, note } = req.body;
+  const { cust_id, invoice_id, amount, pay_type, date, note, cheque_bank, cheque_sayadi, cheque_due } = req.body;
   if (!cust_id || !amount) return res.status(400).json({ error: 'مشتری و مبلغ الزامی است' });
   const db = getDB();
   const result = db.prepare(
-    'INSERT INTO settlements (user_id,cust_id,invoice_id,amount,pay_type,date,note) VALUES (?,?,?,?,?,?,?)'
-  ).run(req.user.id, cust_id, invoice_id || null, parseFloat(amount), pay_type || 'cash', date || '', note || '');
+    'INSERT INTO settlements (user_id,cust_id,invoice_id,amount,pay_type,date,note,cheque_bank,cheque_sayadi,cheque_due) VALUES (?,?,?,?,?,?,?,?,?,?)'
+  ).run(req.user.id, cust_id, invoice_id || null, parseFloat(amount), pay_type || 'cash', date || '', note || '',
+       cheque_bank || '', cheque_sayadi || '', cheque_due || '');
   audit(req.user.id, 'create', 'settlement', result.lastInsertRowid, `تسویه ${amount} تومان - مشتری ${cust_id}`);
   res.json({ id: result.lastInsertRowid, ok: true });
 });
@@ -126,8 +144,8 @@ router.post('/invoices/:id/approve', auth, adminOnly, (req, res) => {
   const inv = db.prepare('SELECT * FROM invoices WHERE id=?').get(req.params.id);
   if (!inv) return res.status(404).json({ error: 'یافت نشد' });
   if (inv.type !== 'final') return res.status(400).json({ error: 'فقط فاکتور رسمی قابل تأیید است' });
-  db.prepare('UPDATE invoices SET approved=1, approved_at=strftime("%s","now"), approved_by=? WHERE id=?')
-    .run(req.user.id, inv.id);
+  db.prepare('UPDATE invoices SET approved=1, approved_at=?, approved_by=? WHERE id=?')
+    .run(Math.floor(Date.now() / 1000), req.user.id, inv.id);
   audit(req.user.id, 'approve', 'invoice', inv.id, `تأیید فاکتور ${inv.num} برای کمیسیون`);
   res.json({ ok: true });
 });

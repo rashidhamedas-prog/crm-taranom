@@ -194,6 +194,9 @@ function initDB() {
       pay_type TEXT DEFAULT 'cash',
       date TEXT,
       note TEXT,
+      cheque_bank TEXT DEFAULT '',
+      cheque_sayadi TEXT DEFAULT '',
+      cheque_due TEXT DEFAULT '',
       created_at INTEGER DEFAULT (strftime('%s','now')),
       FOREIGN KEY(user_id) REFERENCES users(id),
       FOREIGN KEY(cust_id) REFERENCES customers(id)
@@ -229,6 +232,9 @@ function initDB() {
   ensureColumn(db, 'invoices', 'approved_by', 'INTEGER');
   ensureColumn(db, 'orders', 'product_id', 'INTEGER');
   ensureColumn(db, 'orders', 'stock_deducted', 'INTEGER DEFAULT 0');
+  ensureColumn(db, 'settlements', 'cheque_bank', "TEXT DEFAULT ''");
+  ensureColumn(db, 'settlements', 'cheque_sayadi', "TEXT DEFAULT ''");
+  ensureColumn(db, 'settlements', 'cheque_due', "TEXT DEFAULT ''");
 
   // ---- Indexes ----
   db.exec(`

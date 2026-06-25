@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const { getDB, audit } = require('../db');
-const { auth } = require('../middleware/auth');
+const { auth, adminOnly } = require('../middleware/auth');
 const XLSX = require('xlsx');
 const multer = require('multer');
 
@@ -80,7 +80,7 @@ router.get('/export/excel', auth, (req, res) => {
 });
 
 // Import customers from Excel
-router.post('/import', auth, memUpload.single('file'), (req, res) => {
+router.post('/import', auth, adminOnly, memUpload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'فایل آپلود نشد' });
   try {
     const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
