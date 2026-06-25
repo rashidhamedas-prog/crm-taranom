@@ -1,0 +1,6 @@
+node_modules/
+crm.db
+crm.db-shm
+crm.db-wal
+public/uploads/
+.env

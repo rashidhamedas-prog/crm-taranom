@@ -1,0 +1,14 @@
+{
+  "name": "CRM ترنم",
+  "short_name": "ترنم",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#6B21A8",
+  "theme_color": "#6B21A8",
+  "lang": "fa",
+  "dir": "rtl",
+  "icons": [
+    { "src": "/logo.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/logo.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
