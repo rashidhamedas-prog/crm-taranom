@@ -2,6 +2,9 @@ const router = require('express').Router();
 const { getDB, audit } = require('../db');
 const { auth } = require('../middleware/auth');
 const XLSX = require('xlsx');
+const multer = require('multer');
+
+const memUpload = multer({ storage: multer.memoryStorage() });
 
 function getScope(req) {
   if (req.user.role === 'admin' && req.query.user_id) return parseInt(req.query.user_id);
@@ -23,7 +26,7 @@ router.get('/', auth, (req, res) => {
 
 router.post('/', auth, (req, res) => {
   const { biz, owner, city, phone, insta, type, status, note } = req.body;
-  if (!biz) return res.status(400).json({ error: 'نام کسب‌وکار الزامی است' });
+  if (!biz) return res.status(400).json({ error: 'نام فروشگاه الزامی است' });
   const db = getDB();
   const result = db.prepare(
     'INSERT INTO customers (user_id,biz,owner,city,phone,insta,type,status,note) VALUES (?,?,?,?,?,?,?,?,?)'
@@ -63,7 +66,7 @@ router.get('/export/excel', auth, (req, res) => {
     rows = db.prepare('SELECT * FROM customers WHERE user_id=? ORDER BY created_at DESC').all(scope);
   }
   const data = rows.map(r => ({
-    'نام کسب‌وکار': r.biz, 'نام صاحب': r.owner, 'شهر': r.city,
+    'نام فروشگاه': r.biz, 'نام کامل': r.owner, 'شهر': r.city,
     'موبایل': r.phone, 'اینستاگرام': r.insta, 'نوع': r.type, 'وضعیت': r.status,
     'یادداشت': r.note
   }));
@@ -74,6 +77,44 @@ router.get('/export/excel', auth, (req, res) => {
   res.setHeader('Content-Disposition', 'attachment; filename=customers.xlsx');
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.send(buf);
+});
+
+// Import customers from Excel
+router.post('/import', auth, memUpload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'فایل آپلود نشد' });
+  try {
+    const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(ws);
+    const db = getDB();
+    let inserted = 0;
+    const stmt = db.prepare(
+      'INSERT INTO customers (user_id,biz,owner,city,phone,insta,type,status) VALUES (?,?,?,?,?,?,?,?)'
+    );
+    const insertMany = db.transaction((rows) => {
+      for (const row of rows) {
+        const biz = row['نام فروشگاه'] || row['biz'] || row['نام کسب‌وکار'] || '';
+        if (!biz) continue;
+        const targetUserId = row['user_id'] ? parseInt(row['user_id']) : req.user.id;
+        stmt.run(
+          targetUserId,
+          biz,
+          row['نام کامل'] || row['owner'] || row['نام مالک'] || '',
+          row['شهر'] || row['city'] || '',
+          row['موبایل'] || row['phone'] || '',
+          row['اینستاگرام'] || row['insta'] || '',
+          row['نوع'] || row['type'] || 'بوتیک',
+          row['وضعیت'] || row['status'] || 'new'
+        );
+        inserted++;
+      }
+    });
+    insertMany(data);
+    audit(req.user.id, 'import', 'customer', null, `ورود ${inserted} مشتری از اکسل`);
+    res.json({ ok: true, inserted });
+  } catch (e) {
+    res.status(400).json({ error: 'خطا در خواندن فایل: ' + e.message });
+  }
 });
 
 module.exports = router;

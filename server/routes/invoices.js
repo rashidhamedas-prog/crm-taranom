@@ -17,9 +17,10 @@ function faNum(n) {
   return Number(n || 0).toLocaleString('fa-IR');
 }
 
-// Validate & normalize invoice rows. Salesperson price always comes from
-// the products table; admin may override. Every row needs a valid product_id.
-function buildRows(db, inputRows, isAdmin) {
+// Validate & normalize invoice rows.
+// Price is always editable by both admin and salesperson (Phase 2 change).
+// product_id must be valid.
+function buildRows(db, inputRows) {
   const out = [];
   let subtotal = 0;
   for (const r of (inputRows || [])) {
@@ -28,9 +29,9 @@ function buildRows(db, inputRows, isAdmin) {
     const prod = db.prepare('SELECT * FROM products WHERE id=?').get(pid);
     if (!prod) throw new Error('محصول یافت نشد (شناسه ' + pid + ')');
     const qty = Math.max(1, parseInt(r.qty) || 1);
-    // Price: salesperson => product price; admin => may override if provided
+    // Allow price override by anyone (Phase 2: price always editable)
     let price = prod.price;
-    if (isAdmin && r.price !== undefined && r.price !== null && r.price !== '') {
+    if (r.price !== undefined && r.price !== null && r.price !== '') {
       price = parseFloat(r.price) || 0;
     }
     const sum = qty * price;
@@ -38,6 +39,25 @@ function buildRows(db, inputRows, isAdmin) {
     out.push({ product_id: pid, name: prod.name, qty, price, sum });
   }
   return { rows: out, subtotal };
+}
+
+// Deduct stock for each row; returns error message if stock insufficient
+function deductStock(db, rows) {
+  for (const r of rows) {
+    const prod = db.prepare('SELECT * FROM products WHERE id=?').get(r.product_id);
+    if (!prod) return `محصول شناسه ${r.product_id} یافت نشد`;
+    if (prod.stock < r.qty) {
+      return `موجودی ${prod.name} کافی نیست (موجود: ${prod.stock})`;
+    }
+  }
+  // All checks passed — deduct
+  for (const r of rows) {
+    db.prepare('UPDATE products SET stock=stock-? WHERE id=?').run(r.qty, r.product_id);
+    db.prepare('INSERT INTO stock_logs (product_id,user_id,change,note) VALUES (?,?,?,?)').run(
+      r.product_id, 0, -r.qty, 'کسر موجودی از فاکتور رسمی'
+    );
+  }
+  return null;
 }
 
 router.get('/', auth, (req, res) => {
@@ -62,12 +82,11 @@ router.get('/:id', auth, (req, res) => {
 });
 
 router.post('/', auth, (req, res) => {
-  const { cust_id, type, date, note, rows, disc } = req.body;
+  const { cust_id, type, date, note, rows, disc, pay_type, cheque_duration, cheque_due_date, cheque_info } = req.body;
   if (!cust_id) return res.status(400).json({ error: 'مشتری الزامی است' });
   const db = getDB();
-  const isAdmin = req.user.role === 'admin';
   let built;
-  try { built = buildRows(db, rows, isAdmin); }
+  try { built = buildRows(db, rows); }
   catch (e) { return res.status(400).json({ error: e.message }); }
 
   const subtotal = built.subtotal;
@@ -82,11 +101,23 @@ router.post('/', auth, (req, res) => {
   // capture seller info from the user record
   const seller = db.prepare('SELECT name,phone FROM users WHERE id=?').get(req.user.id);
 
+  const invType = type || 'proforma';
+  let stockDeducted = 0;
+
+  // Stock validation & deduction for final invoices
+  if (invType === 'final') {
+    const stockErr = deductStock(db, built.rows);
+    if (stockErr) return res.status(400).json({ error: stockErr });
+    stockDeducted = 1;
+  }
+
   const result = db.prepare(
-    'INSERT INTO invoices (user_id,cust_id,num,type,date,note,rows,subtotal,disc,disc_amt,final,seller_name,seller_phone) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)'
-  ).run(req.user.id, cust_id, num, type || 'proforma', date || '', note || '',
+    'INSERT INTO invoices (user_id,cust_id,num,type,date,note,rows,subtotal,disc,disc_amt,final,seller_name,seller_phone,pay_type,cheque_duration,cheque_due_date,cheque_info,stock_deducted) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+  ).run(req.user.id, cust_id, num, invType, date || '', note || '',
         JSON.stringify(built.rows), subtotal, discPct, discAmt, final,
-        seller ? seller.name : '', seller ? (seller.phone || '') : '');
+        seller ? seller.name : '', seller ? (seller.phone || '') : '',
+        pay_type || 'cash', cheque_duration || '', cheque_due_date || '', cheque_info || '',
+        stockDeducted);
   const row = db.prepare('SELECT i.*,c.biz as cust_biz FROM invoices i LEFT JOIN customers c ON i.cust_id=c.id WHERE i.id=?').get(result.lastInsertRowid);
   res.json({ ...row, rows: JSON.parse(row.rows || '[]') });
 });
@@ -96,17 +127,29 @@ router.put('/:id', auth, (req, res) => {
   const row = db.prepare('SELECT * FROM invoices WHERE id=?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'یافت نشد' });
   if (req.user.role !== 'admin' && row.user_id !== req.user.id) return res.status(403).json({ error: 'دسترسی ندارید' });
-  const { cust_id, type, date, note, rows, disc } = req.body;
-  const isAdmin = req.user.role === 'admin';
+  const { cust_id, type, date, note, rows, disc, pay_type, cheque_duration, cheque_due_date, cheque_info } = req.body;
   let built;
-  try { built = buildRows(db, rows, isAdmin); }
+  try { built = buildRows(db, rows); }
   catch (e) { return res.status(400).json({ error: e.message }); }
   const subtotal = built.subtotal;
   const discPct = parseFloat(disc) || 0;
   const discAmt = Math.round(subtotal * discPct / 100);
   const final = subtotal - discAmt;
-  db.prepare('UPDATE invoices SET cust_id=?,type=?,date=?,note=?,rows=?,subtotal=?,disc=?,disc_amt=?,final=? WHERE id=?')
-    .run(cust_id, type || 'proforma', date || '', note || '', JSON.stringify(built.rows), subtotal, discPct, discAmt, final, req.params.id);
+
+  const newType = type || 'proforma';
+  let stockDeducted = row.stock_deducted || 0;
+
+  // Only deduct stock when transitioning TO final for the first time
+  if (newType === 'final' && !stockDeducted) {
+    const stockErr = deductStock(db, built.rows);
+    if (stockErr) return res.status(400).json({ error: stockErr });
+    stockDeducted = 1;
+  }
+
+  db.prepare('UPDATE invoices SET cust_id=?,type=?,date=?,note=?,rows=?,subtotal=?,disc=?,disc_amt=?,final=?,pay_type=?,cheque_duration=?,cheque_due_date=?,cheque_info=?,stock_deducted=? WHERE id=?')
+    .run(cust_id, newType, date || '', note || '', JSON.stringify(built.rows), subtotal, discPct, discAmt, final,
+         pay_type || 'cash', cheque_duration || '', cheque_due_date || '', cheque_info || '',
+         stockDeducted, req.params.id);
   res.json({ ok: true });
 });
 
@@ -120,21 +163,28 @@ router.delete('/:id', auth, (req, res) => {
   res.json({ ok: true });
 });
 
-// Convert proforma to order
+// Convert proforma to official invoice (type='final')
 router.post('/:id/convert', auth, (req, res) => {
   const db = getDB();
   const inv = db.prepare('SELECT * FROM invoices WHERE id=?').get(req.params.id);
   if (!inv) return res.status(404).json({ error: 'یافت نشد' });
   if (req.user.role !== 'admin' && inv.user_id !== req.user.id) return res.status(403).json({ error: 'دسترسی ندارید' });
-  if (inv.converted) return res.status(400).json({ error: 'قبلاً به سفارش تبدیل شده' });
+  if (inv.converted) return res.status(400).json({ error: 'قبلاً تبدیل شده' });
+  if (inv.type === 'final') return res.status(400).json({ error: 'این فاکتور رسمی است' });
+
   const rows = JSON.parse(inv.rows || '[]');
-  const itemDesc = rows.map(r => r.name).join(' / ');
-  const totalQty = rows.reduce((a, r) => a + (r.qty || 0), 0);
-  const result = db.prepare(
-    'INSERT INTO orders (user_id,cust_id,date,type,qty,total,paid,pay,deliver,status,note) VALUES (?,?,?,?,?,?,?,?,?,?,?)'
-  ).run(inv.user_id, inv.cust_id, inv.date, itemDesc || 'از پیش‌فاکتور', totalQty, inv.final, 0, 'نسیه', '', 'pending', `تبدیل از پیش‌فاکتور ${inv.num}`);
-  db.prepare('UPDATE invoices SET converted=1 WHERE id=?').run(inv.id);
-  res.json({ ok: true, order_id: result.lastInsertRowid });
+
+  // Stock deduction if not already done
+  let stockDeducted = inv.stock_deducted || 0;
+  if (!stockDeducted) {
+    const stockErr = deductStock(db, rows);
+    if (stockErr) return res.status(400).json({ error: stockErr });
+    stockDeducted = 1;
+  }
+
+  db.prepare('UPDATE invoices SET type=?,converted=1,stock_deducted=? WHERE id=?').run('final', stockDeducted, inv.id);
+  audit(req.user.id, 'convert', 'invoice', inv.id, `تبدیل پیش‌فاکتور ${inv.num} به فاکتور رسمی`);
+  res.json({ ok: true });
 });
 
 // Standalone printable HTML page
@@ -148,6 +198,14 @@ router.get('/:id/print', auth, (req, res) => {
   const companyAddr = getSetting(db, 'company_address') || '';
   const companyPhone = getSetting(db, 'company_phone') || '';
   const typeLabel = inv.type === 'final' ? 'فاکتور رسمی' : 'پیش‌فاکتور';
+
+  const payTypeLabel = inv.pay_type === 'cheque' ? 'چک' : 'نقد';
+  let payInfo = `<div><b>نوع پرداخت:</b> ${payTypeLabel}</div>`;
+  if (inv.pay_type === 'cheque') {
+    if (inv.cheque_duration) payInfo += `<div><b>مدت چک:</b> ${inv.cheque_duration} روز</div>`;
+    if (inv.cheque_due_date) payInfo += `<div><b>سررسید:</b> ${inv.cheque_due_date}</div>`;
+    if (inv.cheque_info) payInfo += `<div><b>اطلاعات چک:</b> ${inv.cheque_info}</div>`;
+  }
 
   const rowsHtml = rows.map((r, i) => `
     <tr>
@@ -209,21 +267,22 @@ router.get('/:id/print', auth, (req, res) => {
         <div class="num">${inv.num || ''}</div>
         <div class="tag">${typeLabel}</div>
         <div>تاریخ: ${inv.date || '-'}</div>
+        ${companyPhone ? `<div>تلفن شرکت: ${companyPhone}</div>` : ''}
       </div>
     </div>
 
     <div class="info">
       <div class="box">
-        <div><b>مشتری:</b> ${inv.cust_biz || '-'}</div>
-        <div><b>مالک:</b> ${inv.cust_owner || '-'}</div>
+        <div><b>نام فروشگاه:</b> ${inv.cust_biz || '-'}</div>
+        <div><b>نام کامل:</b> ${inv.cust_owner || '-'}</div>
         <div><b>شهر:</b> ${inv.cust_city || '-'}</div>
         <div><b>تلفن:</b> ${inv.cust_phone || '-'}</div>
       </div>
       <div class="box">
         <div><b>فروشنده:</b> ${inv.seller_name || '-'}</div>
         <div><b>تلفن فروشنده:</b> ${inv.seller_phone || '-'}</div>
-        <div><b>آدرس:</b> ${companyAddr || '-'}</div>
-        <div><b>تلفن شرکت:</b> ${companyPhone || '-'}</div>
+        <div><b>آدرس شرکت:</b> ${companyAddr || '-'}</div>
+        ${payInfo}
       </div>
     </div>
 

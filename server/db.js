@@ -33,6 +33,8 @@ function initDB() {
       phone TEXT,
       active INTEGER DEFAULT 1,
       last_login INTEGER,
+      commission_cash REAL DEFAULT 0,
+      commission_cheque REAL DEFAULT 0,
       created_at INTEGER DEFAULT (strftime('%s','now'))
     );
 
@@ -105,6 +107,11 @@ function initDB() {
       seller_name TEXT,
       seller_phone TEXT,
       converted INTEGER DEFAULT 0,
+      pay_type TEXT DEFAULT 'cash',
+      cheque_duration TEXT DEFAULT '',
+      cheque_due_date TEXT DEFAULT '',
+      cheque_info TEXT DEFAULT '',
+      stock_deducted INTEGER DEFAULT 0,
       created_at INTEGER DEFAULT (strftime('%s','now')),
       FOREIGN KEY(user_id) REFERENCES users(id),
       FOREIGN KEY(cust_id) REFERENCES customers(id)
@@ -188,6 +195,8 @@ function initDB() {
   // ---- Safe migrations for databases created by v2 ----
   ensureColumn(db, 'users', 'phone', 'TEXT');
   ensureColumn(db, 'users', 'last_login', 'INTEGER');
+  ensureColumn(db, 'users', 'commission_cash', 'REAL DEFAULT 0');
+  ensureColumn(db, 'users', 'commission_cheque', 'REAL DEFAULT 0');
   ensureColumn(db, 'products', 'image', 'TEXT');
   ensureColumn(db, 'products', 'unit', "TEXT DEFAULT 'عدد'");
   ensureColumn(db, 'products', 'note', 'TEXT');
@@ -195,6 +204,12 @@ function initDB() {
   ensureColumn(db, 'followups', 'time', 'TEXT');
   ensureColumn(db, 'invoices', 'seller_name', 'TEXT');
   ensureColumn(db, 'invoices', 'seller_phone', 'TEXT');
+  ensureColumn(db, 'invoices', 'converted', 'INTEGER DEFAULT 0');
+  ensureColumn(db, 'invoices', 'pay_type', "TEXT DEFAULT 'cash'");
+  ensureColumn(db, 'invoices', 'cheque_duration', "TEXT DEFAULT ''");
+  ensureColumn(db, 'invoices', 'cheque_due_date', "TEXT DEFAULT ''");
+  ensureColumn(db, 'invoices', 'cheque_info', "TEXT DEFAULT ''");
+  ensureColumn(db, 'invoices', 'stock_deducted', 'INTEGER DEFAULT 0');
   ensureColumn(db, 'orders', 'product_id', 'INTEGER');
   ensureColumn(db, 'orders', 'stock_deducted', 'INTEGER DEFAULT 0');
 

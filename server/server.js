@@ -29,7 +29,6 @@ initDB();
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/customers', require('./routes/customers'));
-app.use('/api/orders', require('./routes/orders'));
 app.use('/api/followups', require('./routes/followups'));
 app.use('/api/invoices', require('./routes/invoices'));
 app.use('/api/products', require('./routes/products'));
