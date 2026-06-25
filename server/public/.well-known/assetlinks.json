@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "ir.taranom.crm",
+    "sha256_cert_fingerprints": [
+      "06:7B:BD:8E:AA:0E:3D:6F:26:CB:8F:ED:CB:FD:9E:D3:97:EE:46:91:90:C4:3C:CD:25:DB:4D:74:64:54:99:69"
+    ]
+  }
+}]

@@ -19,7 +19,14 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Static assets (includes /uploads/products/* and /logo.png if present)
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('assetlinks.json')) {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 2000 });
@@ -39,9 +46,23 @@ app.use('/api/reports', require('./routes/reports'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/accounting', require('./routes/accounting'));
 
+// Server time endpoint — returns current Jalali date so clients don't rely on device clock
+app.get('/api/system/time', (req, res) => {
+  const now = new Date();
+  const jalali = todayJalali();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  res.json({ jalali, time: `${hh}:${mm}` });
+});
+
+// Serve .well-known/assetlinks.json explicitly (TWA domain verification)
+app.get('/.well-known/assetlinks.json', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', '.well-known', 'assetlinks.json'));
+});
+
 // SPA fallback for non-API GET requests
 app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api/')) return next();
+  if (req.path.startsWith('/api/') || req.path.startsWith('/.well-known/')) return next();
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 

@@ -79,12 +79,13 @@ input,select,textarea{font-family:inherit;font-size:14px}
 .content{padding:22px;flex:1}
 
 /* ===== Cards / Generic ===== */
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:22px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:22px;width:100%}
 .stat{background:var(--card);border-radius:14px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.05);
-  border:1px solid var(--border);display:flex;align-items:center;gap:14px}
-.stat .ic{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px}
-.stat .v{font-size:20px;font-weight:800}
-.stat .l{font-size:12px;color:var(--muted)}
+  border:1px solid var(--border);display:flex;align-items:center;gap:14px;min-width:0;overflow:hidden}
+.stat .ic{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.stat .v{font-size:20px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat .l{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat > div:last-child{min-width:0;overflow:hidden}
 .ic.p{background:var(--purple-light);color:var(--purple)}
 .ic.g{background:#d1fae5;color:var(--green)}
 .ic.r{background:#fee2e2;color:var(--red)}
@@ -233,49 +234,58 @@ table.tbl tr:hover td{background:#faf8ff}
 @media(max-width:900px){
   .sidebar{transform:translateX(110%);transition:transform .28s cubic-bezier(.4,0,.2,1);will-change:transform}
   .sidebar.open{transform:translateX(0)}
-  .main{margin-right:0!important}
+  .main{margin-right:0!important;width:100%}
   .topbar .menu-btn{display:flex;align-items:center;justify-content:center}
   .inv-layout{grid-template-columns:1fr}
   .inv-cart{position:static}
   .form-grid{grid-template-columns:1fr 1fr}
   .topbar .clock{display:none}
-  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%}
   .cards{grid-template-columns:repeat(2,1fr);gap:12px}
-  .stat{padding:14px 10px}
+  .stat{padding:14px 10px;gap:10px}
   .stat .ic{width:40px;height:40px;font-size:20px}
   .stat .v{font-size:16px}
   .stat .l{font-size:11px}
   .content{padding:16px}
+  .view{width:100%}
 }
 @media(max-width:600px){
-  .cards{grid-template-columns:1fr 1fr;gap:8px}
-  .stat{padding:12px 8px;gap:10px}
-  .stat .ic{width:36px;height:36px;font-size:18px}
-  .stat .v{font-size:14px}
+  .cards{grid-template-columns:1fr 1fr;gap:8px;width:100%}
+  .stat{padding:12px 8px;gap:8px}
+  .stat .ic{width:34px;height:34px;font-size:17px}
+  .stat .v{font-size:13px}
   .stat .l{font-size:10px}
   .pgrid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
   .overlay{align-items:flex-end;padding:0}
-  .modal{max-height:96vh;border-radius:16px 16px 0 0}
+  .modal{max-height:96vh;border-radius:16px 16px 0 0;width:100%}
   .modal.lg{max-width:100%;border-radius:16px 16px 0 0}
   .inv-layout{grid-template-columns:1fr}
   table.tbl{font-size:12px}
   table.tbl th,table.tbl td{padding:8px 6px}
   .sidebar{width:280px;transform:translateX(110%)}
-  .content{padding:12px}
+  .content{padding:10px;width:100%}
   .dp{width:calc(100vw - 24px);max-width:300px}
   .dp-days button{font-size:13px}
   .topbar{padding:8px 12px}
   .topbar h3{font-size:14px}
-  .toolbar{gap:6px;flex-wrap:wrap}
+  .toolbar{gap:6px;flex-wrap:wrap;width:100%}
   .toolbar input,.toolbar select{font-size:13px;padding:8px 10px;min-width:0;flex:1}
   .btn{padding:8px 12px;font-size:12px}
   .btn.sm{padding:6px 8px;font-size:11px}
   .panel-head{padding:12px 14px;flex-direction:column;align-items:flex-start;gap:8px}
-  .panel-body{padding:12px}
-  .modal-body{padding:14px}
+  .panel-body{padding:10px}
+  .modal-body{padding:12px}
   .form-grid{grid-template-columns:1fr}
   .inv-pick{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
   .topbar .user span:last-child{display:none}
+  .tbl-wrap table{min-width:500px}
+}
+@media(max-width:400px){
+  .cards{grid-template-columns:1fr}
+  .stat{padding:14px 12px;gap:12px}
+  .stat .ic{width:40px;height:40px;font-size:20px}
+  .stat .v{font-size:16px}
+  .stat .l{font-size:11px}
 }
 @media print{
   .sidebar,.topbar,.btn,.toolbar,.panel-head{display:none!important}
@@ -409,6 +419,12 @@ async function api(method, path, data, isFormData){
 function fmt(n){ return Number(n||0).toLocaleString('fa-IR'); }
 function toFa(n){ return String(n||0).replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]); }
 function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escDate(s){ // validate and display Jalali date; if corrupted, show '-'
+  if(!s) return '-';
+  const str=String(s);
+  if(/^\d{4}\/\d{2}\/\d{2}$/.test(str)) return esc(str);
+  return '<span class="muted" title="تاریخ نادرست">—</span>';
+}
 function el(id){ return document.getElementById(id); }
 
 function showToast(msg, type='success'){
@@ -459,9 +475,23 @@ function _j2g(jy,jm,jd){
 }
 const J_MONTHS = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
 const J_WEEK = ['ش','ی','د','س','چ','پ','ج'];
+let _srvOffset = 0; // ms offset between server clock and client clock
+function _serverNow(){ return new Date(Date.now() + _srvOffset); }
 function todayJalali(){
-  const d=new Date(); const [y,m,dd]=_g2j(d.getFullYear(),d.getMonth()+1,d.getDate());
+  const d=_serverNow(); const [y,m,dd]=_g2j(d.getFullYear(),d.getMonth()+1,d.getDate());
   return y+'/'+String(m).padStart(2,'0')+'/'+String(dd).padStart(2,'0');
+}
+async function syncServerTime(){
+  try{
+    const t0=Date.now();
+    const r=await fetch('/api/system/time'); if(!r.ok) return;
+    const j=await r.json(); const rtt=Date.now()-t0;
+    const [jy,jm,jd]=j.jalali.split('/').map(Number);
+    const [gy,gm,gd]=_j2g(jy,jm,jd);
+    const [hh,mm]=(j.time||'00:00').split(':').map(Number);
+    const srvMs=new Date(gy,gm-1,gd,hh,mm,0,0).getTime()+rtt/2;
+    _srvOffset=srvMs-Date.now();
+  }catch(e){}
 }
 
 /* ---- Datepicker popup ---- */
@@ -639,6 +669,7 @@ async function boot(){
   el('login').style.display='none';
   el('app').style.display='block';
   ME = JSON.parse(localStorage.getItem('crm_user')||'null');
+  syncServerTime(); // refresh offset after login (non-blocking)
   el('userName').textContent = ME.name;
   el('userRole').textContent = ME.role==='admin'?'مدیر سیستم':'کارشناس فروش';
   el('brandRole').textContent = ME.role==='admin'?'پنل مدیریت':'پنل فروش';
@@ -740,7 +771,7 @@ ROUTES.dash = async function(){
         <div class="panel-body tbl-wrap">
           <table class="tbl"><thead><tr><th>مشتری</th><th>موضوع</th><th>تاریخ</th><th>اولویت</th></tr></thead>
           <tbody>${followups.filter(f=>f.status==='open').slice(0,8).map(f=>`<tr>
-            <td>${esc(f.cust_biz||'-')}</td><td>${esc(f.subject||'-')}</td><td class="mono">${esc(f.date||'-')}</td><td>${statusTag(f.priority)}</td>
+            <td>${esc(f.cust_biz||'-')}</td><td>${esc(f.subject||'-')}</td><td class="mono">${escDate(f.next_date||f.date)}</td><td>${statusTag(f.priority)}</td>
           </tr>`).join('')||emptyRow(4)}</tbody></table>
         </div>
       </div>`;
@@ -864,8 +895,8 @@ function renderFupTable(){
   el('fupTable').innerHTML=`<table class="tbl"><thead><tr>
     <th>مشتری</th><th>تاریخ</th><th>ساعت</th><th>نوع</th><th>موضوع</th><th>پیگیری بعدی</th><th>اولویت</th><th>وضعیت</th>${isAdmin?'<th>کارشناس</th>':''}<th>عملیات</th>
   </tr></thead><tbody>${rows.map(f=>`<tr>
-    <td>${esc(f.cust_biz||'-')}</td><td class="mono">${esc(f.date||'-')}</td><td class="mono">${esc(f.time||'-')}</td>
-    <td>${esc(f.type||'-')}</td><td>${esc(f.subject||'-')}</td><td class="mono">${esc(f.next_date||'-')}</td>
+    <td>${esc(f.cust_biz||'-')}</td><td class="mono">${escDate(f.date)}</td><td class="mono">${esc(f.time||'-')}</td>
+    <td>${esc(f.type||'-')}</td><td>${esc(f.subject||'-')}</td><td class="mono">${escDate(f.next_date)}</td>
     <td>${statusTag(f.priority)}</td><td>${statusTag(f.status)}</td>
     ${isAdmin?`<td class="muted">${esc(f.salesperson||'-')}</td>`:''}
     <td><button class="btn sm ghost" onclick="fupModal(${f.id})">✏️</button>
@@ -931,7 +962,7 @@ function renderInvTable(){
   </tr></thead><tbody>${rows.map(i=>`<tr>
     <td class="mono" style="font-weight:700">${esc(i.num||'-')}</td><td>${esc(i.cust_biz||'-')}</td>
     <td>${statusTag(i.type)}${i.type==='final'?` <span class="tag ${i.approved?'t-done':'t-pending'}" style="font-size:10px">${i.approved?'✓ تأیید شده':'⏳ در انتظار'}</span>`:''}</td>
-    <td class="mono">${esc(i.date||'-')}</td><td class="mono">${fmt(i.final)}</td>
+    <td class="mono">${escDate(i.date)}</td><td class="mono">${fmt(i.final)}</td>
     <td class="muted">${esc(i.seller_name||'-')}</td>
     <td>
       ${i.type==='proforma' && !i.converted ? `<button class="btn sm orange" onclick="convertProforma(${i.id})">🔄 تبدیل به فاکتور</button>` : ''}
@@ -1380,11 +1411,11 @@ async function loadAccTab(tab){
       <div class="tbl-wrap"><table class="tbl"><thead><tr>
         <th>تاریخ</th><th>مشتری</th><th>مبلغ (ت)</th><th>نوع پرداخت</th><th>اطلاعات چک</th><th>یادداشت</th><th>ثبت‌کننده</th><th>عملیات</th>
       </tr></thead><tbody>${rows.map(r=>`<tr>
-        <td class="mono">${esc(r.date||'-')}</td>
+        <td class="mono">${escDate(r.date)}</td>
         <td>${esc(r.cust_biz||'-')}</td>
         <td class="mono" style="color:var(--green);font-weight:700">${fmt(r.amount)}</td>
         <td>${r.pay_type==='cheque'?'🧾 چک':'💵 نقد'}</td>
-        <td class="muted" style="font-size:12px">${r.pay_type==='cheque'?(esc(r.cheque_bank||'')+' | '+esc(r.cheque_sayadi||'')+' | '+esc(r.cheque_owner||'')+(r.cheque_due?' | سررسید: '+esc(r.cheque_due):'')):'-'}</td>
+        <td class="muted" style="font-size:12px">${r.pay_type==='cheque'?(esc(r.cheque_bank||'')+' | '+esc(r.cheque_sayadi||'')+' | '+esc(r.cheque_owner||'')+(r.cheque_due?' | سررسید: '+escDate(r.cheque_due):'')):'-'}</td>
         <td class="muted">${esc(r.note||'-')}</td>
         <td class="muted">${esc(r.recorder_name||'-')}</td>
         <td><button class="btn sm red" onclick="deleteSettlement(${r.id})">🗑️</button></td>
@@ -1447,7 +1478,7 @@ async function loadAccTab(tab){
       <td class="mono" style="font-weight:700">${esc(i.num)}</td>
       <td>${esc(i.cust_biz||'-')}</td>
       <td class="muted">${esc(i.salesperson||'-')}</td>
-      <td class="mono">${esc(i.date||'-')}</td>
+      <td class="mono">${escDate(i.date)}</td>
       <td class="mono">${fmt(i.final)}</td>
       <td>${i.pay_type==='cheque'?'چک':'نقد'}</td>
       <td><button class="btn sm green" onclick="approveInvoice(${i.id})">✅ تأیید</button></td>
@@ -1742,10 +1773,15 @@ function dismissInstall(){ el('installBanner').classList.remove('show'); localSt
 /* ============================================================
    CLOCK + SW + INIT
 ============================================================ */
-setInterval(()=>{ const c=el('clock'); if(c) c.textContent=new Date().toLocaleTimeString('fa-IR'); }, 1000);
+setInterval(()=>{
+  const c=el('clock');
+  if(c) c.textContent=_serverNow().toLocaleTimeString('fa-IR');
+}, 1000);
 
 window.addEventListener('DOMContentLoaded', async ()=>{
   if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('/sw.js'); }catch(e){} }
+  // Sync server time first (no auth needed) so all date defaults are accurate
+  await syncServerTime();
   const token = localStorage.getItem('crm_token');
   if(token){
     try{ ME = JSON.parse(localStorage.getItem('crm_user')); await boot(); }
