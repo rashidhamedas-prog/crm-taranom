@@ -52,13 +52,17 @@ router.delete('/users/:id', auth, adminOnly, (req, res) => {
 // Admin dashboard - per-salesperson stats (using final invoices for revenue)
 router.get('/dashboard', auth, adminOnly, (req, res) => {
   const db = getDB();
+  const safeDate = v => (v && /^[\d/]+$/.test(v)) ? v : null;
+  const sf = safeDate(req.query.from), st = safeDate(req.query.to);
+  const dateClause = sf || st
+    ? ` AND date >= '${sf || ''}' AND date <= '${st || '9999'}'`
+    : '';
   const users = db.prepare("SELECT id,name,username FROM users WHERE active=1").all();
   const stats = users.map(u => {
     const custCount = db.prepare('SELECT COUNT(*) as c FROM customers WHERE user_id=?').get(u.id).c;
-    const totalSales = db.prepare("SELECT COALESCE(SUM(final),0) as s FROM invoices WHERE user_id=? AND type='final'").get(u.id).s;
-    const totalDebt = 0; // no orders module anymore; debt tracked via invoices if needed
+    const totalSales = db.prepare(`SELECT COALESCE(SUM(final),0) as s FROM invoices WHERE user_id=? AND type='final'${dateClause}`).get(u.id).s;
     const openFup = db.prepare("SELECT COUNT(*) as c FROM followups WHERE user_id=? AND status='open'").get(u.id).c;
-    return { ...u, custCount, totalSales, totalDebt, openFup };
+    return { ...u, custCount, totalSales, totalDebt: 0, openFup };
   });
   res.json(stats);
 });
@@ -66,15 +70,19 @@ router.get('/dashboard', auth, adminOnly, (req, res) => {
 // Aggregate overview across ALL users (revenue from final invoices only)
 router.get('/stats/overview', auth, adminOnly, (req, res) => {
   const db = getDB();
+  const safeDate = v => (v && /^[\d/]+$/.test(v)) ? v : null;
+  const sf = safeDate(req.query.from), st = safeDate(req.query.to);
+  const dateClause = sf || st
+    ? ` AND date >= '${sf || ''}' AND date <= '${st || '9999'}'`
+    : '';
   const totalCustomers = db.prepare('SELECT COUNT(*) c FROM customers').get().c;
-  const totalRevenue = db.prepare("SELECT COALESCE(SUM(final),0) s FROM invoices WHERE type='final'").get().s;
-  const totalInvoices = db.prepare("SELECT COUNT(*) c FROM invoices WHERE type='final'").get().c;
-  const totalProforma = db.prepare("SELECT COUNT(*) c FROM invoices WHERE type='proforma'").get().c;
+  const totalRevenue = db.prepare(`SELECT COALESCE(SUM(final),0) s FROM invoices WHERE type='final'${dateClause}`).get().s;
+  const totalInvoices = db.prepare(`SELECT COUNT(*) c FROM invoices WHERE type='final'${dateClause}`).get().c;
+  const totalProforma = db.prepare(`SELECT COUNT(*) c FROM invoices WHERE type='proforma'${dateClause}`).get().c;
   const totalProducts = db.prepare('SELECT COUNT(*) c FROM products').get().c;
   const openFollowups = db.prepare("SELECT COUNT(*) c FROM followups WHERE status='open'").get().c;
   const lowStock = db.prepare('SELECT COUNT(*) c FROM products WHERE stock<=stock_alert').get().c;
   res.json({ totalCustomers, totalRevenue, totalInvoices, totalProforma, totalProducts, openFollowups, lowStock,
-             // legacy fields kept for compatibility
              totalOrders: 0, totalPaid: 0, totalDebt: 0 });
 });
 

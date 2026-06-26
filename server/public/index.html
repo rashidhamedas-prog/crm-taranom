@@ -761,28 +761,49 @@ function closeModal(){ el('modalRoot').innerHTML=''; }
 ============================================================ */
 const ROUTES = {};
 
+let dashDateFrom='', dashDateTo='';
 ROUTES.dash = async function(){
   const v = el('view');
+  const dateBar = `<div class="toolbar" style="margin-bottom:12px">
+    <input id="dashFrom" data-jdate placeholder="از تاریخ" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;width:120px;font-size:12px" value="${dashDateFrom}">
+    <input id="dashTo" data-jdate placeholder="تا تاریخ" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;width:120px;font-size:12px" value="${dashDateTo}">
+    <button class="btn sm" onclick="dashDateFrom=el('dashFrom').value;dashDateTo=el('dashTo').value;renderDashContent()">🔍 اعمال فیلتر</button>
+    <button class="btn sm ghost" onclick="dashDateFrom='';dashDateTo='';el('dashFrom').value='';el('dashTo').value='';renderDashContent()">✕ حذف فیلتر</button>
+    ${(dashDateFrom||dashDateTo)?`<span class="tag" style="background:var(--purple-light);color:var(--purple)">${dashDateFrom||'ابتدا'} تا ${dashDateTo||'انتها'}</span>`:''}
+  </div>
+  <div id="dashContent"><div class="muted">در حال بارگذاری...</div></div>`;
+  v.innerHTML = dateBar;
+  attachDatepickers(v);
+  await renderDashContent();
+};
+async function renderDashContent(){
+  const body = el('dashContent'); if(!body) return;
+  body.innerHTML = '<div class="muted">در حال بارگذاری...</div>';
+  const dq = (dashDateFrom||dashDateTo)
+    ? '?'+(dashDateFrom?'from='+encodeURIComponent(dashDateFrom):'')+(dashDateFrom&&dashDateTo?'&':'')+(dashDateTo?'to='+encodeURIComponent(dashDateTo):'')
+    : '';
   if(ME.role==='admin'){
-    v.innerHTML = '<div class="muted">در حال بارگذاری...</div>';
-    const ov = await api('GET','/admin/stats/overview');
-    const board = await api('GET','/admin/dashboard');
-    v.innerHTML = `
+    const [ov, board] = await Promise.all([
+      api('GET','/admin/stats/overview'+dq),
+      api('GET','/admin/dashboard'+dq)
+    ]);
+    if(!ov) return;
+    body.innerHTML = `
       <div class="cards">
         ${statCard('p','👥', fmt(ov.totalCustomers),'کل مشتریان')}
-        ${statCard('g','💰', fmt(ov.totalRevenue),'فروش کل (تومان)')}
-        ${statCard('o','🧾', fmt(ov.totalInvoices),'فاکتور رسمی')}
-        ${statCard('b','📋', fmt(ov.totalProforma),'پیش‌فاکتور')}
+        ${statCard('g','💰', fmt(ov.totalRevenue),'فروش کل (تومان)'+(dq?' در بازه':''))}
+        ${statCard('o','🧾', fmt(ov.totalInvoices),'فاکتور رسمی'+(dq?' در بازه':''))}
+        ${statCard('b','📋', fmt(ov.totalProforma),'پیش‌فاکتور'+(dq?' در بازه':''))}
         ${statCard('p','🛍️', fmt(ov.totalProducts),'محصولات')}
         ${statCard('b','📞', fmt(ov.openFollowups),'پیگیری باز')}
         ${statCard('r','📉', fmt(ov.lowStock),'موجودی کم')}
       </div>
       <div class="panel">
-        <div class="panel-head"><h4>عملکرد کارشناسان فروش</h4></div>
+        <div class="panel-head"><h4>عملکرد کارشناسان فروش${dq?' (بازه انتخابی)':''}</h4></div>
         <div class="panel-body tbl-wrap">
           <table class="tbl">
             <thead><tr><th>کارشناس</th><th>مشتریان</th><th>فروش (فاکتور رسمی)</th><th>پیگیری باز</th></tr></thead>
-            <tbody>${board.map(u=>`<tr>
+            <tbody>${(board||[]).map(u=>`<tr>
               <td>${esc(u.name)}</td><td>${fmt(u.custCount)}</td>
               <td class="mono">${fmt(u.totalSales)}</td>
               <td>${fmt(u.openFup)}</td></tr>`).join('')||emptyRow(4)}</tbody>
@@ -790,23 +811,24 @@ ROUTES.dash = async function(){
         </div>
       </div>`;
   } else {
-    v.innerHTML = '<div class="muted">در حال بارگذاری...</div>';
     const [followups, invoices] = await Promise.all([
       api('GET','/followups'), api('GET','/invoices')
     ]);
-    CACHE.followups=followups; CACHE.invoices=invoices;
+    CACHE.followups=followups||[]; CACHE.invoices=invoices||[];
     let myComm = { totalComm:0, commRate:{cash:0,cheque:0} };
     try { myComm = await api('GET','/accounting/my-commission') || myComm; } catch(e){}
-    const finalInvs = invoices.filter(i=>i.type==='final');
+    let finalInvs = (invoices||[]).filter(i=>i.type==='final');
+    let allInvs = invoices||[];
+    if(dashDateFrom) { finalInvs=finalInvs.filter(i=>i.date>=dashDateFrom); allInvs=allInvs.filter(i=>i.date>=dashDateFrom); }
+    if(dashDateTo)   { finalInvs=finalInvs.filter(i=>i.date<=dashDateTo);   allInvs=allInvs.filter(i=>i.date<=dashDateTo); }
     const sales = finalInvs.reduce((a,i)=>a+(i.final||0),0);
-    const openF = followups.filter(f=>f.status==='open').length;
-    const approvedInvs = finalInvs.filter(i=>i.approved);
-    v.innerHTML = `
+    const openF = (followups||[]).filter(f=>f.status==='open').length;
+    body.innerHTML = `
       <div class="cards">
         ${statCard('p','👥', fmt(CACHE.customers.length),'مشتریان من')}
-        ${statCard('g','💰', fmt(sales),'فروش کل (تومان)')}
-        ${statCard('o','🧾', fmt(finalInvs.length),'فاکتور رسمی')}
-        ${statCard('b','📋', fmt(invoices.filter(i=>i.type==='proforma').length),'پیش‌فاکتور')}
+        ${statCard('g','💰', fmt(sales),'فروش کل (تومان)'+(dq?' در بازه':''))}
+        ${statCard('o','🧾', fmt(finalInvs.length),'فاکتور رسمی'+(dq?' در بازه':''))}
+        ${statCard('b','📋', fmt(allInvs.filter(i=>i.type==='proforma').length),'پیش‌فاکتور'+(dq?' در بازه':''))}
         ${statCard('b','📞', fmt(openF),'پیگیری باز')}
         ${statCard('g','🎯', fmt(Math.round(myComm.totalComm||0)),'کمیسیون تأیید شده (ت)')}
       </div>
@@ -814,7 +836,7 @@ ROUTES.dash = async function(){
         <div class="panel-head"><h4>پیگیری‌های باز</h4><button class="btn sm" onclick="go('followups')">مشاهده همه</button></div>
         <div class="panel-body tbl-wrap">
           <table class="tbl"><thead><tr><th>مشتری</th><th>موضوع</th><th>تاریخ</th><th>اولویت</th></tr></thead>
-          <tbody>${followups.filter(f=>f.status==='open').slice(0,8).map(f=>`<tr>
+          <tbody>${(followups||[]).filter(f=>f.status==='open').slice(0,8).map(f=>`<tr>
             <td>${esc(f.cust_biz||'-')}</td><td>${esc(f.subject||'-')}</td><td class="mono">${escDate(f.next_date||f.date)}</td><td>${statusTag(f.priority)}</td>
           </tr>`).join('')||emptyRow(4)}</tbody></table>
         </div>
@@ -1594,6 +1616,7 @@ function drawChart(monthly){
 ============================================================ */
 let accTab = 'receivables';
 let accDateFrom = '', accDateTo = '';
+let accHideZero = true;
 
 ROUTES.accounting = async function(){
   el('view').innerHTML='<div class="muted">در حال بارگذاری...</div>';
@@ -1641,8 +1664,17 @@ async function loadAccTab(tab){
   body.innerHTML='<div class="muted">در حال بارگذاری...</div>';
   const dq=(accDateFrom||accDateTo)?'?'+(accDateFrom?'from='+encodeURIComponent(accDateFrom):'')+(accDateFrom&&accDateTo?'&':'')+(accDateTo?'to='+encodeURIComponent(accDateTo):''):'';
   if(tab==='receivables'){
-    const rows=await api('GET','/accounting/receivables'+dq)||[];
+    const allRows=await api('GET','/accounting/receivables'+dq)||[];
+    const rows=accHideZero ? allRows.filter(r=>r.outstanding>0) : allRows;
+    const hiddenCount=allRows.length-rows.length;
     body.innerHTML=`
+      <div class="toolbar" style="margin-bottom:10px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+          <input type="checkbox" id="chkHideZero" ${accHideZero?'checked':''} onchange="accHideZero=this.checked;loadAccTab('receivables')">
+          فقط مشتریان با مانده بدهی
+        </label>
+        ${hiddenCount>0?`<span class="muted" style="font-size:12px">${hiddenCount} مشتری تسویه‌شده پنهان شده</span>`:''}
+      </div>
       <div class="tbl-wrap"><table class="tbl"><thead><tr>
         <th>نام فروشگاه</th><th>نام کامل</th><th>کارشناس</th><th>کل فاکتور (ت)</th><th>تسویه شده (ت)</th><th>مانده (ت)</th><th>عملیات</th>
       </tr></thead><tbody>${rows.map(r=>{
