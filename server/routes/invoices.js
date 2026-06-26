@@ -73,6 +73,40 @@ router.get('/', auth, (req, res) => {
   res.json(rows);
 });
 
+// Export invoices to Excel (must be before /:id to avoid route capture)
+router.get('/export/excel', auth, (req, res) => {
+  const XLSX = require('xlsx');
+  const db = getDB();
+  const scope = getScope(req);
+  let rows;
+  if (scope === null) {
+    rows = db.prepare('SELECT i.*,c.biz as cust_biz,u.name as salesperson FROM invoices i LEFT JOIN customers c ON i.cust_id=c.id LEFT JOIN users u ON i.user_id=u.id ORDER BY i.created_at DESC').all();
+  } else {
+    rows = db.prepare('SELECT i.*,c.biz as cust_biz FROM invoices i LEFT JOIN customers c ON i.cust_id=c.id WHERE i.user_id=? ORDER BY i.created_at DESC').all(scope);
+  }
+  const data = rows.map(r => ({
+    'شماره': r.num || '',
+    'مشتری': r.cust_biz || '',
+    'نوع': r.type === 'final' ? 'فاکتور رسمی' : 'پیش‌فاکتور',
+    'تاریخ': r.date || '',
+    'مبلغ کل (ت)': r.subtotal || 0,
+    'تخفیف (٪)': r.disc || 0,
+    'مبلغ نهایی (ت)': r.final || 0,
+    'نوع پرداخت': r.pay_type === 'cheque' ? 'چک' : 'نقد',
+    'تأیید شده': r.approved ? 'بله' : 'خیر',
+    'کارشناس': r.salesperson || '',
+    'یادداشت': r.note || ''
+  }));
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [12,20,12,12,18,10,18,12,10,15,20].map(w => ({ wch: w }));
+  XLSX.utils.book_append_sheet(wb, ws, 'فاکتورها');
+  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  res.setHeader('Content-Disposition', 'attachment; filename=invoices.xlsx');
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.send(buf);
+});
+
 router.get('/:id', auth, (req, res) => {
   const db = getDB();
   const row = db.prepare('SELECT i.*,c.biz as cust_biz,c.owner as cust_owner,c.city as cust_city,c.phone as cust_phone FROM invoices i LEFT JOIN customers c ON i.cust_id=c.id WHERE i.id=?').get(req.params.id);

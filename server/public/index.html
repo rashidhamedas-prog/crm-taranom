@@ -1223,22 +1223,31 @@ async function custActivityModal(custId){
    INVOICES
 ============================================================ */
 let invCart = [];
+let invFilter = {q:'', type:''};
 ROUTES.invoices = async function(){
   el('view').innerHTML='<div class="muted">در حال بارگذاری...</div>';
   CACHE.invoices=await api('GET','/invoices')||[];
   el('view').innerHTML=`
     <div class="toolbar">
-      <input class="search" id="iSearch" placeholder="جستجوی فاکتور...">
+      <input class="search" id="iSearch" placeholder="جستجوی فاکتور..." value="${esc(invFilter.q)}">
+      <select id="iType">
+        <option value="" ${invFilter.type===''?'selected':''}>همه انواع</option>
+        <option value="proforma" ${invFilter.type==='proforma'?'selected':''}>پیش‌فاکتور</option>
+        <option value="final" ${invFilter.type==='final'?'selected':''}>فاکتور رسمی</option>
+      </select>
       <button class="btn" onclick="openInvBuilder()">➕ فاکتور جدید</button>
+      <button class="btn ghost" onclick="exportExcel('invoices')">📥 اکسل</button>
     </div>
     <div class="panel"><div class="panel-body tbl-wrap"><div id="invTable"></div></div></div>`;
-  el('iSearch').addEventListener('input',renderInvTable);
+  el('iSearch').addEventListener('input',e=>{invFilter.q=e.target.value;renderInvTable();});
+  el('iType').addEventListener('change',e=>{invFilter.type=e.target.value;renderInvTable();});
   renderInvTable();
 };
 function renderInvTable(){
-  const q=(el('iSearch')?.value||'').toLowerCase();
   let rows=CACHE.invoices.slice();
+  const q=invFilter.q.toLowerCase();
   if(q)rows=rows.filter(i=>((i.num||'')+' '+(i.cust_biz||'')).toLowerCase().includes(q));
+  if(invFilter.type)rows=rows.filter(i=>i.type===invFilter.type);
   const isAdmin=ME.role==='admin';
   el('invTable').innerHTML=`<table class="tbl"><thead><tr>
     <th>شماره</th><th>مشتری</th><th>نوع</th><th>تاریخ</th><th>مبلغ نهایی</th><th>فروشنده</th><th>عملیات</th>
