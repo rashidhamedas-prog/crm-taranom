@@ -19,8 +19,9 @@ async function saveImage(buffer, originalName) {
   const filename = 'p_' + Date.now() + '_' + Math.round(Math.random() * 1e6) + '.webp';
   const dest = path.join(UPLOAD_DIR, filename);
   if (sharp) {
+    // Center-crop to square then resize — ensures consistent card display
     await sharp(buffer)
-      .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+      .resize(600, 600, { fit: 'cover', position: 'centre' })
       .webp({ quality: 82 })
       .toFile(dest);
   } else {

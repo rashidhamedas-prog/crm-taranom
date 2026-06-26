@@ -152,30 +152,42 @@ table.tbl tr:hover td{background:#faf8ff}
 .fg input[readonly]{background:#f3f4f6;color:var(--muted)}
 
 /* ===== Jalali datepicker ===== */
-.dp{position:fixed;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.2);
-  padding:12px;width:290px;z-index:600;display:none}
+.dp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:599;display:none}
+.dp-overlay.open{display:block}
+.dp{position:fixed;background:#fff;border:1px solid var(--border);border-radius:16px;
+  box-shadow:0 16px 48px rgba(0,0,0,.22);padding:14px;width:308px;z-index:600;display:none}
 .dp.open{display:block}
-.dp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.dp-head button{background:var(--purple-light);color:var(--purple);border:none;width:30px;height:30px;border-radius:8px;font-size:16px}
-.dp-head .title{font-weight:700;color:var(--purple);font-size:14px}
-.dp-week,.dp-days{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.dp-week span{text-align:center;font-size:11px;color:var(--muted);padding:4px 0}
-.dp-days button{aspect-ratio:1;border:none;background:#f9f7fd;border-radius:7px;font-size:12px;color:var(--text)}
-.dp-days button:hover{background:var(--purple-light)}
-.dp-days button.today{border:1.5px solid var(--purple2)}
-.dp-days button.sel{background:var(--purple);color:#fff}
-.dp-days button.empty{background:transparent;cursor:default}
-.dp-foot{margin-top:8px;display:flex;gap:6px}
-.dp-foot button{flex:1;font-size:12px;padding:7px;border:none;border-radius:8px}
+.dp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:4px}
+.dp-head button{background:var(--purple-light);color:var(--purple);border:none;min-width:34px;height:34px;border-radius:9px;font-size:16px;cursor:pointer;flex-shrink:0}
+.dp-head button:hover{background:var(--purple);color:#fff}
+.dp-title{display:flex;align-items:center;gap:6px}
+.dp-title .month-lbl{font-weight:700;color:var(--purple);font-size:14px}
+.dp-title select{border:1.5px solid var(--border);border-radius:7px;padding:3px 6px;font-size:13px;color:var(--text);background:#fff;font-family:inherit;cursor:pointer;direction:rtl}
+.dp-week{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px}
+.dp-week span{text-align:center;font-size:11px;font-weight:600;color:var(--muted);padding:5px 0}
+.dp-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.dp-days button{aspect-ratio:1;border:none;background:#f9f7fd;border-radius:8px;font-size:13px;color:var(--text);cursor:pointer;min-height:36px;display:flex;align-items:center;justify-content:center}
+.dp-days button:hover:not(.empty){background:var(--purple-light);color:var(--purple)}
+.dp-days button.today{border:2px solid var(--purple2);font-weight:700}
+.dp-days button.sel{background:var(--purple)!important;color:#fff!important;font-weight:700}
+.dp-days button.empty{background:transparent;cursor:default;pointer-events:none}
+.dp-foot{margin-top:10px;display:flex;gap:6px}
+.dp-foot button{flex:1;font-size:13px;padding:9px;border:none;border-radius:9px;cursor:pointer;font-family:inherit}
 .dp-foot .today-btn{background:var(--green);color:#fff}
+.dp-foot .today-btn:hover{background:#15803d}
 .dp-foot .clear-btn{background:#f3f4f6;color:var(--muted)}
+.dp-foot .clear-btn:hover{background:#e5e7eb}
+@media(max-width:480px){
+  .dp{width:calc(100vw - 24px);left:12px!important;right:12px!important;bottom:12px!important;top:auto!important;border-radius:18px 18px 14px 14px}
+  .dp-days button{min-height:40px;font-size:14px}
+}
 
 /* ===== Product grid ===== */
 .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px}
 .pcard{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05);transition:.15s}
 .pcard:hover{box-shadow:0 6px 18px rgba(107,33,168,.15);transform:translateY(-2px)}
-.pcard .img{height:140px;background:var(--purple-light);display:flex;align-items:center;justify-content:center;font-size:42px;overflow:hidden}
-.pcard .img img{width:100%;height:100%;object-fit:cover}
+.pcard .img{aspect-ratio:1;background:var(--purple-light);display:flex;align-items:center;justify-content:center;font-size:42px;overflow:hidden}
+.pcard .img img{width:100%;height:100%;object-fit:cover;object-position:center}
 .pcard .body{padding:12px}
 .pcard .name{font-weight:600;font-size:14px;margin-bottom:4px}
 .pcard .code{font-size:11px;color:var(--muted);margin-bottom:8px}
@@ -191,8 +203,8 @@ table.tbl tr:hover td{background:#faf8ff}
 .inv-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
 .pick-card{border:1px solid var(--border);border-radius:10px;padding:8px;cursor:pointer;text-align:center;background:#fff}
 .pick-card:hover{border-color:var(--purple2);background:var(--purple-light)}
-.pick-card .pimg{height:80px;background:var(--purple-light);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:30px;overflow:hidden;margin-bottom:6px}
-.pick-card .pimg img{width:100%;height:100%;object-fit:cover}
+.pick-card .pimg{aspect-ratio:1;background:var(--purple-light);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:30px;overflow:hidden;margin-bottom:6px}
+.pick-card .pimg img{width:100%;height:100%;object-fit:cover;object-position:center}
 .pick-card .pn{font-size:12px;font-weight:600;min-height:32px}
 .pick-card .pp{font-size:12px;color:var(--green);font-weight:700}
 .inv-cart{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;position:sticky;top:80px;align-self:start}
@@ -411,6 +423,7 @@ table.tbl tr:hover td{background:#faf8ff}
 <div id="modalRoot"></div>
 
 <!-- ===== Jalali datepicker root ===== -->
+<div id="dpOverlay" class="dp-overlay" onclick="closeDP()"></div>
 <div id="dpRoot"></div>
 
 <!-- ===== Mobile Sidebar Backdrop ===== -->
@@ -547,12 +560,13 @@ function attachDatepickers(scope){
     inp.readOnly = true;
     inp.style.cursor='pointer';
     inp.addEventListener('click', (e)=>{ e.stopPropagation(); openDP(inp); });
+    inp.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' ') openDP(inp); });
   });
 }
 function openDP(inp){
   DP.input = inp;
   const today = todayJalali().split('/');
-  let parts = (inp.value||'').split('/').map(x=>parseInt(x));
+  const parts = (inp.value||'').split('/').map(x=>parseInt(x));
   if(parts.length===3 && parts[0]>=1300 && parts[0]<=1500 && parts[1]>=1 && parts[1]<=12){
     DP.y=parts[0]; DP.m=parts[1]; DP.sel=inp.value;
   } else {
@@ -560,30 +574,39 @@ function openDP(inp){
   }
   DP.y=Math.max(1300,Math.min(1500,DP.y));
   DP.m=Math.max(1,Math.min(12,DP.m));
+  el('dpOverlay').classList.add('open');
   renderDP();
   positionDP(inp);
 }
-function closeDP(){ const dp=el('dpRoot').querySelector('.dp'); if(dp) dp.classList.remove('open'); DP.input=null; }
+function closeDP(){
+  const dp=el('dpRoot').querySelector('.dp');
+  if(dp) dp.classList.remove('open');
+  el('dpOverlay').classList.remove('open');
+  DP.input=null;
+}
 function renderDP(){
   const firstG = _j2g(DP.y, DP.m, 1);
   const fd = new Date(firstG[0], firstG[1]-1, firstG[2]);
-  let startW = (fd.getDay()+1)%7; // shamsi: Sat=0
+  const startW = (fd.getDay()+1)%7; // Jalali week: Sat=0
   const dim = _jDIM(DP.m, DP.y);
   const tj = todayJalali();
   let cells='';
-  for(let i=0;i<startW;i++) cells+='<button class="empty"></button>';
+  for(let i=0;i<startW;i++) cells+='<button class="empty" aria-hidden="true"></button>';
   for(let d=1;d<=dim;d++){
     const val = DP.y+'/'+String(DP.m).padStart(2,'0')+'/'+String(d).padStart(2,'0');
-    let cls=''; if(val===tj)cls+=' today'; if(val===DP.sel)cls+=' sel';
-    cells+=`<button class="${cls}" onclick="pickDay(${d})">${toFa(d)}</button>`;
+    let cls=''; if(val===tj) cls+=' today'; if(val===DP.sel) cls+=' sel';
+    cells+=`<button class="${cls.trim()}" onclick="pickDay(${d})" aria-label="${J_MONTHS[DP.m-1]} ${d}">${toFa(d)}</button>`;
   }
-  el('dpRoot').innerHTML = `<div class="dp open">
+  const yearOpts = [];
+  for(let y=1390;y<=1420;y++) yearOpts.push(`<option value="${y}" ${y===DP.y?'selected':''}>${toFa(y)}</option>`);
+  el('dpRoot').innerHTML = `<div class="dp open" onclick="event.stopPropagation()">
     <div class="dp-head">
-      <button onclick="dpYearNav(1)" title="سال بعد">»</button>
-      <button onclick="dpNav(1)" title="ماه بعد">›</button>
-      <span class="title">${J_MONTHS[DP.m-1]} ${toFa(DP.y)}</span>
       <button onclick="dpNav(-1)" title="ماه قبل">‹</button>
-      <button onclick="dpYearNav(-1)" title="سال قبل">«</button>
+      <div class="dp-title">
+        <span class="month-lbl">${J_MONTHS[DP.m-1]}</span>
+        <select onchange="DP.y=parseInt(this.value);renderDP()" title="انتخاب سال">${yearOpts.join('')}</select>
+      </div>
+      <button onclick="dpNav(1)" title="ماه بعد">›</button>
     </div>
     <div class="dp-week">${J_WEEK.map(w=>`<span>${w}</span>`).join('')}</div>
     <div class="dp-days">${cells}</div>
@@ -592,30 +615,26 @@ function renderDP(){
       <button class="clear-btn" onclick="pickClear()">پاک کردن</button>
     </div>
   </div>`;
-  if(DP.input) positionDP(DP.input);
+  positionDP(DP.input);
 }
 function positionDP(inp){
-  const dp=el('dpRoot').querySelector('.dp'); if(!dp||!inp) return;
+  const dp=el('dpRoot').querySelector('.dp'); if(!dp) return;
+  if(window.innerWidth<=480){ dp.style.cssText=''; return; } // mobile: CSS handles it
+  if(!inp){ dp.style.right='50%'; dp.style.top='50%'; return; }
   const r=inp.getBoundingClientRect();
-  const dpW=290, dpH=dp.offsetHeight||300;
-  // Right edge aligned with input (RTL), clamped to viewport
-  let right=window.innerWidth-r.right;
-  if(right<8) right=8;
-  if(right+dpW>window.innerWidth) right=Math.max(8,window.innerWidth-dpW-8);
-  // Below input, but flip above if not enough space
-  let top;
-  if(r.bottom+dpH+6>window.innerHeight && r.top-dpH-6>0) top=r.top-dpH-6;
-  else top=r.bottom+4;
+  const dpW=308, dpH=dp.offsetHeight||320;
+  let right=Math.max(8, window.innerWidth-r.right);
+  if(right+dpW>window.innerWidth-8) right=Math.max(8, window.innerWidth-dpW-8);
+  let top = (r.bottom+dpH+6>window.innerHeight && r.top-dpH-6>0) ? r.top-dpH-6 : r.bottom+4;
   if(top<8) top=8;
-  dp.style.right=right+'px'; dp.style.top=top+'px'; dp.style.left='auto';
+  dp.style.right=right+'px'; dp.style.top=top+'px'; dp.style.left='auto'; dp.style.bottom='auto';
 }
 function dpNav(dir){
   DP.m+=dir;
-  if(DP.m>12){DP.m=1;DP.y=Math.min(1500,DP.y+1);}
-  if(DP.m<1){DP.m=12;DP.y=Math.max(1300,DP.y-1);}
+  if(DP.m>12){DP.m=1;DP.y=Math.min(1420,DP.y+1);}
+  if(DP.m<1){DP.m=12;DP.y=Math.max(1390,DP.y-1);}
   renderDP();
 }
-function dpYearNav(dir){ DP.y=Math.max(1300,Math.min(1500,DP.y+dir)); renderDP(); }
 function pickDay(d){
   const val = DP.y+'/'+String(DP.m).padStart(2,'0')+'/'+String(d).padStart(2,'0');
   if(DP.input){ DP.input.value=val; DP.input.dispatchEvent(new Event('change')); }
@@ -623,7 +642,6 @@ function pickDay(d){
 }
 function pickToday(){ if(DP.input){ DP.input.value=todayJalali(); DP.input.dispatchEvent(new Event('change')); } closeDP(); }
 function pickClear(){ if(DP.input){ DP.input.value=''; DP.input.dispatchEvent(new Event('change')); } closeDP(); }
-document.addEventListener('click',(e)=>{ if(!e.target.closest('.dp') && !e.target.dataset?.jdate) { /* handled per-input */ } });
 document.addEventListener('click',(e)=>{ const dp=el('dpRoot').querySelector('.dp'); if(dp && dp.classList.contains('open') && !e.target.closest('.dp') && e.target!==DP.input) closeDP(); });
 
 /* ============================================================
