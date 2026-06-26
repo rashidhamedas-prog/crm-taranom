@@ -152,8 +152,9 @@ table.tbl tr:hover td{background:#faf8ff}
 .fg input[readonly]{background:#f3f4f6;color:var(--muted)}
 
 /* ===== Jalali datepicker ===== */
-.dp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:599;display:none}
+.dp-overlay{position:fixed;inset:0;background:transparent;z-index:599;display:none}
 .dp-overlay.open{display:block}
+@media(max-width:480px){.dp-overlay.open{background:rgba(0,0,0,.4)}}
 .dp{position:fixed;background:#fff;border:1px solid var(--border);border-radius:16px;
   box-shadow:0 16px 48px rgba(0,0,0,.22);padding:14px;width:308px;z-index:600;display:none}
 .dp.open{display:block}
@@ -681,6 +682,7 @@ const NAV_ADMIN = [
   {id:'followups', icon:'📞', label:'پیگیری‌ها'},
   {id:'invoices', icon:'🧾', label:'فاکتور'},
   {id:'products', icon:'🛍️', label:'محصولات'},
+  {id:'reminders', icon:'🔔', label:'یادآورها'},
   {id:'users', icon:'👤', label:'کاربران'},
   {id:'reports', icon:'📈', label:'گزارشات'},
   {id:'accounting', icon:'💰', label:'حسابداری'},
@@ -693,6 +695,7 @@ const NAV_SALES = [
   {id:'followups', icon:'📞', label:'پیگیری‌ها'},
   {id:'invoices', icon:'🧾', label:'فاکتور'},
   {id:'catalog', icon:'🛍️', label:'کاتالوگ'},
+  {id:'reminders', icon:'🔔', label:'یادآورها'},
   {id:'messages', icon:'💬', label:'پیام‌ها'},
 ];
 let CURRENT_PAGE = 'dash';
@@ -703,6 +706,7 @@ function buildNav(){
     <a href="#" data-page="${it.id}" onclick="go('${it.id}');return false;">
       <span class="ico">${it.icon}</span><span>${it.label}</span>
       ${it.id==='messages'?'<span class="badge hide" id="msgBadge">0</span>':''}
+      ${it.id==='reminders'?'<span class="badge hide" id="remBadge">0</span>':''}
     </a>`).join('');
 }
 
@@ -741,7 +745,9 @@ async function boot(){
   await loadInitial();
   go('dash');
   refreshMsgBadge();
+  refreshRemBadge();
   setInterval(refreshMsgBadge, 30000);
+  setInterval(refreshRemBadge, 60000);
 }
 
 async function loadInitial(){
@@ -752,6 +758,7 @@ async function loadInitial(){
     ]);
     CACHE.customers = customers||[];
     CACHE.products = products||[];
+    CACHE.reminders = [];
     if(ME.role==='admin'){
       CACHE.users = await api('GET','/auth/users') || [];
       CACHE.settings = await api('GET','/settings') || {};
@@ -1973,6 +1980,101 @@ async function ensureUsersForMsg(){
   if(CACHE.users.length===0 && ME.role!=='admin'){
     // salespeople cannot list users; messaging defaults to broadcast→admin path handled server-side (to_id null reaches admins via broadcast)
   }
+}
+async function refreshRemBadge(){
+  try{
+    const rows=await api('GET','/reminders/due')||[];
+    const b=el('remBadge'); if(!b)return;
+    if(rows.length>0){ b.textContent=rows.length; b.classList.remove('hide'); }
+    else b.classList.add('hide');
+  }catch(e){}
+}
+
+/* ============================================================
+   REMINDERS
+============================================================ */
+let remFilter = {q:'', done:'0'};
+ROUTES.reminders = async function(){
+  const rows = await api('GET','/reminders')||[];
+  CACHE.reminders = rows;
+  const v=el('view');
+  v.innerHTML=`
+    <div class="toolbar">
+      <input class="search" id="remSearch" placeholder="جستجوی یادآور..." value="${esc(remFilter.q)}">
+      <select id="remDone">
+        <option value="0" ${remFilter.done==='0'?'selected':''}>فعال</option>
+        <option value="1" ${remFilter.done==='1'?'selected':''}>انجام‌شده</option>
+        <option value="" ${remFilter.done===''?'selected':''}>همه</option>
+      </select>
+      <button class="btn" onclick="remModal()">➕ یادآور جدید</button>
+    </div>
+    <div class="panel"><div class="panel-body" id="remList"></div></div>`;
+  el('remSearch').addEventListener('input',e=>{remFilter.q=e.target.value;renderRemList();});
+  el('remDone').addEventListener('change',e=>{remFilter.done=e.target.value;renderRemList();});
+  renderRemList();
+};
+function renderRemList(){
+  const body=el('remList'); if(!body) return;
+  let rows=(CACHE.reminders||[]).slice();
+  if(remFilter.q){ const q=remFilter.q.toLowerCase(); rows=rows.filter(r=>(r.title+' '+(r.body||'')+' '+(r.cust_biz||'')).toLowerCase().includes(q)); }
+  if(remFilter.done==='0') rows=rows.filter(r=>!r.done);
+  else if(remFilter.done==='1') rows=rows.filter(r=>r.done);
+  const today=todayJalali();
+  body.innerHTML=rows.length?rows.map(r=>{
+    const overdue=!r.done && r.remind_at && r.remind_at<today;
+    const isAdmin=ME.role==='admin';
+    return `<div class="msg ${overdue?'unread':''}" style="${r.done?'opacity:.55':''}">
+      <div class="mh">
+        <span>${overdue?'🔴':'🔔'} <b>${esc(r.title)}</b>${r.cust_biz?' — '+esc(r.cust_biz):''}</span>
+        <span style="display:flex;gap:6px;align-items:center">
+          <span class="mono">${escDate(r.remind_at)}</span>
+          ${isAdmin&&r.user_name?`<span class="muted">${esc(r.user_name)}</span>`:''}
+          ${!r.done?`<button class="btn sm green" onclick="remDone(${r.id})">✔ انجام شد</button>`:'<span class="tag" style="background:#d1fae5;color:#065f46">✔ انجام</span>'}
+          <button class="btn sm ghost" onclick="remModal(${r.id})">✏️</button>
+          <button class="btn sm red" onclick="remDelete(${r.id})">🗑️</button>
+        </span>
+      </div>
+      ${r.body?`<div class="mb">${esc(r.body)}</div>`:''}
+    </div>`;
+  }).join(''):'<div class="empty">یادآوری وجود ندارد</div>';
+}
+function remModal(id){
+  const r=id?(CACHE.reminders||[]).find(x=>x.id===id)||{}:{};
+  const custOpts=CACHE.customers.map(c=>`<option value="${c.id}" ${r.cust_id===c.id?'selected':''}>${esc(c.biz)}</option>`).join('');
+  openModal(`
+    <div class="modal-head"><h3>${id?'ویرایش یادآور':'یادآور جدید'}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="fg full"><label>عنوان *</label><input id="rem-title" value="${esc(r.title||'')}"></div>
+      <div class="fg"><label>مشتری مرتبط</label><select id="rem-cust"><option value="">بدون مشتری</option>${custOpts}</select></div>
+      <div class="fg"><label>تاریخ یادآوری *</label><input id="rem-date" data-jdate value="${esc(r.remind_at||'')}"></div>
+      <div class="fg full"><label>توضیحات</label><textarea id="rem-body">${esc(r.body||'')}</textarea></div>
+    </div></div>
+    <div class="modal-foot">
+      <button class="btn" onclick="saveRem(${id||'null'})">💾 ذخیره</button>
+      <button class="btn ghost" onclick="closeModal()">انصراف</button>
+    </div>`);
+  attachDatepickers(el('modalRoot'));
+}
+async function saveRem(id){
+  const title=el('rem-title').value.trim();
+  if(!title){showToast('عنوان الزامی است','error');return;}
+  const data={title,body:el('rem-body').value,remind_at:el('rem-date').value,cust_id:el('rem-cust').value||null};
+  try{
+    if(id) await api('PUT','/reminders/'+id,data); else await api('POST','/reminders',data);
+    CACHE.reminders=await api('GET','/reminders')||[];
+    closeModal(); renderRemList(); showToast('ذخیره شد'); refreshRemBadge();
+  }catch(e){showToast('خطا','error');}
+}
+async function remDone(id){
+  await api('PATCH','/reminders/'+id+'/done',{});
+  CACHE.reminders=await api('GET','/reminders')||[];
+  renderRemList(); refreshRemBadge(); showToast('یادآور انجام شد');
+}
+async function remDelete(id){
+  if(!confirm('این یادآور حذف شود؟')) return;
+  await api('DELETE','/reminders/'+id);
+  CACHE.reminders=(CACHE.reminders||[]).filter(r=>r.id!==id);
+  renderRemList(); refreshRemBadge(); showToast('حذف شد');
 }
 
 /* ============================================================

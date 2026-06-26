@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { getDB } = require('../db');
 const { auth } = require('../middleware/auth');
+const { todayJalali } = require('../jalali');
 
 router.get('/', auth, (req, res) => {
   const db = getDB();
@@ -28,7 +29,7 @@ router.get('/', auth, (req, res) => {
 
 router.get('/due', auth, (req, res) => {
   const db = getDB();
-  const today = new Date().toLocaleDateString('fa-IR');
+  const today = todayJalali();
   const rows = db.prepare(`
     SELECT r.*, c.biz as cust_biz
     FROM reminders r
