@@ -1335,17 +1335,19 @@ async function printInvoice(id){
    PRODUCTS (admin)  /  CATALOG (salesperson)
 ============================================================ */
 let prodFilter={category:'',search:'',stock_status:'all'};
+let _prodCanEdit = true; // track canEdit across modal open/close
 async function loadProductsFiltered(){
   const qs = new URLSearchParams();
   if(prodFilter.category) qs.set('category',prodFilter.category);
   if(prodFilter.search) qs.set('search',prodFilter.search);
-  if(prodFilter.stock_status) qs.set('stock_status',prodFilter.stock_status);
+  if(prodFilter.stock_status && prodFilter.stock_status!=='all') qs.set('stock_status',prodFilter.stock_status);
   CACHE.products = await api('GET','/products?'+qs.toString())||[];
 }
 ROUTES.products = function(){ productsPage(true); };
 ROUTES.catalog = function(){ productsPage(false); };
 
 async function productsPage(canEdit){
+  _prodCanEdit = canEdit;
   el('view').innerHTML='<div class="muted">در حال بارگذاری...</div>';
   const cats = await api('GET','/products/categories')||[];
   await loadProductsFiltered();
@@ -1373,8 +1375,19 @@ async function productsPage(canEdit){
 let prodTimer;
 function debounceProd(canEdit){ clearTimeout(prodTimer); prodTimer=setTimeout(()=>refreshProd(canEdit),300); }
 async function refreshProd(canEdit){ await loadProductsFiltered(); renderProdGrid(canEdit); }
+async function _refreshProdWithCats(canEdit){
+  const [cats] = await Promise.all([api('GET','/products/categories'), loadProductsFiltered()]);
+  renderProdGrid(canEdit);
+  const pCat=el('pCat');
+  if(pCat && cats){
+    const prev=pCat.value;
+    pCat.innerHTML='<option value="">همه دسته‌ها</option>'+cats.map(c=>`<option value="${esc(c)}" ${c===prev?'selected':''}>${esc(c)}</option>`).join('');
+    pCat.value=prev;
+  }
+}
 function renderProdGrid(canEdit){
-  el('prodGrid').innerHTML = CACHE.products.map(p=>{
+  const grid=el('prodGrid'); if(!grid) return;
+  grid.innerHTML = CACHE.products.map(p=>{
     const low = p.stock<=p.stock_alert;
     return `<div class="pcard">
       <div class="img" ${p.image?`onclick="showImgPreview('/uploads/products/${esc(p.image)}')" style="cursor:zoom-in"`:''}>${p.image?`<img src="/uploads/products/${esc(p.image)}" loading="lazy" decoding="async">`:'🧥'}</div>
@@ -1399,8 +1412,8 @@ function prodModal(id){
       <div class="fg"><label>دسته‌بندی</label><input id="p-cat" value="${esc(p.category||'')}"></div>
       <div class="fg"><label>کد محصول</label><input id="p-code" value="${esc(p.code||'')}"></div>
       <div class="fg"><label>قیمت (تومان)</label><input id="p-price" type="number" value="${p.price||0}"></div>
-      <div class="fg"><label>موجودی</label><input id="p-stock" type="number" value="${p.stock||0}"></div>
-      <div class="fg"><label>هشدار موجودی</label><input id="p-alert" type="number" value="${p.stock_alert||5}"></div>
+      <div class="fg"><label>موجودی</label><input id="p-stock" type="number" value="${p.stock!=null?p.stock:0}"></div>
+      <div class="fg"><label>هشدار موجودی</label><input id="p-alert" type="number" value="${p.stock_alert!=null?p.stock_alert:5}"></div>
       <div class="fg"><label>واحد</label><input id="p-unit" value="${esc(p.unit||'عدد')}"></div>
       <div class="fg full"><label>تصویر محصول</label><input id="p-image" type="file" accept="image/*"></div>
       <div class="fg full"><label>یادداشت</label><textarea id="p-note">${esc(p.note||'')}</textarea></div>
@@ -1414,10 +1427,10 @@ async function saveProduct(id){
   if(!name){ showToast('نام محصول الزامی است','error'); return; }
   const fd = new FormData();
   fd.append('name',name);
-  fd.append('category',el('p-cat').value);
+  fd.append('category',el('p-cat').value.trim());
   fd.append('code',el('p-code').value);
   fd.append('price',el('p-price').value||0);
-  fd.append('stock',el('p-stock').value||0);
+  fd.append('stock',el('p-stock').value);
   fd.append('stock_alert',el('p-alert').value||5);
   fd.append('unit',el('p-unit').value||'عدد');
   fd.append('note',el('p-note').value);
@@ -1425,8 +1438,10 @@ async function saveProduct(id){
   if(f) fd.append('image',f);
   try{
     if(id) await api('PUT','/products/'+id,fd,true); else await api('POST','/products',fd,true);
-    await loadProductsFiltered(); closeModal(); renderProdGrid(true); showToast('ذخیره شد');
-  }catch(e){}
+    closeModal();
+    await _refreshProdWithCats(_prodCanEdit);
+    showToast('ذخیره شد');
+  }catch(e){ showToast('خطا در ذخیره محصول','error'); }
 }
 function importProducts(){
   const inp=document.createElement('input'); inp.type='file'; inp.accept='.xlsx,.xls';
