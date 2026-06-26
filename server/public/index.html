@@ -226,6 +226,47 @@ table.tbl tr:hover td{background:#faf8ff}
 .flex{display:flex}.gap{gap:10px}.wrap{flex-wrap:wrap}
 .hide{display:none!important}
 
+/* ===== Pipeline Kanban Board ===== */
+.pipeline-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:16px;align-items:flex-start}
+.pipeline-col{flex:0 0 210px;background:#f4f7f5;border-radius:12px;padding:10px;min-height:160px}
+.pipeline-col .col-head{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700;color:var(--purple);padding-bottom:8px;margin-bottom:8px;border-bottom:2px solid var(--border)}
+.pipeline-col .col-head .cnt{background:var(--purple);color:#fff;border-radius:10px;min-width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;padding:0 5px}
+.f-card{background:#fff;border-radius:10px;padding:11px;margin-bottom:8px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.05);cursor:pointer;transition:.15s}
+.f-card:hover{border-color:var(--purple2);box-shadow:0 4px 12px rgba(26,92,56,.12)}
+.f-card .fc-cust{font-weight:700;font-size:13px;margin-bottom:3px}
+.f-card .fc-sub{font-size:12px;color:var(--muted);margin-bottom:5px}
+.f-card .fc-meta{display:flex;gap:4px;flex-wrap:wrap}
+.f-card .fc-date{font-size:11px;color:var(--muted);margin-top:5px}
+.prob-bar{height:4px;border-radius:4px;background:var(--border);overflow:hidden;min-width:50px;flex:1}
+.prob-bar .fill{height:100%;border-radius:4px;background:var(--green)}
+.interest-dot{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle}
+.int-very_low{background:#9ca3af}.int-low{background:#f59e0b}.int-mid{background:#3b82f6}.int-high{background:#10b981}.int-very_high{background:#7c3aed}
+
+/* Pipeline stage tag colors */
+.t-lead{background:#ede9fe;color:#5b21b6}
+.t-contact{background:#dbeafe;color:#1e40af}
+.t-proposal{background:#fef3c7;color:#92400e}
+.t-negotiation{background:#fee2e2;color:#991b1b}
+.t-won{background:#d1fae5;color:#065f46}
+.t-lost{background:#f3f4f6;color:#6b7280}
+
+/* ===== Activity Timeline ===== */
+.timeline{list-style:none;padding:0;position:relative}
+.timeline::before{content:'';position:absolute;right:15px;top:0;bottom:0;width:2px;background:var(--border)}
+.timeline-item{display:flex;gap:12px;padding-bottom:18px;position:relative}
+.timeline-dot{width:30px;height:30px;border-radius:50%;background:var(--purple-light);color:var(--purple);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;z-index:1;border:2px solid #fff;box-shadow:0 0 0 2px var(--purple-light)}
+.timeline-body{flex:1;background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px}
+.tm-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.tm-type{font-weight:700;font-size:13px;color:var(--purple)}
+.tm-date{font-size:11px;color:var(--muted)}
+.tm-text{font-size:13px;color:var(--text);line-height:1.6}
+.tm-meta{display:flex;gap:5px;flex-wrap:wrap}
+
+/* ===== Followup Modal Sections ===== */
+.fup-section{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.fup-section:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.fup-section-title{font-size:11px;font-weight:700;color:var(--purple);letter-spacing:.5px;margin-bottom:10px;padding:4px 8px;background:var(--purple-light);border-radius:5px;display:inline-block}
+
 /* ===== Mobile sidebar backdrop ===== */
 #sidebarBackdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
 #sidebarBackdrop.show{display:block}
@@ -439,7 +480,10 @@ const STATUS_LABEL = {
   vip:'ویژه', active:'فعال', followup:'پیگیری', silent:'خاموش', new:'جدید',
   pending:'در انتظار', onway:'در راه', done:'تحویل شده', cancel:'لغو شده',
   open:'باز', high:'بالا', mid:'متوسط', low:'پایین',
-  proforma:'پیش‌فاکتور', final:'فاکتور رسمی'
+  proforma:'پیش‌فاکتور', final:'فاکتور رسمی',
+  lead:'سرنخ', contact:'تماس', proposal:'پیشنهاد', negotiation:'مذاکره', won:'خرید کرد', lost:'از دست رفت',
+  very_low:'خیلی کم', very_high:'خیلی زیاد',
+  received:'وصول شد', bounced:'برگشت خورد', cancelled:'لغو شد'
 };
 function statusTag(s){ return `<span class="tag t-${esc(s)}">${esc(STATUS_LABEL[s]||s)}</span>`; }
 
@@ -794,7 +838,8 @@ ROUTES.customers = function(){
         ${['vip','active','followup','silent','new'].map(s=>`<option value="${s}" ${custFilter.status===s?'selected':''}>${STATUS_LABEL[s]}</option>`).join('')}
       </select>
       <button class="btn" onclick="custModal()">➕ مشتری جدید</button>
-      ${ME.role==='admin'?`<button class="btn ghost" onclick="importCustomers()">📤 ورود اکسل</button>`:''}
+      ${ME.role==='admin'?`<button class="btn ghost" onclick="importCustomers()">📤 ورود اکسل</button>
+      <button class="btn ghost" onclick="downloadCustTemplate()">📄 قالب</button>`:''}
       <button class="btn ghost" onclick="exportExcel('customers')">📥 اکسل</button>
     </div>
     <div class="panel"><div class="panel-body tbl-wrap"><div id="custTable"></div></div></div>`;
@@ -813,8 +858,10 @@ function renderCustTable(){
     <td>${esc(c.biz)}</td><td>${esc(c.owner||'-')}</td><td>${esc(c.city||'-')}</td>
     <td class="mono">${esc(c.phone||'-')}</td><td>${esc(c.type||'-')}</td><td>${statusTag(c.status)}</td>
     ${isAdmin?`<td class="muted">${esc(c.salesperson||'-')}</td>`:''}
-    <td><button class="btn sm ghost" onclick="custModal(${c.id})">✏️</button>
-        <button class="btn sm red" onclick="confirmDelete('customers',${c.id},'${esc(c.biz)}')">🗑️</button></td>
+    <td style="white-space:nowrap">
+      <button class="btn sm ghost" onclick="custModal(${c.id})">✏️</button>
+      <button class="btn sm blue icon" onclick="custActivityModal(${c.id})" title="تاریخچه پیگیری">📋</button>
+      <button class="btn sm red" onclick="confirmDelete('customers',${c.id},'${esc(c.biz)}')">🗑️</button></td>
   </tr>`).join('')||emptyRow(isAdmin?8:7)}</tbody></table>`;
 }
 function custModal(id){
@@ -833,16 +880,23 @@ function custModal(id){
       <div class="fg"><label>وضعیت</label><select id="c-status">
         ${['new','active','vip','followup','silent'].map(s=>`<option value="${s}" ${c.status===s?'selected':''}>${STATUS_LABEL[s]}</option>`).join('')}
       </select></div>
+      <div class="fg"><label>منبع آشنایی</label><select id="c-source">
+        <option value="">-- انتخاب --</option>
+        ${[['instagram','اینستاگرام'],['referral','معرفی آشنا'],['exhibition','نمایشگاه'],['store_front','مراجعه حضوری'],['online','آنلاین'],['other','سایر']].map(([v,l])=>`<option value="${v}" ${c.source===v?'selected':''}>${l}</option>`).join('')}
+      </select></div>
       <div class="fg full"><label>یادداشت</label><textarea id="c-note">${esc(c.note||'')}</textarea></div>
     </div></div>
-    <div class="modal-foot"><button class="btn" onclick="saveCust(${id||0})">💾 ذخیره</button>
+    <div class="modal-foot">
+      <button class="btn" onclick="saveCust(${id||0})">💾 ذخیره</button>
+      ${id?`<button class="btn blue" onclick="closeModal();custActivityModal(${id})">📋 تاریخچه</button>`:''}
       <button class="btn ghost" onclick="closeModal()">انصراف</button></div>`);
 }
 async function saveCust(id){
   const data = {
     biz:el('c-biz').value.trim(), owner:el('c-owner').value, city:el('c-city').value,
     phone:el('c-phone').value, insta:el('c-insta').value, type:el('c-type').value,
-    status:el('c-status').value, note:el('c-note').value
+    status:el('c-status').value, note:el('c-note').value,
+    source:el('c-source')?.value||''
   };
   if(!data.biz){ showToast('نام فروشگاه الزامی است','error'); return; }
   if(id) await api('PUT','/customers/'+id, data); else await api('POST','/customers', data);
@@ -865,75 +919,257 @@ function importCustomers(){
   };
   inp.click();
 }
+function downloadCustTemplate(){ downloadAuth('/customers/template','customers-template.xlsx'); }
 
 /* ============================================================
-   FOLLOWUPS
+   FOLLOWUPS — CRM Pipeline (redesigned)
 ============================================================ */
-let fupFilter={q:'',status:''};
+const PIPELINE_STAGES = [
+  {id:'lead',      label:'سرنخ',        icon:'🌱', color:'t-lead'},
+  {id:'contact',   label:'تماس',        icon:'📞', color:'t-contact'},
+  {id:'proposal',  label:'پیشنهاد',     icon:'📋', color:'t-proposal'},
+  {id:'negotiation',label:'مذاکره',     icon:'🤝', color:'t-negotiation'},
+  {id:'won',       label:'خرید کرد',    icon:'✅', color:'t-won'},
+  {id:'lost',      label:'از دست رفت',  icon:'❌', color:'t-lost'}
+];
+const INTEREST_LEVELS = [
+  {id:'very_low',  label:'خیلی کم',     cls:'int-very_low'},
+  {id:'low',       label:'کم',          cls:'int-low'},
+  {id:'mid',       label:'متوسط',       cls:'int-mid'},
+  {id:'high',      label:'زیاد',        cls:'int-high'},
+  {id:'very_high', label:'خیلی زیاد',   cls:'int-very_high'}
+];
+const CONTACT_TYPES = ['📱 تلفن','💬 واتساپ','📸 اینستاگرام','📲 تلگرام','🏪 حضوری','✉️ پیامک'];
+
+let fupFilter={q:'',status:'',stage:'',view:'list'};
+
 ROUTES.followups = async function(){
   el('view').innerHTML='<div class="muted">در حال بارگذاری...</div>';
   CACHE.followups=await api('GET','/followups')||[];
   el('view').innerHTML=`
     <div class="toolbar">
-      <input class="search" id="fSearch" placeholder="جستجو..." value="${esc(fupFilter.q)}">
+      <input class="search" id="fSearch" placeholder="جستجو مشتری / موضوع / تگ..." value="${esc(fupFilter.q)}">
       <select id="fStatus"><option value="">همه وضعیت‌ها</option>
         ${['open','done','cancel'].map(s=>`<option value="${s}" ${fupFilter.status===s?'selected':''}>${STATUS_LABEL[s]||s}</option>`).join('')}
       </select>
-      <button class="btn" onclick="fupModal()">➕ پیگیری جدید</button>
+      <select id="fStage"><option value="">همه مراحل</option>
+        ${PIPELINE_STAGES.map(s=>`<option value="${s.id}" ${fupFilter.stage===s.id?'selected':''}>${s.icon} ${s.label}</option>`).join('')}
+      </select>
+      <div style="display:flex;gap:5px">
+        <button id="btnKanban" class="btn sm ${fupFilter.view==='kanban'?'':'ghost'}" onclick="setFupView('kanban')">🗂️ پایپ‌لاین</button>
+        <button id="btnList" class="btn sm ${fupFilter.view==='list'?'':'ghost'}" onclick="setFupView('list')">📋 لیست</button>
+      </div>
+      <button class="btn" onclick="fupModal()">➕ جدید</button>
       <button class="btn ghost" onclick="exportExcel('followups')">📥 اکسل</button>
     </div>
-    <div class="panel"><div class="panel-body tbl-wrap"><div id="fupTable"></div></div></div>`;
-  el('fSearch').addEventListener('input',e=>{fupFilter.q=e.target.value;renderFupTable();});
-  el('fStatus').addEventListener('change',e=>{fupFilter.status=e.target.value;renderFupTable();});
-  renderFupTable();
+    <div id="fupView"></div>`;
+  el('fSearch').addEventListener('input',e=>{fupFilter.q=e.target.value;renderFupView();});
+  el('fStatus').addEventListener('change',e=>{fupFilter.status=e.target.value;renderFupView();});
+  el('fStage').addEventListener('change',e=>{fupFilter.stage=e.target.value;renderFupView();});
+  renderFupView();
 };
-function renderFupTable(){
-  let rows=CACHE.followups.slice();
-  if(fupFilter.q){const q=fupFilter.q.toLowerCase();rows=rows.filter(f=>((f.cust_biz||'')+' '+(f.subject||'')+' '+(f.note||'')).toLowerCase().includes(q));}
-  if(fupFilter.status)rows=rows.filter(f=>f.status===fupFilter.status);
-  const isAdmin=ME.role==='admin';
-  el('fupTable').innerHTML=`<table class="tbl"><thead><tr>
-    <th>مشتری</th><th>تاریخ</th><th>ساعت</th><th>نوع</th><th>موضوع</th><th>پیگیری بعدی</th><th>اولویت</th><th>وضعیت</th>${isAdmin?'<th>کارشناس</th>':''}<th>عملیات</th>
-  </tr></thead><tbody>${rows.map(f=>`<tr>
-    <td>${esc(f.cust_biz||'-')}</td><td class="mono">${escDate(f.date)}</td><td class="mono">${esc(f.time||'-')}</td>
-    <td>${esc(f.type||'-')}</td><td>${esc(f.subject||'-')}</td><td class="mono">${escDate(f.next_date)}</td>
-    <td>${statusTag(f.priority)}</td><td>${statusTag(f.status)}</td>
-    ${isAdmin?`<td class="muted">${esc(f.salesperson||'-')}</td>`:''}
-    <td><button class="btn sm ghost" onclick="fupModal(${f.id})">✏️</button>
-        <button class="btn sm red" onclick="confirmDelete('followups',${f.id},'پیگیری')">🗑️</button></td>
-  </tr>`).join('')||emptyRow(isAdmin?10:9)}</tbody></table>`;
+
+function setFupView(v){
+  fupFilter.view=v;
+  const kb=el('btnKanban'),ls=el('btnList');
+  if(kb) kb.classList.toggle('ghost',v!=='kanban');
+  if(ls) ls.classList.toggle('ghost',v!=='list');
+  renderFupView();
 }
-function fupModal(id){
-  const f = id ? CACHE.followups.find(x=>x.id===id) : {date:todayJalali()};
-  const custOpts = CACHE.customers.map(c=>`<option value="${c.id}" ${f.cust_id===c.id?'selected':''}>${esc(c.biz)}</option>`).join('');
+function filterFups(){
+  let rows=CACHE.followups.slice();
+  if(fupFilter.q){const q=fupFilter.q.toLowerCase();rows=rows.filter(f=>((f.cust_biz||'')+' '+(f.subject||'')+' '+(f.note||'')+' '+(f.tags||'')).toLowerCase().includes(q));}
+  if(fupFilter.status)rows=rows.filter(f=>f.status===fupFilter.status);
+  if(fupFilter.stage)rows=rows.filter(f=>(f.pipeline_stage||'lead')===fupFilter.stage);
+  return rows;
+}
+function renderFupView(){ if(fupFilter.view==='kanban') renderFupKanban(); else renderFupTable(); }
+
+function renderFupTable(){
+  const rows=filterFups();
+  const isAdmin=ME.role==='admin';
+  el('fupView').innerHTML=`<div class="panel"><div class="panel-body tbl-wrap"><table class="tbl"><thead><tr>
+    <th>مشتری</th><th>مرحله</th><th>تاریخ</th><th>نوع</th><th>موضوع</th><th>احتمال</th><th>اولویت</th><th>بعدی</th><th>وضعیت</th>${isAdmin?'<th>کارشناس</th>':''}<th>عملیات</th>
+  </tr></thead><tbody>${rows.map(f=>{
+    const stage=PIPELINE_STAGES.find(s=>s.id===(f.pipeline_stage||'lead'))||PIPELINE_STAGES[0];
+    const prob=parseInt(f.purchase_prob)||0;
+    return `<tr>
+      <td><b>${esc(f.cust_biz||'-')}</b></td>
+      <td><span class="tag ${stage.color}">${stage.icon} ${stage.label}</span></td>
+      <td class="mono">${escDate(f.date)}</td>
+      <td>${esc(f.type||'-')}</td>
+      <td>${esc(f.subject||'-')}${f.tags?`<br><span style="font-size:10px;color:var(--muted)">#${esc(f.tags)}</span>`:''}</td>
+      <td><div style="display:flex;align-items:center;gap:5px"><div class="prob-bar"><div class="fill" style="width:${prob}%"></div></div><span style="font-size:11px;white-space:nowrap">${prob}٪</span></div></td>
+      <td>${statusTag(f.priority)}</td>
+      <td class="mono">${escDate(f.next_date)}</td>
+      <td>${statusTag(f.status)}</td>
+      ${isAdmin?`<td class="muted">${esc(f.salesperson||'-')}</td>`:''}
+      <td style="white-space:nowrap">
+        <button class="btn sm ghost" onclick="fupModal(${f.id})" title="ویرایش">✏️</button>
+        <button class="btn sm blue icon" onclick="custActivityModal(${f.cust_id})" title="تاریخچه">📋</button>
+        <button class="btn sm red icon" onclick="confirmDelete('followups',${f.id},'پیگیری')">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('')||emptyRow(isAdmin?11:10)}</tbody></table></div></div>`;
+}
+
+function renderFupKanban(){
+  const rows=filterFups();
+  el('fupView').innerHTML=`<div class="pipeline-board">${PIPELINE_STAGES.map(stage=>{
+    const cards=rows.filter(f=>(f.pipeline_stage||'lead')===stage.id);
+    return `<div class="pipeline-col">
+      <div class="col-head"><span>${stage.icon} ${stage.label}</span><span class="cnt">${cards.length}</span></div>
+      ${cards.map(f=>{
+        const prob=parseInt(f.purchase_prob)||0;
+        const interest=INTEREST_LEVELS.find(l=>l.id===(f.interest_level||'mid'))||INTEREST_LEVELS[2];
+        return `<div class="f-card" onclick="fupModal(${f.id})">
+          <div class="fc-cust">${esc(f.cust_biz||'-')}</div>
+          ${f.subject?`<div class="fc-sub">${esc(f.subject)}</div>`:''}
+          <div class="fc-meta">
+            ${statusTag(f.priority)}
+            <span class="tag" style="background:#f3f4f6;color:var(--muted);gap:3px;display:inline-flex;align-items:center">
+              <span class="interest-dot ${interest.cls}"></span>${interest.label}
+            </span>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;margin-top:6px">
+            <div class="prob-bar"><div class="fill" style="width:${prob}%"></div></div>
+            <span style="font-size:11px;white-space:nowrap;color:var(--muted)">${prob}٪</span>
+          </div>
+          <div class="fc-date">${esc(f.type||'')} · ${escDate(f.date)}${f.next_date?` → ${escDate(f.next_date)}`:''}</div>
+        </div>`;
+      }).join('')}
+      <button class="btn ghost" style="width:100%;margin-top:8px;font-size:12px;padding:7px" onclick="fupModal(null,'${stage.id}')">+ اضافه</button>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function fupModal(id, defaultStage, presetCustId){
+  const f = id ? CACHE.followups.find(x=>x.id===id) : {
+    date:todayJalali(), pipeline_stage:defaultStage||'lead',
+    interest_level:'mid', purchase_prob:50, status:'open', priority:'mid',
+    cust_id:presetCustId||0
+  };
+  const custOpts=CACHE.customers.map(c=>`<option value="${c.id}" ${f.cust_id===c.id?'selected':''}>${esc(c.biz)}</option>`).join('');
+  const userOpts=(CACHE.users||[]).map(u=>`<option value="${u.id}" ${f.assigned_to===u.id?'selected':''}>${esc(u.name)}</option>`).join('');
   openModal(`
     <div class="modal-head"><h3>${id?'ویرایش پیگیری':'پیگیری جدید'}</h3><button class="x" onclick="closeModal()">×</button></div>
-    <div class="modal-body"><div class="form-grid">
-      <div class="fg"><label>مشتری *</label><select id="f-cust">${custOpts}</select></div>
-      <div class="fg"><label>تاریخ ${id?'':'(پیش‌فرض امروز)'}</label><input id="f-date" data-jdate value="${esc(f.date||'')}"></div>
-      <div class="fg"><label>نوع تماس</label><select id="f-type">
-        ${['📱 تلفن','💬 واتساپ','📸 اینستاگرام','🏪 حضوری','✉️ پیامک'].map(t=>`<option ${f.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
-      <div class="fg"><label>اولویت</label><select id="f-priority">
-        ${['high','mid','low'].map(p=>`<option value="${p}" ${f.priority===p?'selected':''}>${STATUS_LABEL[p]}</option>`).join('')}</select></div>
-      <div class="fg full"><label>موضوع</label><input id="f-subject" value="${esc(f.subject||'')}"></div>
-      <div class="fg full"><label>نتیجه / یادداشت</label><textarea id="f-note">${esc(f.note||'')}</textarea></div>
-      <div class="fg full"><label>اقدام بعدی</label><input id="f-action" value="${esc(f.action||'')}"></div>
-      <div class="fg"><label>تاریخ پیگیری بعدی</label><input id="f-next" data-jdate value="${esc(f.next_date||'')}"></div>
-      <div class="fg"><label>وضعیت</label><select id="f-status">
-        ${['open','done','cancel'].map(s=>`<option value="${s}" ${f.status===s?'selected':''}>${STATUS_LABEL[s]||s}</option>`).join('')}</select></div>
-    </div><p class="muted" style="font-size:12px;margin-top:10px">ساعت ثبت به‌صورت خودکار توسط سیستم ذخیره می‌شود.</p></div>
-    <div class="modal-foot"><button class="btn" onclick="saveFup(${id||0})">💾 ذخیره</button>
-      <button class="btn ghost" onclick="closeModal()">انصراف</button></div>`);
+    <div class="modal-body">
+      <div class="fup-section">
+        <div class="fup-section-title">اطلاعات پایه</div>
+        <div class="form-grid">
+          <div class="fg"><label>مشتری *</label><select id="f-cust">${custOpts}</select></div>
+          <div class="fg"><label>تاریخ تماس</label><input id="f-date" data-jdate value="${esc(f.date||'')}"></div>
+          <div class="fg"><label>نوع تماس</label><select id="f-type">
+            ${CONTACT_TYPES.map(t=>`<option ${f.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+          <div class="fg"><label>وضعیت</label><select id="f-status">
+            ${['open','done','cancel'].map(s=>`<option value="${s}" ${(f.status||'open')===s?'selected':''}>${STATUS_LABEL[s]||s}</option>`).join('')}</select></div>
+        </div>
+      </div>
+      <div class="fup-section">
+        <div class="fup-section-title">پایپ‌لاین فروش</div>
+        <div class="form-grid">
+          <div class="fg"><label>مرحله</label><select id="f-stage" onchange="toggleLostReason()">
+            ${PIPELINE_STAGES.map(s=>`<option value="${s.id}" ${(f.pipeline_stage||'lead')===s.id?'selected':''}>${s.icon} ${s.label}</option>`).join('')}</select></div>
+          <div class="fg"><label>سطح علاقه‌مندی</label><select id="f-interest">
+            ${INTEREST_LEVELS.map(l=>`<option value="${l.id}" ${(f.interest_level||'mid')===l.id?'selected':''}>${l.label}</option>`).join('')}</select></div>
+          <div class="fg"><label>احتمال خرید (٪)</label><input id="f-prob" type="number" min="0" max="100" value="${f.purchase_prob!=null?f.purchase_prob:50}"></div>
+          <div class="fg"><label>اولویت</label><select id="f-priority">
+            ${['high','mid','low'].map(p=>`<option value="${p}" ${(f.priority||'mid')===p?'selected':''}>${STATUS_LABEL[p]}</option>`).join('')}</select></div>
+        </div>
+        <div id="lostReasonDiv" style="${(f.pipeline_stage||'lead')==='lost'?'':'display:none'};margin-top:8px">
+          <div class="fg full"><label>دلیل از دست دادن فروش</label>
+            <input id="f-lost" value="${esc(f.lost_reason||'')}" placeholder="مثلاً: قیمت بالا، رقیب ارزان‌تر، ..."></div>
+        </div>
+      </div>
+      <div class="fup-section">
+        <div class="fup-section-title">جزئیات تماس</div>
+        <div class="form-grid">
+          <div class="fg full"><label>موضوع / هدف تماس</label><input id="f-subject" value="${esc(f.subject||'')}"></div>
+          <div class="fg full"><label>نتیجه و یادداشت</label><textarea id="f-note">${esc(f.note||'')}</textarea></div>
+          <div class="fg full"><label>اقدام بعدی</label><input id="f-action" value="${esc(f.action||'')}"></div>
+          <div class="fg"><label>تاریخ پیگیری بعدی</label><input id="f-next" data-jdate value="${esc(f.next_date||'')}"></div>
+          <div class="fg"><label>تگ‌ها (با کاما)</label><input id="f-tags" value="${esc(f.tags||'')}" placeholder="VIP، فصلی، ..."></div>
+        </div>
+      </div>
+      ${ME.role==='admin'&&userOpts?`<div class="fup-section">
+        <div class="fup-section-title">اطلاعات ادمین</div>
+        <div class="form-grid">
+          <div class="fg"><label>کارشناس مسئول</label><select id="f-assigned">
+            <option value="">-- انتخاب --</option>${userOpts}</select></div>
+        </div>
+      </div>`:''}
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="saveFup(${id||0})">💾 ذخیره</button>
+      ${id?`<button class="btn blue" onclick="closeModal();custActivityModal(${f.cust_id})">📋 تاریخچه</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">انصراف</button>
+    </div>
+  `,true);
+}
+function toggleLostReason(){
+  const div=el('lostReasonDiv');
+  if(div) div.style.display=el('f-stage')?.value==='lost'?'block':'none';
 }
 async function saveFup(id){
+  const cust_id=+el('f-cust').value;
+  if(!cust_id){ showToast('مشتری را انتخاب کنید','error'); return; }
   const data={
-    cust_id:+el('f-cust').value, date:el('f-date').value, type:el('f-type').value,
-    priority:el('f-priority').value, subject:el('f-subject').value, note:el('f-note').value,
-    action:el('f-action').value, next_date:el('f-next').value, status:el('f-status').value
+    cust_id, date:el('f-date').value, type:el('f-type').value,
+    priority:el('f-priority').value, subject:el('f-subject').value,
+    note:el('f-note').value, action:el('f-action').value,
+    next_date:el('f-next').value, status:el('f-status').value,
+    interest_level:el('f-interest').value,
+    purchase_prob:parseInt(el('f-prob').value)||50,
+    pipeline_stage:el('f-stage').value,
+    tags:el('f-tags').value,
+    lost_reason:el('f-lost')?.value||'',
+    assigned_to:el('f-assigned')?.value||null
   };
-  if(!data.cust_id){ showToast('مشتری را انتخاب کنید','error'); return; }
-  if(id) await api('PUT','/followups/'+id,data); else await api('POST','/followups',data);
-  CACHE.followups=await api('GET','/followups'); closeModal(); renderFupTable(); showToast('ذخیره شد');
+  try{
+    if(id) await api('PUT','/followups/'+id,data); else await api('POST','/followups',data);
+    CACHE.followups=await api('GET','/followups'); closeModal(); renderFupView(); showToast('ذخیره شد');
+  }catch(e){}
+}
+
+async function custActivityModal(custId){
+  const cust=CACHE.customers.find(x=>x.id===custId)||{biz:'مشتری',id:custId};
+  openModal(`
+    <div class="modal-head"><h3>📋 تاریخچه — ${esc(cust.biz)}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body" id="activityBody"><div style="text-align:center;padding:24px;color:var(--muted)">در حال بارگذاری...</div></div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal();fupModal(null,null,${custId})">➕ پیگیری جدید</button>
+      <button class="btn ghost" onclick="closeModal()">بستن</button>
+    </div>
+  `,true);
+  try{
+    const history=await api('GET','/followups/by-customer/'+custId)||[];
+    const body=el('activityBody');
+    if(!body) return;
+    if(!history.length){ body.innerHTML='<div class="empty">هنوز پیگیری‌ای ثبت نشده است.</div>'; return; }
+    const typeIcons={'📱 تلفن':'📱','💬 واتساپ':'💬','📸 اینستاگرام':'📸','📲 تلگرام':'📲','🏪 حضوری':'🏪','✉️ پیامک':'✉️'};
+    body.innerHTML=`<ul class="timeline">${history.map(f=>{
+      const stage=PIPELINE_STAGES.find(s=>s.id===(f.pipeline_stage||'lead'))||PIPELINE_STAGES[0];
+      const icon=typeIcons[f.type]||'📞';
+      return `<li class="timeline-item">
+        <div class="timeline-dot">${icon}</div>
+        <div class="timeline-body">
+          <div class="tm-head">
+            <span class="tm-type">${esc(f.type||'تماس')}</span>
+            <span class="tm-date">${escDate(f.date)}${f.time?' · '+esc(f.time):''}</span>
+          </div>
+          ${f.subject?`<div style="font-weight:600;font-size:13px;margin-bottom:4px">${esc(f.subject)}</div>`:''}
+          ${f.note?`<div class="tm-text">${esc(f.note)}</div>`:''}
+          ${f.action?`<div style="font-size:12px;color:var(--blue);margin-top:4px">⏭️ ${esc(f.action)}</div>`:''}
+          <div class="tm-meta" style="margin-top:8px">
+            <span class="tag ${stage.color}">${stage.icon} ${stage.label}</span>
+            ${statusTag(f.priority)}${statusTag(f.status)}
+            ${f.purchase_prob?`<span class="tag" style="background:#e0fdf4;color:#065f46">${f.purchase_prob}٪</span>`:''}
+          </div>
+          ${f.next_date?`<div style="font-size:11px;color:var(--muted);margin-top:6px">📅 پیگیری بعدی: ${escDate(f.next_date)}</div>`:''}
+        </div>
+      </li>`;
+    }).join('')}</ul>`;
+  }catch(e){ const b=el('activityBody'); if(b)b.innerHTML='<div class="empty">خطا در بارگذاری</div>'; }
 }
 
 /* ============================================================
@@ -1721,7 +1957,7 @@ async function doDelete(entity,id){
   closeModal(); showToast('حذف شد');
   // refresh whatever is open
   if(entity==='customers'){ await reloadCustomers(); if(CURRENT_PAGE==='customers')renderCustTable(); }
-  else if(entity==='followups'){ CACHE.followups=await api('GET','/followups'); renderFupTable(); }
+  else if(entity==='followups'){ CACHE.followups=await api('GET','/followups'); renderFupView(); }
   else if(entity==='invoices'){ CACHE.invoices=await api('GET','/invoices'); renderInvTable(); }
   else if(entity==='products'){ await loadProductsFiltered(); renderProdGrid(true); }
   else if(entity==='admin/users'){ CACHE.users=await api('GET','/auth/users'); ROUTES.users(); }

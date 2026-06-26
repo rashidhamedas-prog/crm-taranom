@@ -245,6 +245,15 @@ function initDB() {
   ensureColumn(db, 'settlements', 'cheque_owner', "TEXT DEFAULT ''");
   ensureColumn(db, 'settlements', 'cheque_due', "TEXT DEFAULT ''");
   ensureColumn(db, 'settlements', 'cheque_status', "TEXT DEFAULT 'pending'");
+  // Followup CRM pipeline fields
+  ensureColumn(db, 'followups', 'interest_level', "TEXT DEFAULT 'mid'");
+  ensureColumn(db, 'followups', 'purchase_prob', 'INTEGER DEFAULT 50');
+  ensureColumn(db, 'followups', 'pipeline_stage', "TEXT DEFAULT 'lead'");
+  ensureColumn(db, 'followups', 'tags', "TEXT DEFAULT ''");
+  ensureColumn(db, 'followups', 'lost_reason', "TEXT DEFAULT ''");
+  ensureColumn(db, 'followups', 'assigned_to', 'INTEGER');
+  // Customer CRM fields
+  ensureColumn(db, 'customers', 'source', "TEXT DEFAULT ''");
 
   // ---- Indexes ----
   db.exec(`
