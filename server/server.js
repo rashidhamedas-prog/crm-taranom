@@ -46,13 +46,9 @@ app.use('/api/reports', require('./routes/reports'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/accounting', require('./routes/accounting'));
 
-// Server time endpoint — returns current Jalali date so clients don't rely on device clock
+// Server time endpoint — returns Unix timestamp (UTC) for reliable client clock sync
 app.get('/api/system/time', (req, res) => {
-  const now = new Date();
-  const jalali = todayJalali();
-  const hh = String(now.getHours()).padStart(2, '0');
-  const mm = String(now.getMinutes()).padStart(2, '0');
-  res.json({ jalali, time: `${hh}:${mm}` });
+  res.json({ ts: Date.now() });
 });
 
 // Serve .well-known/assetlinks.json explicitly (TWA domain verification)

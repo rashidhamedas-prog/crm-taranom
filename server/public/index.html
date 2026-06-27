@@ -561,11 +561,7 @@ async function syncServerTime(){
     const t0=Date.now();
     const r=await fetch('/api/system/time'); if(!r.ok) return;
     const j=await r.json(); const rtt=Date.now()-t0;
-    const [jy,jm,jd]=j.jalali.split('/').map(Number);
-    const [gy,gm,gd]=_j2g(jy,jm,jd);
-    const [hh,mm]=(j.time||'00:00').split(':').map(Number);
-    const srvMs=new Date(gy,gm-1,gd,hh,mm,0,0).getTime()+rtt/2;
-    _srvOffset=srvMs-Date.now();
+    if(j.ts) _srvOffset=(j.ts+rtt/2)-Date.now();
   }catch(e){}
 }
 
