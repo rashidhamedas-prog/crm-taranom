@@ -239,6 +239,17 @@ table.tbl tr:hover td{background:#faf8ff}
 .flex{display:flex}.gap{gap:10px}.wrap{flex-wrap:wrap}
 .hide{display:none!important}
 
+/* ===== Searchable Customer Select ===== */
+.cust-sw{position:relative}
+.cust-si{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:9px;outline:none;background:#fff;font-family:inherit;font-size:14px;color:var(--text)}
+.cust-si:focus{border-color:var(--purple2);box-shadow:0 0 0 3px rgba(35,107,68,.08)}
+.cust-si-drop{background:#fff;border:1.5px solid var(--border);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.16);overflow-y:auto;z-index:2000;direction:rtl}
+.cust-si-item{padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.cust-si-item:last-child{border-bottom:none}
+.cust-si-item:hover{background:var(--purple-light);color:var(--purple)}
+.cust-si-meta{font-size:11px;color:var(--muted);white-space:nowrap}
+.cust-si-empty{padding:14px;text-align:center;color:var(--muted);font-size:12px}
+
 /* ===== Pipeline Kanban Board ===== */
 .pipeline-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:16px;align-items:flex-start;width:100%;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
 .pipeline-col{flex:0 0 210px;background:#f4f7f5;border-radius:12px;padding:10px;min-height:160px;scroll-snap-align:start;min-width:0}
@@ -321,7 +332,7 @@ table.tbl tr:hover td{background:#faf8ff}
   .pipeline-col{flex:0 0 168px}
   .pipeline-board{gap:8px}
   .content{padding:10px;width:100%}
-  .dp{width:calc(100vw - 24px);max-width:300px}
+  .dp{max-width:calc(100vw - 16px)}
   .dp-days button{font-size:13px}
   .topbar{padding:8px 12px}
   .topbar h3{font-size:14px}
@@ -448,7 +459,7 @@ table.tbl tr:hover td{background:#faf8ff}
    STATE & API
 ============================================================ */
 let ME = null;
-let CACHE = { customers:[], products:[], users:[], orders:[], followups:[], invoices:[], settings:{} };
+let CACHE = { customers:[], products:[], allProducts:[], users:[], orders:[], followups:[], invoices:[], settings:{} };
 let mChart = null;
 
 async function api(method, path, data, isFormData){
@@ -539,7 +550,10 @@ const J_WEEK = ['ش','ی','د','س','چ','پ','ج'];
 let _srvOffset = 0; // ms offset between server clock and client clock
 function _serverNow(){ return new Date(Date.now() + _srvOffset); }
 function todayJalali(){
-  const d=_serverNow(); const [y,m,dd]=_g2j(d.getFullYear(),d.getMonth()+1,d.getDate());
+  const d=_serverNow();
+  const ds=d.toLocaleDateString('en-CA',{timeZone:'Asia/Tehran'});
+  const [gy,gm,gdd]=ds.split('-').map(Number);
+  const [y,m,dd]=_g2j(gy,gm,gdd);
   return y+'/'+String(m).padStart(2,'0')+'/'+String(dd).padStart(2,'0');
 }
 async function syncServerTime(){
@@ -553,6 +567,75 @@ async function syncServerTime(){
     const srvMs=new Date(gy,gm-1,gd,hh,mm,0,0).getTime()+rtt/2;
     _srvOffset=srvMs-Date.now();
   }catch(e){}
+}
+
+/* ---- Searchable Customer Select ---- */
+function custSelect(id, selectedId, optional=false){
+  const sel=selectedId?CACHE.customers.find(c=>c.id===+selectedId):null;
+  const ph=optional?'مشتری مرتبط (اختیاری)...':'جستجو: نام، موبایل، کد...';
+  return `<div class="cust-sw" data-cs-id="${esc(id)}">
+    <input type="hidden" id="${esc(id)}" value="${selectedId||''}" data-optional="${optional?1:0}">
+    <input type="text" id="${esc(id)}-input" class="cust-si" placeholder="${ph}" value="${sel?esc(sel.biz):''}">
+    <div id="${esc(id)}-drop" class="cust-si-drop" style="display:none;position:fixed;width:280px;max-height:220px"></div>
+  </div>`;
+}
+function initCustSearches(scope){
+  (scope||document).querySelectorAll('.cust-sw').forEach(sw=>{
+    const id=sw.dataset.csId;
+    const inp=el(id+'-input');
+    if(!inp||inp.dataset.csBound) return;
+    inp.dataset.csBound='1';
+    inp.addEventListener('focus',()=>showCustDrop(id,''));
+    inp.addEventListener('input',()=>showCustDrop(id,inp.value));
+    inp.addEventListener('keydown',e=>{
+      if(e.key==='Escape'){hideCustDrop(id);}
+    });
+    document.addEventListener('click',e=>{
+      if(!sw.contains(e.target)) hideCustDrop(id);
+    },{capture:true});
+  });
+}
+function showCustDrop(id, q){
+  const drop=el(id+'-drop'); if(!drop) return;
+  const inp=el(id+'-input'); if(!inp) return;
+  const optional=el(id)?.dataset?.optional==='1';
+  const term=(q||'').trim().toLowerCase();
+  let list=CACHE.customers;
+  if(term){
+    const words=term.split(/\s+/);
+    list=list.filter(c=>{
+      const hay=((c.biz||'')+' '+(c.phone||'')+' '+(c.owner||'')).toLowerCase();
+      return words.every(w=>hay.includes(w));
+    });
+  }
+  const rect=inp.getBoundingClientRect();
+  drop.style.top=(rect.bottom+2)+'px';
+  drop.style.left=rect.left+'px';
+  drop.style.width=rect.width+'px';
+  drop.style.display='block';
+  let html='';
+  if(optional) html+=`<div class="cust-si-item" onclick="pickCust('${id}',0)"><span>بدون مشتری</span></div>`;
+  html+=list.slice(0,40).map(c=>`
+    <div class="cust-si-item" onclick="pickCust('${id}',${c.id})">
+      <span>${esc(c.biz)}</span>
+      <span class="cust-si-meta">${esc(c.phone||'')}</span>
+    </div>`).join('');
+  if(!html) html='<div class="cust-si-empty">مشتری یافت نشد</div>';
+  drop.innerHTML=html;
+}
+function pickCust(id, custId){
+  const h=el(id); if(h) h.value=custId||'';
+  const inp=el(id+'-input');
+  if(inp){
+    if(custId){
+      const c=CACHE.customers.find(x=>x.id===+custId);
+      inp.value=c?c.biz:'';
+    } else { inp.value=''; }
+  }
+  hideCustDrop(id);
+}
+function hideCustDrop(id){
+  const drop=el(id+'-drop'); if(drop) drop.style.display='none';
 }
 
 /* ---- Datepicker popup ---- */
@@ -761,6 +844,7 @@ async function loadInitial(){
     ]);
     CACHE.customers = customers||[];
     CACHE.products = products||[];
+    CACHE.allProducts = products||[];
     CACHE.reminders = [];
     if(ME.role==='admin'){
       CACHE.users = await api('GET','/auth/users') || [];
@@ -781,6 +865,7 @@ function openModal(html, lg){
   el('modalRoot').innerHTML = `<div class="overlay open" onclick="if(event.target===this)closeModal()">
     <div class="modal ${lg?'lg':''}">${html}</div></div>`;
   attachDatepickers(el('modalRoot'));
+  initCustSearches(el('modalRoot'));
 }
 function closeModal(){ el('modalRoot').innerHTML=''; }
 
@@ -1099,7 +1184,6 @@ function fupModal(id, defaultStage, presetCustId){
     interest_level:'mid', purchase_prob:50, status:'open', priority:'mid',
     cust_id:presetCustId||0
   };
-  const custOpts=CACHE.customers.map(c=>`<option value="${c.id}" ${f.cust_id===c.id?'selected':''}>${esc(c.biz)}</option>`).join('');
   const userOpts=(CACHE.users||[]).map(u=>`<option value="${u.id}" ${f.assigned_to===u.id?'selected':''}>${esc(u.name)}</option>`).join('');
   openModal(`
     <div class="modal-head"><h3>${id?'ویرایش پیگیری':'پیگیری جدید'}</h3><button class="x" onclick="closeModal()">×</button></div>
@@ -1107,7 +1191,7 @@ function fupModal(id, defaultStage, presetCustId){
       <div class="fup-section">
         <div class="fup-section-title">اطلاعات پایه</div>
         <div class="form-grid">
-          <div class="fg"><label>مشتری *</label><select id="f-cust">${custOpts}</select></div>
+          <div class="fg"><label>مشتری *</label>${custSelect('f-cust', f.cust_id)}</div>
           <div class="fg"><label>تاریخ تماس</label><input id="f-date" data-jdate value="${esc(f.date||'')}"></div>
           <div class="fg"><label>نوع تماس</label><select id="f-type">
             ${CONTACT_TYPES.map(t=>`<option ${f.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
@@ -1270,13 +1354,12 @@ function renderInvTable(){
 function openInvBuilder(id){
   const inv = id ? CACHE.invoices.find(x=>x.id===id) : null;
   invCart = inv ? inv.rows.map(r=>({product_id:r.product_id,name:r.name,qty:r.qty,price:r.price})) : [];
-  const custOpts = CACHE.customers.map(c=>`<option value="${c.id}" ${inv&&inv.cust_id===c.id?'selected':''}>${esc(c.biz)}</option>`).join('');
   const isAdmin = ME.role==='admin';
   openModal(`
     <div class="modal-head"><h3>${id?'ویرایش فاکتور':'فاکتور جدید'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="modal-body">
       <div class="form-grid" style="margin-bottom:14px">
-        <div class="fg"><label>مشتری *</label><select id="inv-cust">${custOpts}</select></div>
+        <div class="fg"><label>مشتری *</label>${custSelect('inv-cust', inv?inv.cust_id:0)}</div>
         <div class="fg"><label>نوع</label><select id="inv-type">
           <option value="proforma" ${inv&&inv.type==='proforma'?'selected':''}>پیش‌فاکتور</option>
           <option value="final" ${inv&&inv.type==='final'?'selected':''}>فاکتور رسمی</option></select></div>
@@ -1313,9 +1396,12 @@ function openInvBuilder(id){
   renderCart();
 }
 function renderInvPicker(){
-  const q=(el('invProdSearch')?.value||'').toLowerCase();
-  let prods=CACHE.products.slice();
-  if(q)prods=prods.filter(p=>((p.name||'')+' '+(p.code||'')).toLowerCase().includes(q));
+  const words=(el('invProdSearch')?.value||'').trim().toLowerCase().split(/\s+/).filter(Boolean);
+  let prods=(CACHE.allProducts.length?CACHE.allProducts:CACHE.products).slice();
+  if(words.length) prods=prods.filter(p=>{
+    const hay=((p.name||'')+' '+(p.code||'')+' '+(p.category||'')).toLowerCase();
+    return words.every(w=>hay.includes(w));
+  });
   el('invPicker').innerHTML = prods.map(p=>`
     <div class="pick-card" onclick="addToCart(${p.id})">
       <div class="pimg">${p.image?`<img src="/uploads/products/${esc(p.image)}" loading="lazy" decoding="async">`:'🧥'}</div>
@@ -1849,11 +1935,10 @@ async function updateChequeStatus(id, status){
 }
 
 function settlementModal(custId){
-  const custOpts=CACHE.customers.map(c=>`<option value="${c.id}" ${custId===c.id?'selected':''}>${esc(c.biz)}</option>`).join('');
   openModal(`
     <div class="modal-head"><h3>ثبت تسویه حساب</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="modal-body"><div class="form-grid">
-      <div class="fg full"><label>مشتری *</label><select id="st-cust">${custOpts}</select></div>
+      <div class="fg full"><label>مشتری *</label>${custSelect('st-cust', custId)}</div>
       <div class="fg"><label>مبلغ تسویه (تومان) *</label><input id="st-amount" type="number" min="1" placeholder="0"></div>
       <div class="fg"><label>نوع پرداخت</label><select id="st-paytype" onchange="toggleStlCheque()">
         <option value="cash">نقد</option><option value="cheque">چک</option></select></div>
@@ -2052,12 +2137,11 @@ function renderRemList(){
 }
 function remModal(id){
   const r=id?(CACHE.reminders||[]).find(x=>x.id===id)||{}:{};
-  const custOpts=CACHE.customers.map(c=>`<option value="${c.id}" ${r.cust_id===c.id?'selected':''}>${esc(c.biz)}</option>`).join('');
   openModal(`
     <div class="modal-head"><h3>${id?'ویرایش یادآور':'یادآور جدید'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="modal-body"><div class="form-grid">
       <div class="fg full"><label>عنوان *</label><input id="rem-title" value="${esc(r.title||'')}"></div>
-      <div class="fg"><label>مشتری مرتبط</label><select id="rem-cust"><option value="">بدون مشتری</option>${custOpts}</select></div>
+      <div class="fg"><label>مشتری مرتبط</label>${custSelect('rem-cust', r.cust_id, true)}</div>
       <div class="fg"><label>تاریخ یادآوری *</label><input id="rem-date" data-jdate value="${esc(r.remind_at||'')}"></div>
       <div class="fg full"><label>توضیحات</label><textarea id="rem-body">${esc(r.body||'')}</textarea></div>
     </div></div>
@@ -2190,7 +2274,7 @@ function dismissInstall(){ el('installBanner').classList.remove('show'); localSt
 ============================================================ */
 setInterval(()=>{
   const c=el('clock');
-  if(c) c.textContent=_serverNow().toLocaleTimeString('fa-IR');
+  if(c) c.textContent=_serverNow().toLocaleTimeString('fa-IR',{timeZone:'Asia/Tehran',hour:'2-digit',minute:'2-digit'});
 }, 1000);
 
 window.addEventListener('DOMContentLoaded', async ()=>{
