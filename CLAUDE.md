@@ -72,3 +72,17 @@ Four global arrays are the single source of truth at runtime:
 | `invoices`  | `custId`, `type`, `date`, `note`, `rows[]`, `subtotal`, `disc`, `discAmt`, `final`, `num`, `createdAt` |
 
 All collections are ordered by `createdAt desc` in their Firestore queries.
+
+## Production Server
+
+- **IP**: `45.90.98.99`
+- **User**: `root`
+- **App path**: `/root/crm-taranom`
+- **Process manager**: PM2, process name `crm-taranom`
+- **Branch**: `claude/claude-md-docs-2ssrpy`
+- **Credentials**: stored in `.server` (gitignored — never commit SSH password to git)
+
+Deploy command (run on server):
+```bash
+cd /root/crm-taranom && git pull origin claude/claude-md-docs-2ssrpy && pm2 restart crm-taranom
+```
