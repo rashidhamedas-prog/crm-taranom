@@ -64,7 +64,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
 .sidebar .foot button{width:100%;background:rgba(255,255,255,.15);color:#fff;border:none;padding:9px;border-radius:8px;margin-top:8px}
 .sidebar .foot button:hover{background:rgba(255,255,255,.28)}
 
-.main{flex:1;margin-right:240px;display:flex;flex-direction:column;min-height:100vh}
+.main{flex:1;margin-right:240px;display:flex;flex-direction:column;min-height:100vh;min-width:0}
 .topbar{background:#fff;border-bottom:1px solid var(--border);padding:12px 24px;display:flex;
   align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
 .topbar .left{display:flex;align-items:center;gap:14px}
@@ -240,14 +240,14 @@ table.tbl tr:hover td{background:#faf8ff}
 .hide{display:none!important}
 
 /* ===== Pipeline Kanban Board ===== */
-.pipeline-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:16px;align-items:flex-start}
-.pipeline-col{flex:0 0 210px;background:#f4f7f5;border-radius:12px;padding:10px;min-height:160px}
+.pipeline-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:16px;align-items:flex-start;width:100%;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+.pipeline-col{flex:0 0 210px;background:#f4f7f5;border-radius:12px;padding:10px;min-height:160px;scroll-snap-align:start;min-width:0}
 .pipeline-col .col-head{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700;color:var(--purple);padding-bottom:8px;margin-bottom:8px;border-bottom:2px solid var(--border)}
 .pipeline-col .col-head .cnt{background:var(--purple);color:#fff;border-radius:10px;min-width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;padding:0 5px}
-.f-card{background:#fff;border-radius:10px;padding:11px;margin-bottom:8px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.05);cursor:pointer;transition:.15s}
+.f-card{background:#fff;border-radius:10px;padding:11px;margin-bottom:8px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.05);cursor:pointer;transition:.15s;min-width:0;overflow:hidden}
 .f-card:hover{border-color:var(--purple2);box-shadow:0 4px 12px rgba(26,92,56,.12)}
-.f-card .fc-cust{font-weight:700;font-size:13px;margin-bottom:3px}
-.f-card .fc-sub{font-size:12px;color:var(--muted);margin-bottom:5px}
+.f-card .fc-cust{font-weight:700;font-size:13px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.f-card .fc-sub{font-size:12px;color:var(--muted);margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .f-card .fc-meta{display:flex;gap:4px;flex-wrap:wrap}
 .f-card .fc-date{font-size:11px;color:var(--muted);margin-top:5px}
 .prob-bar{height:4px;border-radius:4px;background:var(--border);overflow:hidden;min-width:50px;flex:1}
@@ -302,6 +302,7 @@ table.tbl tr:hover td{background:#faf8ff}
   .stat .l{font-size:11px}
   .content{padding:16px}
   .view{width:100%}
+  .pipeline-col{flex:0 0 190px}
 }
 @media(max-width:600px){
   .cards{grid-template-columns:1fr 1fr;gap:8px;width:100%}
@@ -317,6 +318,8 @@ table.tbl tr:hover td{background:#faf8ff}
   table.tbl{font-size:12px}
   table.tbl th,table.tbl td{padding:8px 6px}
   .sidebar{width:280px;transform:translateX(110%)}
+  .pipeline-col{flex:0 0 168px}
+  .pipeline-board{gap:8px}
   .content{padding:10px;width:100%}
   .dp{width:calc(100vw - 24px);max-width:300px}
   .dp-days button{font-size:13px}
