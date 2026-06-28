@@ -212,6 +212,41 @@ function initDB() {
       key TEXT UNIQUE NOT NULL,
       value TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      key_hash TEXT NOT NULL,
+      key_prefix TEXT NOT NULL,
+      scopes TEXT DEFAULT 'read',
+      active INTEGER DEFAULT 1,
+      last_used INTEGER,
+      created_at INTEGER DEFAULT (strftime('%s','now')),
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS api_usage_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      api_key_id INTEGER,
+      endpoint TEXT,
+      method TEXT,
+      status INTEGER,
+      ip TEXT,
+      created_at INTEGER DEFAULT (strftime('%s','now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS webhooks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      url TEXT NOT NULL,
+      events TEXT DEFAULT 'customer.created',
+      secret TEXT DEFAULT '',
+      active INTEGER DEFAULT 1,
+      created_at INTEGER DEFAULT (strftime('%s','now')),
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
   `);
 
   // ---- Safe migrations for databases created by v2 ----
@@ -252,8 +287,13 @@ function initDB() {
   ensureColumn(db, 'followups', 'tags', "TEXT DEFAULT ''");
   ensureColumn(db, 'followups', 'lost_reason', "TEXT DEFAULT ''");
   ensureColumn(db, 'followups', 'assigned_to', 'INTEGER');
+  // Follow-up scheduled time for timed SMS reminders
+  ensureColumn(db, 'followups', 'next_time', "TEXT DEFAULT ''");
+  ensureColumn(db, 'followups', 'sms_sent', 'INTEGER DEFAULT 0');
   // Customer CRM fields
   ensureColumn(db, 'customers', 'source', "TEXT DEFAULT ''");
+  // Salesperson role migration: generic 'salesperson' → 'field_sales'
+  db.exec("UPDATE users SET role='field_sales' WHERE role='salesperson'");
 
   // ---- Indexes ----
   db.exec(`
@@ -268,6 +308,8 @@ function initDB() {
     CREATE INDEX IF NOT EXISTS idx_messages_to ON messages(to_id);
     CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id);
     CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(entity);
+    CREATE INDEX IF NOT EXISTS idx_api_usage ON api_usage_log(api_key_id);
+    CREATE INDEX IF NOT EXISTS idx_followups_next ON followups(next_date);
   `);
 
   // ---- Default admin ----
@@ -286,9 +328,12 @@ function initDB() {
     company_phone: '',
     telegram_bot_token: '',
     telegram_chat_id: '',
-    sms_provider: 'melipayamak',
+    sms_provider: 'kavenegar',
     sms_api_key: '',
-    sms_from: ''
+    sms_from: '',
+    api_v1_enabled: '1',
+    api_rate_limit: '100',
+    webhook_secret: ''
   };
   const insSetting = db.prepare('INSERT OR IGNORE INTO settings (key,value) VALUES (?,?)');
   for (const [k, v] of Object.entries(defaults)) insSetting.run(k, v);

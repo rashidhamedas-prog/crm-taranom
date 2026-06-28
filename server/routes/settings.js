@@ -5,7 +5,8 @@ const { auth, adminOnly } = require('../middleware/auth');
 const ALLOWED_KEYS = [
   'telegram_bot_token', 'telegram_chat_id',
   'sms_provider', 'sms_api_key', 'sms_from',
-  'company_name', 'company_phone', 'company_address'
+  'company_name', 'company_phone', 'company_address',
+  'api_v1_enabled', 'api_rate_limit', 'webhook_secret'
 ];
 
 // GET all settings (admin only)

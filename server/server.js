@@ -6,6 +6,8 @@ const rateLimit = require('express-rate-limit');
 const cron = require('node-cron');
 const { initDB, getDB } = require('./db');
 const { todayJalali, nowHHMM } = require('./jalali');
+const { sendSMS } = require('./sms');
+const { hashKey } = require('./routes/api_keys');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,6 +47,8 @@ app.use('/api/reminders', require('./routes/reminders'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/accounting', require('./routes/accounting'));
+app.use('/api/api-keys', require('./routes/api_keys').router);
+app.use('/api/v1', require('./routes/api_v1'));
 
 // Server time endpoint — returns Unix timestamp (UTC) for reliable client clock sync
 app.get('/api/system/time', (req, res) => {
@@ -62,23 +66,103 @@ app.get('*', (req, res, next) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ---- Daily cron: flag silent customers (no order in 30+ days) ----
-// Dates are Jalali strings; we use created_at-based recency where possible and
-// fall back to "has any order" heuristics, then create an auto followup once.
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function getSMSSettings() {
+  try {
+    const db = getDB();
+    const rows = db.prepare("SELECT key,value FROM settings WHERE key IN ('sms_provider','sms_api_key','sms_from')").all();
+    const s = {};
+    for (const r of rows) s[r.key] = r.value;
+    return s;
+  } catch { return {}; }
+}
+
+function logSMS(db, userId, custId, phone, body, status) {
+  try {
+    db.prepare('INSERT INTO sms_log (user_id,cust_id,phone,body,status) VALUES (?,?,?,?,?)')
+      .run(userId || null, custId || null, phone, body, status);
+  } catch {}
+}
+
+// ── Daily cron: batch SMS for today's follow-ups (no scheduled time) ─────────
+async function runFollowupSMSBatch() {
+  try {
+    const db = getDB();
+    const today = todayJalali();
+    const settings = getSMSSettings();
+    if (!settings.sms_api_key) return;
+
+    // Followups due today with no specific time and SMS not yet sent
+    const followups = db.prepare(
+      "SELECT f.*,c.biz as cust_biz,c.owner as cust_owner,u.phone as user_phone,u.id as uid FROM followups f LEFT JOIN customers c ON f.cust_id=c.id LEFT JOIN users u ON f.user_id=u.id WHERE f.next_date=? AND (f.next_time IS NULL OR f.next_time='') AND f.status='open' AND f.sms_sent=0"
+    ).all(today);
+
+    // Group by user
+    const byUser = {};
+    for (const f of followups) {
+      if (!f.uid || !f.user_phone) continue;
+      if (!byUser[f.uid]) byUser[f.uid] = { phone: f.user_phone, items: [] };
+      byUser[f.uid].items.push(f);
+    }
+
+    for (const [uid, group] of Object.entries(byUser)) {
+      const lines = group.items.map(f => `• ${f.cust_biz || '-'}${f.cust_owner ? ' - ' + f.cust_owner : ''}`).join('\n');
+      const text = `پیگیری‌های امروز\n\n${lines}`;
+      const result = await sendSMS(settings, group.phone, text);
+      const status = result.ok ? 'sent' : 'failed';
+      // Mark all as sent regardless of result to avoid spam on retry
+      const ids = group.items.map(f => f.id);
+      db.prepare(`UPDATE followups SET sms_sent=1 WHERE id IN (${ids.map(() => '?').join(',')})`).run(...ids);
+      for (const f of group.items) {
+        logSMS(db, uid, f.cust_id, group.phone, text, status);
+      }
+      console.log(`📱 SMS دسته‌ای برای کاربر ${uid}: ${group.items.length} پیگیری → ${status}`);
+    }
+  } catch (e) {
+    console.error('cron followup-sms error:', e.message);
+  }
+}
+
+// ── Per-minute cron: send SMS for time-specific follow-ups ────────────────────
+async function runTimedFollowupSMS() {
+  try {
+    const db = getDB();
+    const today = todayJalali();
+    const now = nowHHMM();
+    const settings = getSMSSettings();
+    if (!settings.sms_api_key) return;
+
+    const followups = db.prepare(
+      "SELECT f.*,c.biz as cust_biz,c.owner as cust_owner,u.phone as user_phone,u.id as uid FROM followups f LEFT JOIN customers c ON f.cust_id=c.id LEFT JOIN users u ON f.user_id=u.id WHERE f.next_date=? AND f.next_time=? AND f.status='open' AND f.sms_sent=0"
+    ).all(today, now);
+
+    for (const f of followups) {
+      if (!f.uid || !f.user_phone) continue;
+      const text = `یادآور پیگیری\n\n• ${f.cust_biz || '-'}${f.cust_owner ? ' - ' + f.cust_owner : ''}\nساعت: ${now}`;
+      const result = await sendSMS(settings, f.user_phone, text);
+      db.prepare('UPDATE followups SET sms_sent=1 WHERE id=?').run(f.id);
+      logSMS(db, f.uid, f.cust_id, f.user_phone, text, result.ok ? 'sent' : 'failed');
+      console.log(`📱 SMS زمان‌بندی برای پیگیری ${f.id}: ${result.ok ? 'ارسال شد' : 'خطا'}`);
+    }
+  } catch (e) {
+    console.error('cron timed-sms error:', e.message);
+  }
+}
+
+// ── Daily cron: flag silent customers (no order in 30+ days) ─────────────────
 function runSilentCustomerCheck() {
   try {
     const db = getDB();
-    const cutoff = Math.floor(Date.now() / 1000) - 30 * 24 * 3600; // 30 days ago (unix)
+    const cutoff = Math.floor(Date.now() / 1000) - 30 * 24 * 3600;
     const today = todayJalali();
     const time = nowHHMM();
     const customers = db.prepare('SELECT * FROM customers').all();
     let created = 0;
     for (const c of customers) {
       const lastOrder = db.prepare('SELECT created_at FROM orders WHERE cust_id=? ORDER BY created_at DESC LIMIT 1').get(c.id);
-      // silent = has had orders before but none in last 30 days
       const isSilent = lastOrder && lastOrder.created_at < cutoff;
       if (!isSilent) continue;
-      // avoid duplicates: skip if an open auto followup already exists
       const existing = db.prepare(
         "SELECT id FROM followups WHERE cust_id=? AND status='open' AND subject LIKE '%مشتری خاموش%'"
       ).get(c.id);
@@ -95,8 +179,14 @@ function runSilentCustomerCheck() {
   }
 }
 
-// Run every day at 08:00 server time
-cron.schedule('0 8 * * *', runSilentCustomerCheck);
+// Daily at 08:00: batch SMS + silent customer check
+cron.schedule('0 8 * * *', () => {
+  runFollowupSMSBatch();
+  runSilentCustomerCheck();
+});
+
+// Every minute: timed follow-up SMS
+cron.schedule('* * * * *', runTimedFollowupSMS);
 
 app.listen(PORT, () => {
   console.log(`CRM ترنم نسخه ۳ روی پورت ${PORT} اجرا شد`);

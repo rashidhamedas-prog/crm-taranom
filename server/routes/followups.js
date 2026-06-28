@@ -32,17 +32,17 @@ router.get('/by-customer/:cust_id', auth, (req, res) => {
 });
 
 router.post('/', auth, (req, res) => {
-  const { cust_id, date, type, subject, note, action, next_date, status, priority,
+  const { cust_id, date, type, subject, note, action, next_date, next_time, status, priority,
           interest_level, purchase_prob, pipeline_stage, tags, lost_reason, assigned_to } = req.body;
   if (!cust_id) return res.status(400).json({ error: 'مشتری الزامی است' });
   const db = getDB();
   const finalDate = date && String(date).trim() ? date : todayJalali();
   const time = nowHHMM();
   const result = db.prepare(
-    'INSERT INTO followups (user_id,cust_id,date,time,type,subject,note,action,next_date,status,priority,interest_level,purchase_prob,pipeline_stage,tags,lost_reason,assigned_to) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+    'INSERT INTO followups (user_id,cust_id,date,time,type,subject,note,action,next_date,next_time,status,priority,interest_level,purchase_prob,pipeline_stage,tags,lost_reason,assigned_to) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
   ).run(
     req.user.id, cust_id, finalDate, time,
-    type || '📱 تلفن', subject || '', note || '', action || '', next_date || '',
+    type || '📱 تلفن', subject || '', note || '', action || '', next_date || '', next_time || '',
     status || 'open', priority || 'mid',
     interest_level || 'mid', parseInt(purchase_prob) || 50,
     pipeline_stage || 'lead', tags || '', lost_reason || '',
@@ -57,18 +57,20 @@ router.put('/:id', auth, (req, res) => {
   const row = db.prepare('SELECT * FROM followups WHERE id=?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'یافت نشد' });
   if (req.user.role !== 'admin' && row.user_id !== req.user.id) return res.status(403).json({ error: 'دسترسی ندارید' });
-  const { cust_id, date, type, subject, note, action, next_date, status, priority,
+  const { cust_id, date, type, subject, note, action, next_date, next_time, status, priority,
           interest_level, purchase_prob, pipeline_stage, tags, lost_reason, assigned_to } = req.body;
   const finalDate = date && String(date).trim() ? date : (row.date || todayJalali());
+  // Reset sms_sent when next_date/next_time changes so reminder fires again
+  const smsReset = (next_date !== row.next_date || next_time !== row.next_time) ? 0 : row.sms_sent;
   db.prepare(
-    'UPDATE followups SET cust_id=?,date=?,type=?,subject=?,note=?,action=?,next_date=?,status=?,priority=?,interest_level=?,purchase_prob=?,pipeline_stage=?,tags=?,lost_reason=?,assigned_to=? WHERE id=?'
+    'UPDATE followups SET cust_id=?,date=?,type=?,subject=?,note=?,action=?,next_date=?,next_time=?,status=?,priority=?,interest_level=?,purchase_prob=?,pipeline_stage=?,tags=?,lost_reason=?,assigned_to=?,sms_sent=? WHERE id=?'
   ).run(
     cust_id, finalDate,
-    type || '📱 تلفن', subject || '', note || '', action || '', next_date || '',
+    type || '📱 تلفن', subject || '', note || '', action || '', next_date || '', next_time || '',
     status || 'open', priority || 'mid',
     interest_level || 'mid', parseInt(purchase_prob) || 50,
     pipeline_stage || 'lead', tags || '', lost_reason || '',
-    assigned_to ? parseInt(assigned_to) : null,
+    assigned_to ? parseInt(assigned_to) : null, smsReset,
     req.params.id
   );
   res.json({ ok: true });

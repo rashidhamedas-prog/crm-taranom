@@ -250,6 +250,37 @@ table.tbl tr:hover td{background:#faf8ff}
 .cust-si-meta{font-size:11px;color:var(--muted);white-space:nowrap}
 .cust-si-empty{padding:14px;text-align:center;color:var(--muted);font-size:12px}
 
+/* ===== Help Page ===== */
+.help-tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.help-tabs button{padding:9px 18px;border:none;border-radius:10px;background:#f3f4f6;color:var(--muted);font-weight:600;cursor:pointer;font-family:inherit;font-size:14px}
+.help-tabs button.active{background:var(--purple);color:#fff}
+.help-section{background:#fff;border:1px solid var(--border);border-radius:14px;margin-bottom:12px;overflow:hidden}
+.help-section .hs-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;font-weight:700;font-size:15px;user-select:none}
+.help-section .hs-head:hover{background:var(--purple-light)}
+.help-section .hs-head .hs-icon{font-size:20px;margin-left:10px}
+.help-section .hs-body{padding:0 16px 16px;font-size:14px;line-height:1.9;color:#374151;display:none}
+.help-section.open .hs-body{display:block}
+.help-section .hs-body h5{color:var(--purple);margin:14px 0 6px;font-size:14px}
+.help-section .hs-body ul{padding-right:18px;margin:6px 0}
+.help-section .hs-body ul li{margin-bottom:4px}
+.help-section .hs-body .tip{background:#f0fdf4;border-right:3px solid var(--green);padding:10px 14px;border-radius:8px;margin:10px 0;font-size:13px}
+.help-section .hs-body .warn{background:#fffbeb;border-right:3px solid #f59e0b;padding:10px 14px;border-radius:8px;margin:10px 0;font-size:13px}
+
+/* ===== API Page ===== */
+.api-key-row{display:flex;align-items:center;gap:10px;padding:12px;background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:8px}
+.api-key-row .key-name{font-weight:700;flex:1}
+.api-key-row .key-prefix{font-family:monospace;font-size:12px;color:var(--muted);background:#f3f4f6;padding:3px 8px;border-radius:6px}
+.api-key-row .key-scope{font-size:12px;color:var(--blue);background:#eff6ff;padding:3px 8px;border-radius:6px}
+.api-reveal{font-family:monospace;font-size:13px;background:#1f2937;color:#86efac;padding:14px;border-radius:10px;word-break:break-all;margin:12px 0;direction:ltr;text-align:left}
+.webhook-row{display:flex;align-items:center;gap:10px;padding:12px;background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:8px}
+.usage-tbl{font-size:12px;width:100%}
+.usage-tbl td,.usage-tbl th{padding:6px 8px;border-bottom:1px solid var(--border)}
+.usage-tbl th{color:var(--muted);font-weight:600}
+
+/* Role tags */
+.t-inside{background:#ede9fe;color:#5b21b6}
+.t-field{background:#e0f2fe;color:#0c4a6e}
+
 /* ===== Pipeline Kanban Board ===== */
 .pipeline-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:16px;align-items:flex-start;width:100%;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
 .pipeline-col{flex:0 0 210px;background:#f4f7f5;border-radius:12px;padding:10px;min-height:160px;scroll-snap-align:start;min-width:0}
@@ -768,6 +799,8 @@ const NAV_ADMIN = [
   {id:'accounting', icon:'💰', label:'حسابداری'},
   {id:'messages', icon:'💬', label:'پیام‌ها'},
   {id:'settings', icon:'⚙️', label:'تنظیمات'},
+  {id:'api', icon:'🔌', label:'API'},
+  {id:'help', icon:'📖', label:'راهنما'},
 ];
 const NAV_SALES = [
   {id:'dash', icon:'🏠', label:'داشبورد'},
@@ -777,6 +810,7 @@ const NAV_SALES = [
   {id:'catalog', icon:'🛍️', label:'کاتالوگ'},
   {id:'reminders', icon:'🔔', label:'یادآورها'},
   {id:'messages', icon:'💬', label:'پیام‌ها'},
+  {id:'help', icon:'📖', label:'راهنما'},
 ];
 let CURRENT_PAGE = 'dash';
 
@@ -811,14 +845,22 @@ function closeSidebar(){
 /* ============================================================
    BOOT
 ============================================================ */
+function roleLabel(r){
+  if(r==='admin') return 'مدیر سیستم';
+  if(r==='inside_sales') return 'کارشناس داخلی';
+  if(r==='field_sales') return 'کارشناس میدانی';
+  return 'کارشناس فروش';
+}
+function isAdmin(){ return ME && ME.role==='admin'; }
+
 async function boot(){
   el('login').style.display='none';
   el('app').style.display='block';
   ME = JSON.parse(localStorage.getItem('crm_user')||'null');
   syncServerTime(); // refresh offset after login (non-blocking)
   el('userName').textContent = ME.name;
-  el('userRole').textContent = ME.role==='admin'?'مدیر سیستم':'کارشناس فروش';
-  el('brandRole').textContent = ME.role==='admin'?'پنل مدیریت':'پنل فروش';
+  el('userRole').textContent = roleLabel(ME.role);
+  el('brandRole').textContent = isAdmin()?'پنل مدیریت':'پنل فروش';
   el('avatar').textContent = (ME.name||'؟').trim().charAt(0);
   el('footUser').textContent = ME.name + ' · @' + ME.username;
   buildNav();
@@ -1130,7 +1172,7 @@ function renderFupTable(){
       <td>${esc(f.subject||'-')}${f.tags?`<br><span style="font-size:10px;color:var(--muted)">#${esc(f.tags)}</span>`:''}</td>
       <td><div style="display:flex;align-items:center;gap:5px"><div class="prob-bar"><div class="fill" style="width:${prob}%"></div></div><span style="font-size:11px;white-space:nowrap">${prob}٪</span></div></td>
       <td>${statusTag(f.priority)}</td>
-      <td class="mono">${escDate(f.next_date)}</td>
+      <td class="mono">${escDate(f.next_date)}${f.next_time?`<br><span style="font-size:11px;color:var(--purple)">⏰ ${esc(f.next_time)}</span>`:''}</td>
       <td>${statusTag(f.status)}</td>
       ${isAdmin?`<td class="muted">${esc(f.salesperson||'-')}</td>`:''}
       <td style="white-space:nowrap">
@@ -1216,6 +1258,7 @@ function fupModal(id, defaultStage, presetCustId){
           <div class="fg full"><label>نتیجه و یادداشت</label><textarea id="f-note">${esc(f.note||'')}</textarea></div>
           <div class="fg full"><label>اقدام بعدی</label><input id="f-action" value="${esc(f.action||'')}"></div>
           <div class="fg"><label>تاریخ پیگیری بعدی</label><input id="f-next" data-jdate value="${esc(f.next_date||'')}"></div>
+          <div class="fg"><label>ساعت پیگیری <small style="color:var(--muted)">(اختیاری — پیامک در همین ساعت)</small></label><input id="f-next-time" type="time" value="${esc(f.next_time||'')}" style="font-family:inherit"></div>
           <div class="fg"><label>تگ‌ها (با کاما)</label><input id="f-tags" value="${esc(f.tags||'')}" placeholder="VIP، فصلی، ..."></div>
         </div>
       </div>
@@ -1245,7 +1288,8 @@ async function saveFup(id){
     cust_id, date:el('f-date').value, type:el('f-type').value,
     priority:el('f-priority').value, subject:el('f-subject').value,
     note:el('f-note').value, action:el('f-action').value,
-    next_date:el('f-next').value, status:el('f-status').value,
+    next_date:el('f-next').value, next_time:el('f-next-time')?.value||'',
+    status:el('f-status').value,
     interest_level:el('f-interest').value,
     purchase_prob:parseInt(el('f-prob').value)||50,
     pipeline_stage:el('f-stage').value,
@@ -1615,7 +1659,7 @@ ROUTES.users = async function(){
       <table class="tbl"><thead><tr><th>نام</th><th>نام کاربری</th><th>نقش</th><th>تلفن</th><th>آخرین ورود</th><th>وضعیت</th><th>عملیات</th></tr></thead>
       <tbody>${CACHE.users.map(u=>`<tr>
         <td>${esc(u.name)}</td><td class="mono">@${esc(u.username)}</td>
-        <td>${u.role==='admin'?'<span class="tag t-vip">مدیر</span>':'<span class="tag t-active">فروش</span>'}</td>
+        <td>${u.role==='admin'?'<span class="tag t-vip">مدیر</span>':u.role==='inside_sales'?'<span class="tag t-inside">داخلی</span>':'<span class="tag t-field">میدانی</span>'}</td>
         <td class="mono">${esc(u.phone||'-')}</td>
         <td class="muted">${u.last_login?new Date(u.last_login*1000).toLocaleDateString('fa-IR'):'هرگز'}</td>
         <td>${u.active?'<span class="tag t-done">فعال</span>':'<span class="tag t-cancel">غیرفعال</span>'}</td>
@@ -1626,7 +1670,7 @@ ROUTES.users = async function(){
     </div></div>`;
 };
 function userModal(id){
-  const u = id ? CACHE.users.find(x=>x.id===id) : {role:'salesperson',active:1};
+  const u = id ? CACHE.users.find(x=>x.id===id) : {role:'field_sales',active:1};
   openModal(`
     <div class="modal-head"><h3>${id?'ویرایش کاربر':'کاربر جدید'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="modal-body"><div class="form-grid">
@@ -1634,8 +1678,9 @@ function userModal(id){
       <div class="fg"><label>نام کاربری *</label><input id="u-username" value="${esc(u.username||'')}" ${id?'readonly':''}></div>
       <div class="fg"><label>تلفن</label><input id="u-phone" value="${esc(u.phone||'')}"></div>
       <div class="fg"><label>نقش</label><select id="u-role">
-        <option value="salesperson" ${u.role==='salesperson'?'selected':''}>کارشناس فروش</option>
-        <option value="admin" ${u.role==='admin'?'selected':''}>مدیر</option></select></div>
+        <option value="field_sales" ${(u.role==='field_sales'||u.role==='salesperson')?'selected':''}>کارشناس میدانی (حضوری)</option>
+        <option value="inside_sales" ${u.role==='inside_sales'?'selected':''}>کارشناس داخلی (تلفنی)</option>
+        <option value="admin" ${u.role==='admin'?'selected':''}>مدیر سیستم</option></select></div>
       <div class="fg"><label>${id?'رمز جدید (خالی = بدون تغییر)':'رمز عبور *'}</label><input id="u-pass" type="password"></div>
       <div class="fg"><label>وضعیت</label><select id="u-active">
         <option value="1" ${u.active?'selected':''}>فعال</option>
@@ -2040,7 +2085,7 @@ function composeMsg(){
   if(ME.role!=='admin') recipients = recipients.filter(u=>u.role==='admin');
   // if salesperson has no users cache, fetch admins lazily via simple option
   const opts = recipients.length
-    ? recipients.map(u=>`<option value="${u.id}">${esc(u.name)} (${u.role==='admin'?'مدیر':'فروش'})</option>`).join('')
+    ? recipients.map(u=>`<option value="${u.id}">${esc(u.name)} (${roleLabel(u.role)})</option>`).join('')
     : '<option value="">مدیر سیستم</option>';
   openModal(`
     <div class="modal-head"><h3>پیام جدید</h3><button class="x" onclick="closeModal()">×</button></div>
@@ -2185,19 +2230,400 @@ ROUTES.settings = async function(){
     </div></div></div>
     <div class="panel"><div class="panel-head"><h4>پیامک (SMS)</h4></div><div class="panel-body"><div class="form-grid">
       <div class="fg"><label>سرویس‌دهنده</label><select id="s-sms_provider">
-        <option value="melipayamak" ${s.sms_provider==='melipayamak'?'selected':''}>ملی‌پیامک</option>
-        <option value="niksms" ${s.sms_provider==='niksms'?'selected':''}>نیک‌اس‌ام‌اس</option></select></div>
+        <option value="kavenegar" ${(s.sms_provider==='kavenegar'||!s.sms_provider)?'selected':''}>کاوه‌نگار</option>
+        <option value="melipayamak" ${s.sms_provider==='melipayamak'?'selected':''}>ملی‌پیامک (user:pass)</option>
+      </select></div>
       <div class="fg"><label>کلید API</label><input id="s-sms_api_key" value="${esc(s.sms_api_key||'')}"></div>
       <div class="fg"><label>شماره فرستنده</label><input id="s-sms_from" value="${esc(s.sms_from||'')}"></div>
-    </div></div></div>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-top:8px">برای ارسال پیامک، شماره موبایل هر کارشناس باید در اطلاعات کاربر ثبت شده باشد.</p>
+    </div></div>
     <button class="btn green" onclick="saveSettings()">💾 ذخیره تنظیمات</button>`;
 };
 async function saveSettings(){
-  const keys=['company_name','company_phone','company_address','telegram_bot_token','telegram_chat_id','sms_provider','sms_api_key','sms_from'];
+  const keys=['company_name','company_phone','company_address','telegram_bot_token','telegram_chat_id','sms_provider','sms_api_key','sms_from','api_v1_enabled','api_rate_limit','webhook_secret'];
   const data={}; keys.forEach(k=>{ const e=el('s-'+k); if(e)data[k]=e.value; });
   CACHE.settings = await api('PUT','/settings',data);
   showToast('تنظیمات ذخیره شد');
 }
+
+/* ============================================================
+   API & INTEGRATIONS (admin)
+============================================================ */
+ROUTES.api = async function(){
+  if(!isAdmin()){ el('view').innerHTML='<div class="empty">فقط مدیران دسترسی دارند</div>'; return; }
+  const [keys, webhooks] = await Promise.all([
+    api('GET','/api-keys').catch(()=>[]),
+    api('GET','/api-keys/webhooks').catch(()=>[])
+  ]);
+  const s = CACHE.settings||{};
+  el('view').innerHTML=`
+    <div class="panel"><div class="panel-head"><h4>وضعیت API</h4></div><div class="panel-body">
+      <div class="form-grid">
+        <div class="fg"><label>API v1</label><select id="api-enabled">
+          <option value="1" ${s.api_v1_enabled!=='0'?'selected':''}>فعال</option>
+          <option value="0" ${s.api_v1_enabled==='0'?'selected':''}>غیرفعال</option></select></div>
+        <div class="fg"><label>محدودیت درخواست (در ساعت)</label><input id="api-rate" type="number" value="${esc(s.api_rate_limit||'100')}"></div>
+        <div class="fg"><label>Webhook Secret</label><input id="api-wh-secret" value="${esc(s.webhook_secret||'')}"></div>
+      </div>
+      <button class="btn green" style="margin-top:8px" onclick="saveAPISettings()">💾 ذخیره</button>
+    </div></div>
+    <div class="panel"><div class="panel-head" style="justify-content:space-between">
+      <h4>کلیدهای API</h4>
+      <button class="btn sm" onclick="newAPIKey()">➕ کلید جدید</button>
+    </div><div class="panel-body">
+      ${keys.length ? keys.map(k=>`
+        <div class="api-key-row">
+          <span class="key-name">${esc(k.name)}</span>
+          <span class="key-prefix">${esc(k.key_prefix)}…</span>
+          <span class="key-scope">${esc(k.scopes)}</span>
+          <span class="${k.active?'tag t-done':'tag t-cancel'}">${k.active?'فعال':'غیرفعال'}</span>
+          <span class="muted" style="font-size:11px">${k.last_used?new Date(k.last_used*1000).toLocaleDateString('fa-IR'):'استفاده نشده'}</span>
+          <button class="btn sm ghost" onclick="editAPIKey(${k.id},'${esc(k.name)}','${esc(k.scopes)}',${k.active})">✏️</button>
+          <button class="btn sm red" onclick="deleteAPIKey(${k.id})">🗑️</button>
+        </div>`).join('') : '<div class="muted" style="padding:10px">کلید API وجود ندارد</div>'}
+    </div></div>
+    <div class="panel"><div class="panel-head" style="justify-content:space-between">
+      <h4>Webhooks</h4>
+      <button class="btn sm" onclick="newWebhook()">➕ Webhook جدید</button>
+    </div><div class="panel-body">
+      ${webhooks.length ? webhooks.map(w=>`
+        <div class="webhook-row">
+          <span style="font-weight:700;flex:1">${esc(w.name)}</span>
+          <span class="muted" style="font-size:12px;direction:ltr;flex:2;overflow:hidden;text-overflow:ellipsis">${esc(w.url)}</span>
+          <span class="key-scope">${esc(w.events)}</span>
+          <span class="${w.active?'tag t-done':'tag t-cancel'}">${w.active?'فعال':'غیرفعال'}</span>
+          <button class="btn sm ghost" onclick="editWebhook(${w.id},'${esc(w.name)}','${esc(w.url)}','${esc(w.events)}',${w.active})">✏️</button>
+          <button class="btn sm red" onclick="deleteWebhook(${w.id})">🗑️</button>
+        </div>`).join('') : '<div class="muted" style="padding:10px">Webhook ثبت نشده</div>'}
+    </div></div>
+    <div class="panel"><div class="panel-head"><h4>مستندات API</h4></div><div class="panel-body" style="font-size:13px;line-height:1.8">
+      <p>آدرس پایه: <code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;direction:ltr;display:inline-block">/api/v1/</code></p>
+      <p>احراز هویت: <code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;direction:ltr;display:inline-block">Authorization: Bearer trn_xxxx</code></p>
+      <div class="api-reveal">GET /api/v1/customers?q=نام&status=active&limit=50
+GET /api/v1/customers/:id
+POST /api/v1/customers {"biz":"نام","owner":"","phone":"","city":"","status":"new"}
+GET /api/v1/followups?cust_id=1&status=open&date=1404/01/01
+POST /api/v1/followups {"cust_id":1,"subject":"","next_date":""}
+GET /api/v1/invoices?type=final&limit=50
+GET /api/v1/invoices/:id
+GET /api/v1/products?q=نام&category=بلوز
+GET /api/v1/ping</div>
+      <p style="color:var(--muted)">برای دسترسی نوشتن، هنگام ساخت کلید، scope را روی <b>read,write</b> تنظیم کنید.</p>
+    </div></div>`;
+};
+async function saveAPISettings(){
+  const data={api_v1_enabled:el('api-enabled').value, api_rate_limit:el('api-rate').value, webhook_secret:el('api-wh-secret').value};
+  CACHE.settings = await api('PUT','/settings',data);
+  showToast('ذخیره شد');
+}
+function newAPIKey(){
+  openModal(`
+    <div class="modal-head"><h3>کلید API جدید</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="fg full"><label>نام کلید *</label><input id="ak-name" placeholder="مثلاً: اتصال n8n"></div>
+      <div class="fg full"><label>دسترسی</label><select id="ak-scope">
+        <option value="read">فقط خواندن</option>
+        <option value="read,write">خواندن و نوشتن</option></select></div>
+    </div></div>
+    <div class="modal-foot"><button class="btn" onclick="createAPIKey()">🔑 ساخت</button>
+      <button class="btn ghost" onclick="closeModal()">انصراف</button></div>`);
+}
+async function createAPIKey(){
+  const name=el('ak-name').value.trim(), scopes=el('ak-scope').value;
+  if(!name){showToast('نام الزامی است','error');return;}
+  const r = await api('POST','/api-keys',{name,scopes});
+  closeModal();
+  openModal(`
+    <div class="modal-head"><h3>کلید API ساخته شد</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body">
+      <p style="color:var(--red);font-weight:700">این کلید فقط یک‌بار نشان داده می‌شود. آن را ذخیره کنید.</p>
+      <div class="api-reveal">${esc(r.key)}</div>
+    </div>
+    <div class="modal-foot"><button class="btn" onclick="navigator.clipboard.writeText('${esc(r.key)}');showToast('کپی شد')">📋 کپی</button>
+      <button class="btn ghost" onclick="closeModal();ROUTES.api()">بستن</button></div>`);
+}
+async function editAPIKey(id,name,scopes,active){
+  openModal(`
+    <div class="modal-head"><h3>ویرایش کلید API</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="fg full"><label>نام</label><input id="ak-name" value="${esc(name)}"></div>
+      <div class="fg full"><label>دسترسی</label><select id="ak-scope">
+        <option value="read" ${scopes==='read'?'selected':''}>فقط خواندن</option>
+        <option value="read,write" ${scopes==='read,write'?'selected':''}>خواندن و نوشتن</option></select></div>
+      <div class="fg full"><label>وضعیت</label><select id="ak-active">
+        <option value="1" ${active?'selected':''}>فعال</option>
+        <option value="0" ${!active?'selected':''}>غیرفعال</option></select></div>
+    </div></div>
+    <div class="modal-foot"><button class="btn" onclick="updateAPIKey(${id})">💾 ذخیره</button>
+      <button class="btn ghost" onclick="closeModal()">انصراف</button></div>`);
+}
+async function updateAPIKey(id){
+  await api('PUT','/api-keys/'+id,{name:el('ak-name').value,scopes:el('ak-scope').value,active:+el('ak-active').value});
+  closeModal(); ROUTES.api(); showToast('ذخیره شد');
+}
+async function deleteAPIKey(id){
+  if(!confirm('این کلید حذف شود؟')) return;
+  await api('DELETE','/api-keys/'+id); ROUTES.api(); showToast('حذف شد');
+}
+function newWebhook(){
+  openModal(`
+    <div class="modal-head"><h3>Webhook جدید</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="fg full"><label>نام *</label><input id="wh-name"></div>
+      <div class="fg full"><label>آدرس URL *</label><input id="wh-url" placeholder="https://…" dir="ltr"></div>
+      <div class="fg full"><label>رویدادها</label><select id="wh-events">
+        <option value="customer.created">customer.created</option>
+        <option value="followup.created">followup.created</option>
+        <option value="customer.created,followup.created">همه</option></select></div>
+      <div class="fg full"><label>Secret (اختیاری)</label><input id="wh-secret" dir="ltr"></div>
+    </div></div>
+    <div class="modal-foot"><button class="btn" onclick="createWebhook()">💾 ذخیره</button>
+      <button class="btn ghost" onclick="closeModal()">انصراف</button></div>`);
+}
+async function createWebhook(){
+  const name=el('wh-name').value.trim(), url=el('wh-url').value.trim();
+  if(!name||!url){showToast('نام و آدرس الزامی است','error');return;}
+  await api('POST','/api-keys/webhooks',{name,url,events:el('wh-events').value,secret:el('wh-secret').value});
+  closeModal(); ROUTES.api(); showToast('ذخیره شد');
+}
+async function editWebhook(id,name,url,events,active){
+  openModal(`
+    <div class="modal-head"><h3>ویرایش Webhook</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="fg full"><label>نام</label><input id="wh-name" value="${esc(name)}"></div>
+      <div class="fg full"><label>URL</label><input id="wh-url" value="${esc(url)}" dir="ltr"></div>
+      <div class="fg full"><label>رویدادها</label><input id="wh-events" value="${esc(events)}" dir="ltr"></div>
+      <div class="fg full"><label>وضعیت</label><select id="wh-active">
+        <option value="1" ${active?'selected':''}>فعال</option>
+        <option value="0" ${!active?'selected':''}>غیرفعال</option></select></div>
+    </div></div>
+    <div class="modal-foot"><button class="btn" onclick="updateWebhook(${id})">💾 ذخیره</button>
+      <button class="btn ghost" onclick="closeModal()">انصراف</button></div>`);
+}
+async function updateWebhook(id){
+  await api('PUT','/api-keys/webhooks/'+id,{name:el('wh-name').value,url:el('wh-url').value,events:el('wh-events').value,active:+el('wh-active').value,secret:''});
+  closeModal(); ROUTES.api(); showToast('ذخیره شد');
+}
+async function deleteWebhook(id){
+  if(!confirm('این Webhook حذف شود؟')) return;
+  await api('DELETE','/api-keys/webhooks/'+id); ROUTES.api(); showToast('حذف شد');
+}
+
+/* ============================================================
+   HELP / USER MANUAL
+============================================================ */
+let helpTab = 'admin';
+ROUTES.help = function(){
+  el('view').innerHTML=`
+    <div class="help-tabs">
+      <button id="htab-admin" class="${isAdmin()?'active':''}" onclick="setHelpTab('admin')">📘 راهنمای مدیر</button>
+      <button id="htab-sales" class="${!isAdmin()?'active':''}" onclick="setHelpTab('sales')">📗 راهنمای کارشناس</button>
+    </div>
+    <div id="helpContent"></div>`;
+  setHelpTab(isAdmin()?'admin':'sales');
+};
+function setHelpTab(t){
+  helpTab=t;
+  document.querySelectorAll('.help-tabs button').forEach(b=>b.classList.remove('active'));
+  el('htab-'+t)?.classList.add('active');
+  el('helpContent').innerHTML = t==='admin' ? renderAdminGuide() : renderSalesGuide();
+}
+function helpSec(icon,title,body){
+  return `<div class="help-section"><div class="hs-head" onclick="this.closest('.help-section').classList.toggle('open')">
+    <span><span class="hs-icon">${icon}</span>${title}</span><span>▾</span></div>
+    <div class="hs-body">${body}</div></div>`;
+}
+function renderAdminGuide(){
+  return [
+    helpSec('📊','داشبورد',`
+      <p>داشبورد نمای کلی از وضعیت کسب‌وکار را نشان می‌دهد.</p>
+      <h5>امکانات</h5><ul>
+        <li>آمار تعداد مشتریان، فاکتورها و پیگیری‌های باز</li>
+        <li>نمودار فروش ماهانه (بر اساس فاکتورهای رسمی)</li>
+        <li>جدول عملکرد هر کارشناس: تعداد مشتری، فروش کل، پیگیری‌های باز</li>
+        <li>فیلتر تاریخ برای گزارش بازه دلخواه</li>
+      </ul>
+      <div class="tip">برای تحلیل دوره‌ای، تاریخ شروع و پایان را وارد کنید و روی «اعمال» کلیک کنید.</div>`),
+    helpSec('👥','مدیریت مشتریان',`
+      <p>تمام مشتریان کسب‌وکار اینجا مدیریت می‌شوند.</p>
+      <h5>افزودن مشتری جدید</h5><ul>
+        <li>روی «+ مشتری جدید» کلیک کنید</li>
+        <li>نام فروشگاه (کسب‌وکار) را وارد کنید — این فیلد اجباری است</li>
+        <li>نام صاحب، شهر، تلفن و اینستاگرام را تکمیل کنید</li>
+        <li>نوع مشتری (بوتیک، عمده‌فروش، ...) و وضعیت را انتخاب کنید</li>
+      </ul>
+      <h5>وضعیت‌های مشتری</h5><ul>
+        <li><b>VIP</b>: مشتری ویژه با حجم خرید بالا</li>
+        <li><b>فعال</b>: مشتری با تعاملات منظم</li>
+        <li><b>پیگیری</b>: نیاز به پیگیری دارد</li>
+        <li><b>خاموش</b>: مدت‌هاست سفارشی نداشته</li>
+        <li><b>جدید</b>: تازه ثبت شده</li>
+      </ul>
+      <h5>ورود از اکسل</h5><p>از دکمه «ورود اکسل» می‌توانید لیست مشتریان را از فایل اکسل وارد کنید. ستون‌های اجباری: نام فروشگاه.</p>
+      <div class="warn">حذف مشتری قابل بازگشت نیست. قبل از حذف، از نداشتن فاکتور و پیگیری مطمئن شوید.</div>`),
+    helpSec('📞','پیگیری‌ها',`
+      <p>پیگیری یعنی ثبت هر تماس یا فعالیتی که با مشتری انجام می‌دهید.</p>
+      <h5>ثبت پیگیری جدید</h5><ul>
+        <li>مشتری را جستجو و انتخاب کنید</li>
+        <li>نوع تماس (تلفن، حضوری، واتس‌اپ، ...) را مشخص کنید</li>
+        <li>موضوع تماس و نتیجه را بنویسید</li>
+        <li>مرحله پایپ‌لاین را به‌روز کنید</li>
+        <li>تاریخ پیگیری بعدی را تنظیم کنید</li>
+      </ul>
+      <h5>یادآور پیامکی</h5><ul>
+        <li>اگر تاریخ پیگیری بعدی را وارد کنید، سیستم روز موعد ساعت ۸ صبح پیامک می‌فرستد</li>
+        <li>اگر ساعت دقیق هم وارد کنید، پیامک دقیقاً در آن ساعت ارسال می‌شود</li>
+        <li>پیامک حاوی نام مشتری و فروشگاه است</li>
+      </ul>
+      <div class="tip">در بخش تنظیمات → پیامک، API سرویس پیامکی را وارد کنید تا یادآورها ارسال شوند.</div>`),
+    helpSec('📈','پایپ‌لاین فروش',`
+      <p>پایپ‌لاین مسیر تبدیل یک سرنخ به مشتری را دنبال می‌کند.</p>
+      <h5>مراحل پایپ‌لاین</h5><ul>
+        <li><b>سرنخ</b>: اطلاعات اولیه دریافت شده</li>
+        <li><b>تماس</b>: اولین تماس برقرار شده</li>
+        <li><b>پیشنهاد</b>: قیمت یا نمونه ارائه شده</li>
+        <li><b>مذاکره</b>: در حال توافق</li>
+        <li><b>برنده</b>: فروش انجام شد</li>
+        <li><b>ازدست‌رفته</b>: فروش نشد — دلیل را ثبت کنید</li>
+      </ul>
+      <div class="tip">احتمال خرید (۰-۱۰۰٪) و سطح علاقه‌مندی را دقیق وارد کنید تا گزارش‌های پیش‌بینی دقیق‌تر باشد.</div>`),
+    helpSec('🛍️','محصولات و موجودی',`
+      <p>کاتالوگ محصولات و مدیریت انبار.</p>
+      <h5>افزودن محصول</h5><ul>
+        <li>کد، نام، دسته‌بندی، قیمت واحد و موجودی را وارد کنید</li>
+        <li>حد هشدار موجودی را تنظیم کنید — وقتی کمتر شد، هشدار قرمز نشان می‌دهد</li>
+        <li>عکس محصول را آپلود کنید (نمایش در فاکتور)</li>
+      </ul>
+      <div class="tip">کد محصول باید منحصربه‌فرد باشد — از آن برای جستجوی سریع در فاکتورساز استفاده کنید.</div>`),
+    helpSec('🧾','فاکتور',`
+      <p>صدور پیش‌فاکتور و فاکتور رسمی.</p>
+      <h5>صدور فاکتور</h5><ul>
+        <li>مشتری را انتخاب کنید</li>
+        <li>محصولات را از کاتالوگ جستجو و اضافه کنید</li>
+        <li>تعداد و قیمت هر ردیف را تنظیم کنید</li>
+        <li>درصد تخفیف کل را وارد کنید</li>
+        <li>نوع را انتخاب کنید: پیش‌فاکتور یا فاکتور رسمی</li>
+      </ul>
+      <h5>چاپ</h5><p>از دکمه «چاپ» روی صفحه نمایش فاکتور استفاده کنید. تنها فاکتور چاپ می‌شود، بقیه رابط کاربری پنهان می‌شود.</p>
+      <div class="warn">فاکتورهای رسمی در گزارش درآمد محاسبه می‌شوند. پیش‌فاکتور فقط برای نمایش قیمت است.</div>`),
+    helpSec('💰','حسابداری',`
+      <p>مدیریت پرداخت‌ها و مانده‌حساب مشتریان.</p>
+      <h5>ثبت تسویه</h5><ul>
+        <li>مشتری را انتخاب کنید</li>
+        <li>مبلغ و نوع پرداخت (نقد یا چک) را وارد کنید</li>
+        <li>تاریخ چک را اگر مربوط است پر کنید</li>
+      </ul>
+      <h5>مانده‌حساب</h5><p>تفاوت مجموع فاکتورهای رسمی و مجموع تسویه‌های ثبت‌شده، بدهی مشتری است.</p>`),
+    helpSec('📊','گزارشات',`
+      <p>تحلیل عملکرد فروش و کارشناسان.</p><ul>
+        <li><b>گزارش کارشناسان</b>: مقایسه فروش، مشتریان و پیگیری هر نفر</li>
+        <li><b>گزارش مشتریان</b>: بیشترین خرید، آخرین تعامل</li>
+        <li><b>گزارش فاکتور</b>: درآمد دوره، تعداد فاکتور</li>
+      </ul>
+      <div class="tip">با فیلتر تاریخ، گزارش هر ماه یا فصل را جداگانه ببینید.</div>`),
+    helpSec('👤','مدیریت کاربران',`
+      <p>ساخت و مدیریت حساب‌های کارشناسان.</p>
+      <h5>نقش‌های کاربری</h5><ul>
+        <li><b>مدیر سیستم</b>: دسترسی کامل به همه بخش‌ها</li>
+        <li><b>کارشناس میدانی (حضوری)</b>: ویزیت حضوری مشتریان</li>
+        <li><b>کارشناس داخلی (تلفنی)</b>: فروش و پیگیری تلفنی</li>
+      </ul>
+      <h5>کمیسیون</h5><p>درصد کمیسیون نقد و چک هر کارشناس را جداگانه تنظیم کنید.</p>
+      <div class="warn">شماره موبایل کارشناس را حتماً وارد کنید تا یادآور پیامکی دریافت کند.</div>`),
+    helpSec('⚙️','تنظیمات',`
+      <h5>اطلاعات شرکت</h5><p>نام، تلفن و آدرس شرکت که روی فاکتورها چاپ می‌شود.</p>
+      <h5>تلگرام</h5><p>Bot Token و Chat ID برای ارسال اعلان‌های سیستمی.</p>
+      <h5>پیامک</h5><ul>
+        <li><b>کاوه‌نگار</b>: API Key از پنل کاوه‌نگار</li>
+        <li><b>ملی‌پیامک</b>: username:password در فیلد API Key</li>
+        <li>شماره فرستنده را از پنل سرویس‌دهنده دریافت کنید</li>
+      </ul>`),
+    helpSec('🔌','API و یکپارچه‌سازی',`
+      <p>اتصال نرم‌افزارهای خارجی به CRM ترنم از طریق API.</p>
+      <h5>ساخت کلید API</h5><ol>
+        <li>به بخش API بروید</li>
+        <li>«کلید جدید» را انتخاب کنید</li>
+        <li>نام و سطح دسترسی را تنظیم کنید</li>
+        <li>کلید را کپی و در جای امنی ذخیره کنید — دوباره نشان داده نمی‌شود</li>
+      </ol>
+      <h5>استفاده از API</h5>
+      <div class="api-reveal">curl -H "Authorization: Bearer trn_xxxx" /api/v1/customers</div>
+      <h5>Webhook</h5><p>آدرس URL دریافت رویداد را ثبت کنید تا هنگام ایجاد مشتری یا پیگیری، داده به آدرس شما ارسال شود.</p>`)
+  ].join('');
+}
+function renderSalesGuide(){
+  return [
+    helpSec('🚀','شروع کار',`
+      <p>خوش آمدید! این راهنما به شما کمک می‌کند از سیستم CRM ترنم استفاده کنید.</p>
+      <h5>اولین قدم‌ها</h5><ol>
+        <li>از منو سمت چپ بخش مشتریان را باز کنید</li>
+        <li>مشتریان فعلی خود را ببینید یا مشتری جدید اضافه کنید</li>
+        <li>بعد از هر تماس، پیگیری ثبت کنید</li>
+        <li>تاریخ پیگیری بعدی را فراموش نکنید — سیستم به شما پیامک می‌فرستد</li>
+      </ol>
+      <div class="tip">صفحه داشبورد آمار شخصی شما را نشان می‌دهد: تعداد مشتری، فروش کل و پیگیری‌های باز.</div>`),
+    helpSec('👥','کار با مشتریان',`
+      <h5>جستجوی مشتری</h5><p>در بالای لیست مشتریان، نام فروشگاه یا شماره تلفن را تایپ کنید تا فیلتر شود.</p>
+      <h5>ثبت مشتری جدید</h5><ul>
+        <li>دکمه «مشتری جدید» را بزنید</li>
+        <li>نام فروشگاه اجباری است</li>
+        <li>شهر، تلفن و نوع مشتری را وارد کنید</li>
+        <li>در یادداشت، اطلاعات مهم مثل روز بازید یا ترجیحات را بنویسید</li>
+      </ul>
+      <h5>تاریخچه مشتری</h5><p>روی دکمه «تاریخچه» کنار هر مشتری کلیک کنید تا همه پیگیری‌ها، فاکتورها و تسویه‌های آن مشتری را ببینید.</p>
+      <div class="tip">وضعیت مشتری را به‌روز نگه دارید: VIP، فعال، پیگیری، خاموش.</div>`),
+    helpSec('📞','ثبت پیگیری',`
+      <p>بعد از هر تماس با مشتری، حتماً یک پیگیری ثبت کنید.</p>
+      <h5>مراحل ثبت</h5><ol>
+        <li>از منو «پیگیری‌ها» را باز کنید، یا از صفحه مشتری روی «+ پیگیری» کلیک کنید</li>
+        <li>مشتری را جستجو و انتخاب کنید</li>
+        <li>نوع تماس (تلفن، حضوری، واتس‌اپ) را مشخص کنید</li>
+        <li>موضوع تماس را به‌خلاصه بنویسید</li>
+        <li>نتیجه تماس را در «یادداشت» بنویسید</li>
+        <li>مرحله پایپ‌لاین را به‌روز کنید</li>
+        <li>تاریخ پیگیری بعدی را وارد کنید</li>
+      </ol>
+      <div class="tip">اگر ساعت دقیق هم وارد کنید، پیامک یادآور دقیقاً در آن ساعت می‌رسد. بدون ساعت، پیامک ساعت ۸ صبح فرستاده می‌شود.</div>`),
+    helpSec('📈','پایپ‌لاین فروش',`
+      <p>پایپ‌لاین نشان می‌دهد هر مشتری در چه مرحله‌ای از خرید است.</p>
+      <h5>مراحل</h5><ul>
+        <li><b>سرنخ</b>: اطلاعات گرفتید ولی تماس نگرفتید</li>
+        <li><b>تماس</b>: اول تماس برقرار شده</li>
+        <li><b>پیشنهاد</b>: قیمت یا نمونه دادید</li>
+        <li><b>مذاکره</b>: دارید توافق می‌کنید</li>
+        <li><b>برنده</b>: خرید انجام شد</li>
+        <li><b>ازدست‌رفته</b>: نخرید — دلیلش را ثبت کنید تا یاد بگیرید</li>
+      </ul>`),
+    helpSec('🧾','صدور فاکتور',`
+      <h5>مراحل</h5><ol>
+        <li>از منو «فاکتور» را باز کنید</li>
+        <li>«فاکتور جدید» را بزنید</li>
+        <li>مشتری را انتخاب کنید</li>
+        <li>محصولات را از کاتالوگ جستجو و اضافه کنید</li>
+        <li>تعداد هر محصول را وارد کنید</li>
+        <li>نوع را انتخاب کنید: پیش‌فاکتور یا فاکتور</li>
+        <li>ذخیره کنید و در صورت نیاز چاپ بگیرید</li>
+      </ol>
+      <div class="warn">پیش‌فاکتور برای نمایش قیمت است. فاکتور رسمی برای ثبت فروش قطعی.</div>`),
+    helpSec('🔔','یادآورها',`
+      <p>یادآورها برای کارهایی است که نمی‌خواهید فراموش کنید — غیر از پیگیری مشتری.</p>
+      <h5>مثال‌ها</h5><ul>
+        <li>یادآور زنگ زدن به تامین‌کننده</li>
+        <li>یادآور شرکت در نمایشگاه</li>
+        <li>یادآور تجدید قرارداد</li>
+      </ul>
+      <p>یادآور پیگیری مشتری را از بخش «پیگیری‌ها» ثبت کنید تا به مشتری لینک شود.</p>`),
+    helpSec('📊','گزارش‌های من',`
+      <p>در داشبورد، آمار شخصی شما نشان داده می‌شود:</p><ul>
+        <li>تعداد مشتریان شما</li>
+        <li>مجموع فروش (فاکتورهای رسمی)</li>
+        <li>تعداد پیگیری‌های باز</li>
+      </ul>
+      <div class="tip">برای دیدن جزئیات بیشتر، از بخش «گزارشات» (فقط مدیر) درخواست دهید.</div>`)
+  ].join('');
+}
+function toggleHelpSec(el_){ el_.closest('.help-section').classList.toggle('open'); }
 
 /* ============================================================
    DELETE CONFIRM + CHANGE PASSWORD
