@@ -188,81 +188,9 @@ tbody tr:nth-child(even):hover td{background:var(--purple-light)}
   .kpi-val{font-size:16px}
   .form-row{grid-template-columns:1fr}
 }
-
-/* LOGIN */
-.login-overlay{position:fixed;inset:0;background:linear-gradient(135deg,var(--purple),var(--purple2));z-index:99999;display:flex;align-items:center;justify-content:center}
-.login-box{background:#fff;border-radius:20px;padding:32px 24px;width:calc(100% - 40px);max-width:340px;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center}
-.login-logo{font-size:48px;margin-bottom:8px}
-.login-title{font-size:20px;font-weight:700;color:var(--purple);margin-bottom:4px}
-.login-sub{font-size:12px;color:var(--gray400);margin-bottom:24px}
-.login-err{color:var(--red);font-size:12px;margin:0 0 12px;min-height:18px}
-.role-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700}
-.role-admin{background:rgba(255,255,255,.25);color:#fff}
-.role-seller{background:rgba(255,255,255,.15);color:#fff}
-.logout-btn{background:none;border:none;color:rgba(255,255,255,.7);font-size:11px;cursor:pointer;padding:4px 8px;border-radius:6px;font-family:'Vazirmatn',Tahoma,sans-serif}
-.logout-btn:hover{color:#fff;background:rgba(255,255,255,.15)}
-
-/* DATEPICKER */
-.dp-wrap{position:relative;display:block}
-.dp-popup{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg);z-index:10000;width:264px;padding:10px;font-size:12px;font-family:'Vazirmatn',Tahoma,sans-serif}
-.dp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
-.dp-nav{background:none;border:none;cursor:pointer;padding:4px 10px;border-radius:6px;font-size:16px;color:var(--gray600);font-family:'Vazirmatn',Tahoma,sans-serif;line-height:1}
-.dp-nav:hover{background:var(--gray100)}
-.dp-title{font-weight:700;color:var(--purple);font-size:12px}
-.dp-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;margin-bottom:4px}
-.dp-weekdays span{font-size:10px;color:var(--gray400);padding:2px 0;font-weight:600}
-.dp-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
-.dp-d{text-align:center;padding:6px 2px;cursor:pointer;border-radius:6px;font-size:11px;color:var(--gray700);border:none;background:none;font-family:'Vazirmatn',Tahoma,sans-serif}
-.dp-d:hover{background:var(--purple-light);color:var(--purple)}
-.dp-d.dp-today{font-weight:700;color:var(--purple);background:var(--purple-light)}
-.dp-d.dp-sel{background:var(--purple);color:#fff;font-weight:700}
-.dp-d.dp-empty{pointer-events:none}
-.dp-today-btn{width:100%;margin-top:8px;padding:5px;border:1px solid var(--border);border-radius:6px;background:var(--gray50);cursor:pointer;font-size:11px;font-family:'Vazirmatn',Tahoma,sans-serif;color:var(--gray600)}
-.dp-today-btn:hover{background:var(--gray100)}
-
-/* VALIDATION */
-.field-err{border-color:var(--red)!important;background:#fff8f8!important}
-.err-msg{font-size:10px;color:var(--red);margin-top:2px;display:none}
-.err-msg.show{display:block}
-
-/* PRODUCTS */
-.prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px}
-.prod-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;box-shadow:var(--shadow);transition:all .2s}
-.prod-card:hover{border-color:var(--purple-mid);box-shadow:var(--shadow-md)}
-.prod-name{font-size:13px;font-weight:700;color:var(--gray800);margin-bottom:2px}
-.prod-code{font-size:10px;color:var(--gray400)}
-.prod-price{font-size:13px;color:var(--purple);font-weight:700;margin-top:4px}
-.prod-meta{font-size:10px;color:var(--gray400);margin-top:2px}
-.prod-stock{display:inline-block;margin-top:6px;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600;background:var(--green-light);color:var(--green)}
-.prod-stock.low{background:var(--red-light);color:var(--red)}
-.inv-prod-sel{width:100%;margin-bottom:3px;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;font-family:'Vazirmatn',Tahoma,sans-serif;direction:rtl;background:var(--gray50);color:var(--gray700);cursor:pointer}
-.inv-prod-sel:focus{outline:none;border-color:var(--purple)}
 </style>
 </head>
 <body>
-
-<!-- LOGIN OVERLAY -->
-<div id="loginOverlay" class="login-overlay">
-  <div class="login-box">
-    <div class="login-logo">🌸</div>
-    <div class="login-title">CRM ترنم</div>
-    <div class="login-sub">پوشاک ترنم — مدیریت مشتریان عمده</div>
-    <div class="form-group" style="text-align:right">
-      <label style="font-size:11px;font-weight:600;color:var(--gray600)">نام کاربری</label>
-      <input id="loginUser" placeholder="admin یا seller" autocomplete="username" style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'Vazirmatn',Tahoma,sans-serif;direction:rtl;outline:none">
-    </div>
-    <div class="form-group" style="text-align:right">
-      <label style="font-size:11px;font-weight:600;color:var(--gray600)">رمز عبور</label>
-      <input id="loginPass" type="password" placeholder="••••••" autocomplete="current-password" style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'Vazirmatn',Tahoma,sans-serif;direction:rtl;outline:none" onkeydown="if(event.key==='Enter')doLogin()">
-    </div>
-    <div class="login-err" id="loginErr"></div>
-    <button class="btn btn-primary" style="width:100%;padding:12px" onclick="doLogin()">ورود به سیستم</button>
-    <div style="margin-top:14px;font-size:10px;color:var(--gray400);line-height:1.8">
-      مدیر: <strong>admin</strong> / <strong>admin123</strong><br>
-      فروشنده: <strong>seller</strong> / <strong>seller123</strong>
-    </div>
-  </div>
-</div>
 
 <div class="topbar">
   <div class="topbar-brand">
@@ -273,8 +201,6 @@ tbody tr:nth-child(even):hover td{background:var(--purple-light)}
     </div>
   </div>
   <div class="topbar-right">
-    <span class="role-badge" id="roleBadge" style="display:none"></span>
-    <button class="logout-btn" id="logoutBtn" style="display:none" onclick="doLogout()">خروج</button>
     <div class="sync-dot" id="syncDot" title="اتصال به سرور"></div>
     <div class="topbar-clock" id="clock"></div>
   </div>
@@ -286,7 +212,6 @@ tbody tr:nth-child(even):hover td{background:var(--purple-light)}
   <div class="tab" onclick="showPage('orders')">📦 سفارشات</div>
   <div class="tab" onclick="showPage('followups')">📞 پیگیری‌ها</div>
   <div class="tab" onclick="showPage('invoices')">🧾 فاکتور</div>
-  <div class="tab" onclick="showPage('products')">🛍️ محصولات</div>
 </div>
 
 <div class="content">
@@ -453,23 +378,6 @@ tbody tr:nth-child(even):hover td{background:var(--purple-light)}
   </div>
 </div>
 
-<!-- PRODUCTS -->
-<div class="page" id="page-products">
-  <div class="sec-head">
-    <span class="sec-title">🛍️ محصولات</span>
-    <button class="btn btn-add no-print admin-only" onclick="openModal('product')">+ محصول جدید</button>
-  </div>
-  <div class="filter-bar">
-    <input id="pq" placeholder="🔍 جستجو..." oninput="renderProducts()">
-    <select id="pf-cat" onchange="renderProducts()">
-      <option value="">همه دسته‌ها</option>
-      <option>مانتو</option><option>شومیز</option><option>پیراهن</option><option>دامن</option>
-      <option>شلوار</option><option>لباس مجلسی</option><option>کاپشن</option><option>پالتو</option><option>متفرقه</option>
-    </select>
-  </div>
-  <div id="prodGrid" class="prod-grid"></div>
-</div>
-
 </div><!-- content -->
 
 <!-- ============ MODAL: CUSTOMER ============ -->
@@ -517,7 +425,7 @@ tbody tr:nth-child(even):hover td{background:var(--purple-light)}
   <input type="hidden" id="o-id">
   <div class="form-group"><label>مشتری *</label><select id="o-cust"></select></div>
   <div class="form-row">
-    <div class="form-group"><label>تاریخ سفارش</label><input id="o-date" class="dp-input" placeholder="انتخاب تاریخ" readonly></div>
+    <div class="form-group"><label>تاریخ سفارش</label><input id="o-date" placeholder="1403/04/01"></div>
     <div class="form-group"><label>نوع کالا</label>
       <select id="o-type">
         <option>مانتو بهاره</option><option>مانتو تابستانه</option><option>مانتو پاییزه</option>
@@ -539,7 +447,7 @@ tbody tr:nth-child(even):hover td{background:var(--purple-light)}
   </div>
   <div class="form-group debt-field"><label>مانده بدهی (خودکار)</label><input id="o-debt" readonly></div>
   <div class="form-row">
-    <div class="form-group"><label>تاریخ تحویل</label><input id="o-deliver" class="dp-input" placeholder="انتخاب تاریخ" readonly></div>
+    <div class="form-group"><label>تاریخ تحویل</label><input id="o-deliver" placeholder="1403/04/05"></div>
     <div class="form-group"><label>وضعیت</label>
       <select id="o-status">
         <option value="pending">⏳ آماده‌سازی</option>
@@ -565,7 +473,7 @@ tbody tr:nth-child(even):hover td{background:var(--purple-light)}
   <input type="hidden" id="f-id">
   <div class="form-group"><label>مشتری *</label><select id="f-cust"></select></div>
   <div class="form-row">
-    <div class="form-group"><label>تاریخ تماس</label><input id="f-date" class="dp-input" placeholder="انتخاب تاریخ" readonly></div>
+    <div class="form-group"><label>تاریخ تماس</label><input id="f-date" placeholder="1403/04/01"></div>
     <div class="form-group"><label>نوع تماس</label>
       <select id="f-type"><option>📱 تلفن</option><option>💬 واتساپ</option><option>📸 اینستاگرام</option><option>🤝 حضوری</option><option>📩 تلگرام</option></select>
     </div>
@@ -581,7 +489,7 @@ tbody tr:nth-child(even):hover td{background:var(--purple-light)}
   <div class="form-group"><label>موضوع</label><input id="f-subject" placeholder="پیگیری خرید جدید"></div>
   <div class="form-group"><label>نتیجه / یادداشت</label><textarea id="f-note" rows="2" placeholder="چه اتفاقی افتاد..."></textarea></div>
   <div class="form-group"><label>اقدام بعدی</label><input id="f-action" placeholder="ارسال کاتالوگ جدید"></div>
-  <div class="form-group"><label>تاریخ پیگیری بعدی</label><input id="f-next" class="dp-input" placeholder="انتخاب تاریخ" readonly></div>
+  <div class="form-group"><label>تاریخ پیگیری بعدی</label><input id="f-next" placeholder="1403/04/08"></div>
   <div class="modal-footer">
     <button class="btn btn-secondary" onclick="closeModal('followup')">انصراف</button>
     <button class="btn btn-primary" onclick="saveFollowup()">ذخیره</button>
@@ -602,7 +510,7 @@ tbody tr:nth-child(even):hover td{background:var(--purple-light)}
     </div>
   </div>
   <div class="form-row">
-    <div class="form-group"><label>تاریخ</label><input id="inv-date" class="dp-input" placeholder="انتخاب تاریخ" readonly></div>
+    <div class="form-group"><label>تاریخ</label><input id="inv-date" placeholder="1403/04/01"></div>
     <div class="form-group"><label>درصد تخفیف کل (%)</label><input id="inv-disc" type="number" min="0" max="100" placeholder="0" oninput="calcInvTotals()"></div>
   </div>
   <div class="form-group"><label>توضیحات / شرایط پرداخت</label><input id="inv-note" placeholder="مثلاً: چک ۳۰ روزه"></div>
@@ -636,43 +544,6 @@ tbody tr:nth-child(even):hover td{background:var(--purple-light)}
   <div class="modal-footer no-print">
     <button class="btn btn-secondary" onclick="closeModal('viewinv')">بستن</button>
     <button class="btn btn-primary" onclick="window.print()">🖨️ چاپ</button>
-  </div>
-</div>
-</div>
-
-<!-- ============ MODAL: PRODUCT ============ -->
-<div class="overlay" id="modal-product">
-<div class="modal">
-  <div class="modal-handle"></div>
-  <div class="modal-title">🛍️ محصول جدید / ویرایش</div>
-  <input type="hidden" id="p-id">
-  <div class="form-row">
-    <div class="form-group">
-      <label>نام محصول *</label>
-      <input id="p-name" placeholder="مانتو لینن بهاره">
-      <div class="err-msg" id="p-name-err">نام محصول الزامی است</div>
-    </div>
-    <div class="form-group"><label>کد محصول</label><input id="p-code" placeholder="MT-001"></div>
-  </div>
-  <div class="form-row">
-    <div class="form-group"><label>دسته‌بندی</label>
-      <select id="p-cat">
-        <option>مانتو</option><option>شومیز</option><option>پیراهن</option><option>دامن</option>
-        <option>شلوار</option><option>لباس مجلسی</option><option>کاپشن</option><option>پالتو</option><option>متفرقه</option>
-      </select>
-    </div>
-    <div class="form-group"><label>واحد</label>
-      <select id="p-unit"><option>عدد</option><option>جین</option><option>بسته</option><option>کیلوگرم</option></select>
-    </div>
-  </div>
-  <div class="form-row">
-    <div class="form-group"><label>قیمت پایه (تومان)</label><input id="p-price" type="number" min="0" placeholder="0"></div>
-    <div class="form-group"><label>موجودی اولیه</label><input id="p-stock" type="number" min="0" placeholder="0"></div>
-  </div>
-  <div class="form-group"><label>توضیحات</label><textarea id="p-note" rows="2" placeholder="مشخصات یا ویژگی‌های محصول..."></textarea></div>
-  <div class="modal-footer">
-    <button class="btn btn-secondary" onclick="closeModal('product')">انصراف</button>
-    <button class="btn btn-primary" onclick="saveProduct()">ذخیره محصول</button>
   </div>
 </div>
 </div>
@@ -736,7 +607,6 @@ let followups = [
   {id:'P004',custId:'C002',date:'1403/03/01',type:'📱 تلفن',subject:'پیگیری بدهی',note:'قول پرداخت هفته دیگر',action:'تماس مجدد',next:'1403/03/08',status:'open',priority:'high',createdAt:Date.now()}
 ];
 let invoices = [];
-let products = [];
 let invCounter = 1;
 let custCounter = 6, ordCounter = 6, fupCounter = 5;
 let mChart = null;
@@ -778,10 +648,6 @@ function setupListeners() {
     invoices = snap.docs.map(d => ({...d.data(), id: d.id}));
     renderInvoices();
   });
-  db.collection('products').orderBy('createdAt','desc').onSnapshot(snap => {
-    products = snap.docs.map(d => ({...d.data(), id: d.id}));
-    renderProducts();
-  });
 }
 
 function loadLocal() {
@@ -790,12 +656,10 @@ function loadLocal() {
     const o = localStorage.getItem('crm_o');
     const f = localStorage.getItem('crm_f');
     const i = localStorage.getItem('crm_i');
-    const p = localStorage.getItem('crm_p');
     if(c) customers = JSON.parse(c);
     if(o) orders = JSON.parse(o);
     if(f) followups = JSON.parse(f);
     if(i) invoices = JSON.parse(i);
-    if(p) products = JSON.parse(p);
   } catch(e) {}
 }
 
@@ -806,7 +670,6 @@ function saveLocal() {
     localStorage.setItem('crm_o', JSON.stringify(orders));
     localStorage.setItem('crm_f', JSON.stringify(followups));
     localStorage.setItem('crm_i', JSON.stringify(invoices));
-    localStorage.setItem('crm_p', JSON.stringify(products));
   } catch(e) {}
 }
 
@@ -843,11 +706,10 @@ function showPage(p) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
   document.querySelectorAll('.tab').forEach((t,i) => {
-    if(['dash','customers','orders','followups','invoices','products'][i] === p) t.classList.add('active');
+    if(['dash','customers','orders','followups','invoices'][i] === p) t.classList.add('active');
   });
   document.getElementById('page-'+p).classList.add('active');
   if(p === 'dash') renderDash();
-  if(p === 'products') renderProducts();
 }
 
 function openModal(type) {
@@ -888,15 +750,6 @@ function openModal(type) {
     addInvRow(); addInvRow();
     calcInvTotals();
   }
-  if(type === 'product') {
-    ['p-id','p-name','p-code','p-note'].forEach(id => {
-      const el = document.getElementById(id); if(el) el.value = '';
-    });
-    document.getElementById('p-price').value = '0';
-    document.getElementById('p-stock').value = '0';
-    document.getElementById('p-name').classList.remove('field-err');
-    document.getElementById('p-name-err').classList.remove('show');
-  }
   document.getElementById('modal-'+type).classList.add('open');
   document.getElementById('modal-'+type).scrollTop = 0;
 }
@@ -921,17 +774,9 @@ function showToast(msg, dur=2500) {
 // ─────────────────────────────────────────
 // CUSTOMERS CRUD
 // ─────────────────────────────────────────
-function _setErr(id, show) {
-  const el = document.getElementById(id);
-  if(!el) return;
-  if(show) el.classList.add('field-err');
-  else el.classList.remove('field-err');
-}
-
 function saveCustomer() {
   const biz = document.getElementById('c-biz').value.trim();
-  _setErr('c-biz', !biz);
-  if(!biz) { showToast('❌ نام کسب‌وکار الزامی است'); document.getElementById('c-biz').focus(); return; }
+  if(!biz) { showToast('❌ نام کسب‌وکار الزامی است'); return; }
   const id = document.getElementById('c-id').value;
   const obj = {
     biz, owner: document.getElementById('c-owner').value,
@@ -1000,7 +845,6 @@ function calcDebt() {
 function saveOrder() {
   const custId = document.getElementById('o-cust').value;
   const total = document.getElementById('o-total').value;
-  _setErr('o-total', !total);
   if(!custId || !total) { showToast('❌ مشتری و مبلغ الزامی است'); return; }
   const id = document.getElementById('o-id').value;
   const obj = {
@@ -1117,25 +961,13 @@ function addInvRow(desc='',qty=1,price=0) {
   const rowId = 'row-' + Date.now() + Math.random().toString(36).slice(2,5);
   const tr = document.createElement('tr');
   tr.id = rowId;
-  const prodSel = products.length
-    ? `<select class="inv-prod-sel" onchange="onInvProdSel(this,document.getElementById('${rowId}'))"><option value="">📦 انتخاب محصول...</option>${products.map(p=>`<option value="${p.id}" data-price="${p.price}" data-name="${p.name}">${p.name}${p.price?` — ${fmt(p.price)}ت`:''}</option>`).join('')}</select>`
-    : '';
   tr.innerHTML = `
-    <td>${prodSel}<input type="text" placeholder="مانتو لینن بهاره" value="${desc}" oninput="calcInvTotals()"></td>
+    <td><input type="text" placeholder="مانتو لینن بهاره" value="${desc}" oninput="calcInvTotals()"></td>
     <td><input type="number" min="1" value="${qty}" oninput="calcInvTotals()" style="width:60px"></td>
     <td><input type="number" min="0" value="${price}" oninput="calcInvTotals()"></td>
     <td id="${rowId}-sum" style="font-weight:600;color:var(--purple)">${fmt(qty*price)}</td>
     <td><button class="btn-icon" onclick="document.getElementById('${rowId}').remove();calcInvTotals()">🗑️</button></td>`;
   tbody.appendChild(tr);
-}
-
-function onInvProdSel(sel, tr) {
-  const opt = sel.options[sel.selectedIndex];
-  if(!opt.value) return;
-  const inputs = tr.querySelectorAll('input');
-  if(inputs[0]) inputs[0].value = opt.getAttribute('data-name')||'';
-  if(inputs[2]) inputs[2].value = Number(opt.getAttribute('data-price'))||0;
-  calcInvTotals();
 }
 
 function calcInvTotals() {
@@ -1343,7 +1175,7 @@ function renderCustomers() {
       <td>${sBadge(c.status)}</td>
       <td style="white-space:nowrap">
         <button class="btn-icon" onclick="editCustomer('${c.id}')" title="ویرایش">✏️</button>
-        <button class="btn-icon admin-only" onclick="deleteCustomer('${c.id}')" title="حذف">🗑️</button>
+        <button class="btn-icon" onclick="deleteCustomer('${c.id}')" title="حذف">🗑️</button>
       </td></tr>`;
   }).join('');
 }
@@ -1377,7 +1209,7 @@ function renderOrders() {
       <td>${osBadge(o.status)}</td>
       <td style="white-space:nowrap">
         <button class="btn-icon" onclick="editOrder('${o.id}')" title="ویرایش">✏️</button>
-        <button class="btn-icon admin-only" onclick="deleteOrder('${o.id}')" title="حذف">🗑️</button>
+        <button class="btn-icon" onclick="deleteOrder('${o.id}')" title="حذف">🗑️</button>
       </td></tr>`;
   }).join('');
 }
@@ -1411,7 +1243,7 @@ function renderFollowups() {
           <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
             <span class="badge ${sClass[0]}">${sClass.slice(1).join(' ')}</span>
             <button class="btn-icon" onclick="editFollowup('${f.id}')" title="ویرایش">✏️</button>
-            <button class="btn-icon admin-only" onclick="deleteFollowup('${f.id}')" title="حذف">🗑️</button>
+            <button class="btn-icon" onclick="deleteFollowup('${f.id}')" title="حذف">🗑️</button>
           </div>
         </div>
         <div class="fup-sub">${f.type||''} | ${f.note||'—'}</div>
@@ -1454,7 +1286,7 @@ function renderInvoices() {
       <td><span class="badge bactive">✅ صادر شد</span></td>
       <td style="white-space:nowrap">
         <button class="btn-icon" onclick="viewInvoice('${i.id}')" title="مشاهده">👁️</button>
-        <button class="btn-icon admin-only" onclick="deleteInvoice('${i.id}')" title="حذف">🗑️</button>
+        <button class="btn-icon" onclick="deleteInvoice('${i.id}')" title="حذف">🗑️</button>
       </td></tr>`;
   }).join('');
 }
@@ -1464,283 +1296,7 @@ function renderAll() {
   renderOrders();
   renderFollowups();
   renderInvoices();
-  renderProducts();
   if(document.getElementById('page-dash').classList.contains('active')) renderDash();
-  if(currentUser) applyRole();
-}
-
-// ─────────────────────────────────────────
-// LOGIN / ROLES
-// ─────────────────────────────────────────
-const USERS = {
-  admin:  {pass:'admin123',  role:'admin',  label:'مدیر'},
-  seller: {pass:'seller123', role:'seller', label:'فروشنده'}
-};
-let currentUser = null;
-
-function doLogin() {
-  const u = document.getElementById('loginUser').value.trim();
-  const p = document.getElementById('loginPass').value;
-  const match = USERS[u];
-  if(!match || match.pass !== p) {
-    document.getElementById('loginErr').textContent = '❌ نام کاربری یا رمز اشتباه است';
-    return;
-  }
-  currentUser = {username: u, ...match};
-  sessionStorage.setItem('crmUser', JSON.stringify(currentUser));
-  document.getElementById('loginOverlay').style.display = 'none';
-  applyRole();
-}
-
-function doLogout() {
-  sessionStorage.removeItem('crmUser');
-  currentUser = null;
-  document.getElementById('loginOverlay').style.display = 'flex';
-  document.getElementById('loginUser').value = '';
-  document.getElementById('loginPass').value = '';
-  document.getElementById('loginErr').textContent = '';
-  document.getElementById('roleBadge').style.display = 'none';
-  document.getElementById('logoutBtn').style.display = 'none';
-}
-
-function applyRole() {
-  if(!currentUser) return;
-  const isAdmin = currentUser.role === 'admin';
-  document.querySelectorAll('.admin-only').forEach(el => {
-    el.style.display = isAdmin ? '' : 'none';
-  });
-  const badge = document.getElementById('roleBadge');
-  badge.textContent = currentUser.label;
-  badge.className = `role-badge role-${currentUser.role}`;
-  badge.style.display = 'inline-block';
-  document.getElementById('logoutBtn').style.display = 'inline-block';
-}
-
-function checkSession() {
-  const saved = sessionStorage.getItem('crmUser');
-  if(saved) {
-    try {
-      currentUser = JSON.parse(saved);
-      document.getElementById('loginOverlay').style.display = 'none';
-      applyRole();
-    } catch(e) { sessionStorage.removeItem('crmUser'); }
-  }
-}
-
-// ─────────────────────────────────────────
-// JALALI DATE PICKER
-// ─────────────────────────────────────────
-function _jIsLeap(y){return((((y-474)%2820)+474+38)*682)%2816<682;}
-function _jDim(m,y){return m<=6?31:m<=11?30:_jIsLeap(y)?30:29;}
-const _jMonths=['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
-const _jWD=['ش','ی','د','س','چ','پ','ج'];
-
-function _g2j(gy,gm,gd){
-  var g2=[0,31,59,90,120,151,181,212,243,273,304,334],leap=(gy%4===0&&(gy%100!==0||gy%400===0));
-  var gDN=365*(gy-1)+Math.floor((gy-1)/4)-Math.floor((gy-1)/100)+Math.floor((gy-1)/400)+g2[gm-1]+(gm>2&&leap?1:0)+gd;
-  var jDN=gDN-1948320;
-  var j_np=Math.floor(jDN/1029983);var jDN2=jDN%1029983;
-  var jy,jd;
-  if(jDN2===1029982){jy=2820;}else{var a=Math.floor(jDN2/366);var b=jDN2%366;jy=Math.floor((2134*a+2816*b+2815)/(1028522))+a;}
-  jy+=2820*j_np+474;
-  if(jy<=0)jy--;
-  jd=jDN-(_jDaysFromEpoch(jy,1,1))+1;
-  var jm;for(jm=1;jm<=12;jm++){var dim=_jDim(jm,jy);if(jd<=dim)break;jd-=dim;}
-  return[jy,jm,jd];
-}
-
-function _jDaysFromEpoch(jy,jm,jd){
-  var y=jy-474;var yy=474+y%2820;
-  return jd+Math.floor((yy*682-110)/2816)+Math.floor(yy/4)*1461+Math.floor(y/2820)*1029983+(yy-1)*365+(jm<=6?(jm-1)*31:Math.floor((jm-7)*30+186))+1948320-1;
-}
-
-function _j2g(jy,jm,jd){
-  var jDN=_jDaysFromEpoch(jy,jm,jd);
-  var L=jDN+68569;var N=Math.floor(4*L/146097);L-=Math.floor((146097*N+3)/4);
-  var I=Math.floor(4000*(L+1)/1461001);L-=Math.floor(1461*I/4)-31;
-  var J=Math.floor(80*L/2447);var gd=L-Math.floor(2447*J/80);
-  L=Math.floor(J/11);var gm=J+2-12*L;var gy=100*(N-49)+I+L;
-  return[gy,gm,gd];
-}
-
-function _todayJ(){
-  var n=new Date();return _g2j(n.getFullYear(),n.getMonth()+1,n.getDate());
-}
-
-var _dpTarget=null,_dpY=0,_dpM=0;
-
-function _dpOpen(inp){
-  _dpClose();
-  _dpTarget=inp;
-  var v=(inp.value||'').split('/');
-  var tj=_todayJ();
-  _dpY=v.length===3&&parseInt(v[0])>1300?parseInt(v[0]):tj[0];
-  _dpM=v.length===3&&parseInt(v[0])>1300?parseInt(v[1]):tj[1];
-  _dpRender();
-}
-
-function _dpRender(){
-  _dpClose();
-  var pop=document.createElement('div');
-  pop.className='dp-popup';pop.id='_dpPop';
-  var tj=_todayJ();
-  var y=_dpY,m=_dpM;
-  var gFirst=_j2g(y,m,1);
-  var jsDay=new Date(gFirst[0],gFirst[1]-1,gFirst[2]).getDay();
-  var perStart=(jsDay+1)%7; // Sat=0,Sun=1,...,Fri=6
-  var dim=_jDim(m,y);
-  var sv=(_dpTarget?_dpTarget.value||'':'').split('/');
-  var selD=sv.length===3&&parseInt(sv[0])===y&&parseInt(sv[1])===m?parseInt(sv[2]):0;
-
-  var days='';
-  for(var i=0;i<perStart;i++) days+=`<button class="dp-d dp-empty" disabled></button>`;
-  for(var d=1;d<=dim;d++){
-    var cls='dp-d'+(tj[0]===y&&tj[1]===m&&tj[2]===d?' dp-today':'')+(selD===d?' dp-sel':'');
-    days+=`<button class="${cls}" onclick="_dpPick(${d})">${d.toLocaleString('fa-IR')}</button>`;
-  }
-
-  pop.innerHTML=`
-    <div class="dp-head">
-      <button class="dp-nav" onclick="_dpNav(1)">&#8250;</button>
-      <span class="dp-title">${_jMonths[m-1]} ${y.toLocaleString('fa-IR')}</span>
-      <button class="dp-nav" onclick="_dpNav(-1)">&#8249;</button>
-    </div>
-    <div class="dp-weekdays">${_jWD.map(w=>`<span>${w}</span>`).join('')}</div>
-    <div class="dp-days">${days}</div>
-    <button class="dp-today-btn" onclick="_dpPickToday()">امروز</button>`;
-
-  document.body.appendChild(pop);
-  var rect=_dpTarget.getBoundingClientRect();
-  var top=rect.bottom+4,left=rect.left;
-  if(top+300>window.innerHeight) top=rect.top-310;
-  if(left+264>window.innerWidth) left=window.innerWidth-272;
-  pop.style.top=top+'px';pop.style.left=left+'px';
-}
-
-function _dpNav(d){
-  _dpM+=d;
-  if(_dpM>12){_dpM=1;_dpY++;}
-  if(_dpM<1){_dpM=12;_dpY--;}
-  _dpRender();
-}
-
-function _dpPick(d){
-  if(!_dpTarget) return;
-  _dpTarget.value=`${_dpY}/${String(_dpM).padStart(2,'0')}/${String(d).padStart(2,'0')}`;
-  _dpTarget.dispatchEvent(new Event('change',{bubbles:true}));
-  _dpClose();
-}
-
-function _dpPickToday(){
-  var tj=_todayJ();
-  _dpY=tj[0];_dpM=tj[1];
-  _dpPick(tj[2]);
-}
-
-function _dpClose(){
-  var pop=document.getElementById('_dpPop');if(pop)pop.remove();
-}
-
-function wireDateInputs(){
-  document.querySelectorAll('.dp-input').forEach(function(inp){
-    inp.addEventListener('click',function(e){e.stopPropagation();_dpOpen(this);});
-    inp.style.cursor='pointer';
-    inp.style.caretColor='transparent';
-  });
-}
-
-document.addEventListener('click',function(e){
-  if(!e.target.closest('#_dpPop')&&!e.target.classList.contains('dp-input')) _dpClose();
-});
-
-// ─────────────────────────────────────────
-// PRODUCTS CRUD
-// ─────────────────────────────────────────
-function saveProduct() {
-  const name = document.getElementById('p-name').value.trim();
-  const nameEl = document.getElementById('p-name');
-  const nameErr = document.getElementById('p-name-err');
-  if(!name) {
-    nameEl.classList.add('field-err');
-    nameErr.classList.add('show');
-    nameEl.focus();
-    return;
-  }
-  nameEl.classList.remove('field-err');
-  nameErr.classList.remove('show');
-  const id = document.getElementById('p-id').value;
-  const obj = {
-    name,
-    code: document.getElementById('p-code').value.trim(),
-    cat: document.getElementById('p-cat').value,
-    unit: document.getElementById('p-unit').value,
-    price: Number(document.getElementById('p-price').value)||0,
-    stock: Number(document.getElementById('p-stock').value)||0,
-    note: document.getElementById('p-note').value,
-    createdAt: Date.now()
-  };
-  if(USE_FIREBASE) {
-    if(id) db.collection('products').doc(id).update(obj);
-    else db.collection('products').add(obj);
-  } else {
-    if(id) { const i=products.findIndex(p=>p.id===id); if(i>=0)products[i]={...obj,id}; }
-    else products.unshift({...obj, id: uid('PRD')});
-    saveLocal(); renderProducts();
-  }
-  closeModal('product');
-  showToast('✅ محصول ذخیره شد');
-}
-
-function editProduct(id) {
-  const p = products.find(x=>x.id===id); if(!p)return;
-  document.getElementById('p-id').value = p.id;
-  document.getElementById('p-name').value = p.name||'';
-  document.getElementById('p-code').value = p.code||'';
-  document.getElementById('p-cat').value = p.cat||'مانتو';
-  document.getElementById('p-unit').value = p.unit||'عدد';
-  document.getElementById('p-price').value = p.price||0;
-  document.getElementById('p-stock').value = p.stock||0;
-  document.getElementById('p-note').value = p.note||'';
-  document.getElementById('p-name').classList.remove('field-err');
-  document.getElementById('p-name-err').classList.remove('show');
-  document.getElementById('modal-product').classList.add('open');
-}
-
-function deleteProduct(id) {
-  confirmDelete(function(){
-    if(USE_FIREBASE) db.collection('products').doc(id).delete();
-    else { products=products.filter(p=>p.id!==id); saveLocal(); renderProducts(); }
-    showToast('🗑️ حذف شد');
-  });
-}
-
-function renderProducts() {
-  const el = document.getElementById('prodGrid'); if(!el)return;
-  const q = (document.getElementById('pq')||{}).value||'';
-  const fc = (document.getElementById('pf-cat')||{}).value||'';
-  let list = products;
-  if(q.trim()) list = list.filter(p=>(p.name||'').includes(q)||(p.code||'').includes(q));
-  if(fc) list = list.filter(p=>p.cat===fc);
-  if(!list.length){
-    el.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🛍️</div>محصولی یافت نشد<br><small>با دکمه «+ محصول جدید» اولین محصول را اضافه کنید</small></div>`;
-    return;
-  }
-  el.innerHTML=list.map(p=>`
-    <div class="prod-card">
-      <div class="prod-name">${p.name}</div>
-      ${p.code?`<div class="prod-code">#${p.code}</div>`:''}
-      <div class="prod-price">${fmt(p.price)} تومان</div>
-      <div class="prod-meta">${p.cat||''} · ${p.unit||'عدد'}</div>
-      <span class="prod-stock${p.stock<5?' low':''}">${(p.stock||0).toLocaleString('fa-IR')} ${p.unit||'عدد'}</span>
-      <div style="display:flex;gap:4px;margin-top:8px;justify-content:flex-end">
-        <button class="btn-icon" onclick="editProduct('${p.id}')" title="ویرایش">✏️</button>
-        <button class="btn-icon admin-only" onclick="deleteProduct('${p.id}')" title="حذف">🗑️</button>
-      </div>
-    </div>`).join('');
-  // Re-apply role hiding
-  if(currentUser&&currentUser.role!=='admin'){
-    document.querySelectorAll('.admin-only').forEach(el=>el.style.display='none');
-  }
 }
 
 // ─────────────────────────────────────────
@@ -1756,11 +1312,9 @@ updateClock();
 // BOOT
 // ─────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
-  checkSession();
   loadLocal();
   renderAll();
   initFirebase();
-  wireDateInputs();
 });
 </script>
 </body>
