@@ -151,36 +151,45 @@ table.tbl tr:hover td{background:#faf8ff}
 .fg textarea{resize:vertical;min-height:70px}
 .fg input[readonly]{background:#f3f4f6;color:var(--muted)}
 
-/* ===== Jalali datepicker ===== */
-.dp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:599;display:none}
+/* ===== Jalali datepicker (modern redesign) ===== */
+.dp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.32);z-index:599;display:none;backdrop-filter:blur(3px)}
 .dp-overlay.open{display:block}
-@media(max-width:480px){.dp-overlay.open{background:rgba(0,0,0,.5)}}
-.dp{position:fixed;background:#fff;border:1px solid var(--border);border-radius:16px;
-  box-shadow:0 16px 48px rgba(0,0,0,.22);padding:14px;width:308px;z-index:600;display:none}
-.dp.open{display:block}
-.dp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:4px}
-.dp-head button{background:var(--purple-light);color:var(--purple);border:none;min-width:34px;height:34px;border-radius:9px;font-size:16px;cursor:pointer;flex-shrink:0}
-.dp-head button:hover{background:var(--purple);color:#fff}
-.dp-title{display:flex;align-items:center;gap:6px}
-.dp-title .month-lbl{font-weight:700;color:var(--purple);font-size:14px}
-.dp-title select{border:1.5px solid var(--border);border-radius:7px;padding:3px 6px;font-size:13px;color:var(--text);background:#fff;font-family:inherit;cursor:pointer;direction:rtl}
-.dp-week{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px}
-.dp-week span{text-align:center;font-size:11px;font-weight:600;color:var(--muted);padding:5px 0}
-.dp-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
-.dp-days button{aspect-ratio:1;border:none;background:#f9f7fd;border-radius:8px;font-size:13px;color:var(--text);cursor:pointer;min-height:36px;display:flex;align-items:center;justify-content:center}
-.dp-days button:hover:not(.empty){background:var(--purple-light);color:var(--purple)}
-.dp-days button.today{border:2px solid var(--purple2);font-weight:700}
-.dp-days button.sel{background:var(--purple)!important;color:#fff!important;font-weight:700}
+@media(max-width:480px){.dp-overlay.open{background:rgba(0,0,0,.55)}}
+.dp{position:fixed;background:#fff;border-radius:22px;box-shadow:0 24px 64px rgba(0,0,0,.28);width:326px;z-index:600;display:none;overflow:hidden}
+.dp.open{display:block;animation:dpPop .18s cubic-bezier(.34,1.56,.64,1)}
+@keyframes dpPop{from{opacity:0;transform:scale(.9) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+/* Header */
+.dp-hd{background:linear-gradient(135deg,var(--purple) 0%,var(--purple2) 100%);padding:18px 16px 14px;color:#fff}
+.dp-hd-year{font-size:12px;opacity:.75;margin-bottom:2px;letter-spacing:.5px}
+.dp-hd-month{font-size:24px;font-weight:800;margin-bottom:10px}
+.dp-nav{display:flex;align-items:center;gap:8px}
+.dp-nav button{background:rgba(255,255,255,.2);color:#fff;border:none;width:34px;height:34px;border-radius:10px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0}
+.dp-nav button:hover{background:rgba(255,255,255,.38)}
+.dp-nav select{flex:1;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:13px;font-family:inherit;cursor:pointer;outline:none;direction:rtl;-webkit-appearance:none;text-align:center}
+.dp-nav select option{background:var(--purple);color:#fff}
+/* Body */
+.dp-body{padding:12px 10px 6px}
+.dp-week{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px}
+.dp-week span{text-align:center;font-size:10px;font-weight:700;color:var(--muted);padding:6px 0;text-transform:uppercase}
+.dp-days{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}
+.dp-days button{aspect-ratio:1;border:none;background:transparent;border-radius:12px;font-size:13px;color:var(--text);cursor:pointer;min-height:40px;display:flex;align-items:center;justify-content:center;transition:background .1s,color .1s,transform .1s;position:relative;font-family:inherit}
+.dp-days button:hover:not(.empty):not(.sel){background:var(--purple-light);color:var(--purple);transform:scale(1.12)}
+.dp-days button.today{font-weight:800;color:var(--purple)}
+.dp-days button.today::after{content:'';position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--purple)}
+.dp-days button.sel{background:var(--purple)!important;color:#fff!important;font-weight:800;box-shadow:0 4px 12px rgba(26,92,56,.4);transform:scale(1.08)}
 .dp-days button.empty{visibility:hidden;cursor:default;pointer-events:none}
-.dp-foot{margin-top:10px;display:flex;gap:6px}
-.dp-foot button{flex:1;font-size:13px;padding:9px;border:none;border-radius:9px;cursor:pointer;font-family:inherit}
-.dp-foot .today-btn{background:var(--green);color:#fff}
-.dp-foot .today-btn:hover{background:#15803d}
+/* Footer */
+.dp-foot{display:flex;gap:8px;padding:8px 10px 12px}
+.dp-foot button{flex:1;font-size:13px;padding:10px;border:none;border-radius:12px;cursor:pointer;font-family:inherit;font-weight:600;transition:.15s}
+.dp-foot .today-btn{background:var(--purple-light);color:var(--purple)}
+.dp-foot .today-btn:hover{background:var(--purple);color:#fff}
 .dp-foot .clear-btn{background:#f3f4f6;color:var(--muted)}
-.dp-foot .clear-btn:hover{background:#e5e7eb}
+.dp-foot .clear-btn:hover{background:#e5e7eb;color:var(--text)}
 @media(max-width:480px){
-  .dp{width:calc(100vw - 24px);left:12px!important;right:12px!important;bottom:12px!important;top:auto!important;border-radius:18px 18px 14px 14px}
-  .dp-days button{min-height:40px;font-size:14px}
+  .dp{width:calc(100vw - 20px);left:10px!important;right:10px!important;bottom:10px!important;top:auto!important;border-radius:22px 22px 16px 16px;animation:dpSlideUp .22s ease}
+  @keyframes dpSlideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+  .dp-days button{min-height:44px;font-size:15px}
+  .dp-hd-month{font-size:22px}
 }
 
 /* ===== Product grid ===== */
@@ -249,6 +258,13 @@ table.tbl tr:hover td{background:#faf8ff}
 .cust-si-item:hover{background:var(--purple-light);color:var(--purple)}
 .cust-si-meta{font-size:11px;color:var(--muted);white-space:nowrap}
 .cust-si-empty{padding:14px;text-align:center;color:var(--muted);font-size:12px}
+
+/* ===== Contextual help tooltip ===== */
+.hlp{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--purple-light);color:var(--purple);font-size:9px;font-weight:800;cursor:help;margin-right:4px;vertical-align:middle;position:relative;user-select:none;flex-shrink:0;line-height:1}
+.hlp::before{content:attr(data-tip);position:absolute;bottom:calc(100% + 8px);right:-8px;background:#1e293b;color:#f1f5f9;padding:9px 13px;border-radius:11px;font-size:12px;width:240px;white-space:normal;line-height:1.65;z-index:10000;display:none;text-align:right;direction:rtl;font-weight:400;box-shadow:0 8px 24px rgba(0,0,0,.25);pointer-events:none}
+.hlp::after{content:'';position:absolute;bottom:calc(100% + 3px);right:4px;border:5px solid transparent;border-top-color:#1e293b;display:none;pointer-events:none}
+.hlp:hover::before,.hlp:hover::after{display:block}
+@media(max-width:600px){.hlp::before{width:200px;right:auto;left:-8px}}
 
 /* ===== Help Page ===== */
 .help-tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
@@ -708,18 +724,21 @@ function renderDP(){
     cells+=`<button class="${cls.trim()}" onclick="pickDay(${d})" aria-label="${J_MONTHS[DP.m-1]} ${d}">${toFa(d)}</button>`;
   }
   const yearOpts = [];
-  for(let y=1390;y<=1420;y++) yearOpts.push(`<option value="${y}" ${y===DP.y?'selected':''}>${toFa(y)}</option>`);
+  for(let y=1380;y<=1425;y++) yearOpts.push(`<option value="${y}" ${y===DP.y?'selected':''}>${toFa(y)}</option>`);
   el('dpRoot').innerHTML = `<div class="dp open" onclick="event.stopPropagation()">
-    <div class="dp-head">
-      <button onclick="dpNav(-1)" title="ماه قبل">‹</button>
-      <div class="dp-title">
-        <span class="month-lbl">${J_MONTHS[DP.m-1]}</span>
+    <div class="dp-hd">
+      <div class="dp-hd-year">${toFa(DP.y)}</div>
+      <div class="dp-hd-month">${J_MONTHS[DP.m-1]}</div>
+      <div class="dp-nav">
+        <button onclick="dpNav(-1)" title="ماه قبل">‹</button>
         <select onchange="DP.y=parseInt(this.value);renderDP()" title="انتخاب سال">${yearOpts.join('')}</select>
+        <button onclick="dpNav(1)" title="ماه بعد">›</button>
       </div>
-      <button onclick="dpNav(1)" title="ماه بعد">›</button>
     </div>
-    <div class="dp-week">${J_WEEK.map(w=>`<span>${w}</span>`).join('')}</div>
-    <div class="dp-days">${cells}</div>
+    <div class="dp-body">
+      <div class="dp-week">${J_WEEK.map(w=>`<span>${w}</span>`).join('')}</div>
+      <div class="dp-days">${cells}</div>
+    </div>
     <div class="dp-foot">
       <button class="today-btn" onclick="pickToday()">امروز</button>
       <button class="clear-btn" onclick="pickClear()">پاک کردن</button>
@@ -729,10 +748,10 @@ function renderDP(){
 }
 function positionDP(inp){
   const dp=el('dpRoot').querySelector('.dp'); if(!dp) return;
-  if(window.innerWidth<=480){ dp.style.cssText=''; return; } // mobile: CSS handles it
+  if(window.innerWidth<=480){ dp.style.cssText=''; return; }
   if(!inp){ dp.style.right='50%'; dp.style.top='50%'; return; }
   const r=inp.getBoundingClientRect();
-  const dpW=308, dpH=dp.offsetHeight||320;
+  const dpW=326, dpH=dp.offsetHeight||370;
   let right=Math.max(8, window.innerWidth-r.right);
   if(right+dpW>window.innerWidth-8) right=Math.max(8, window.innerWidth-dpW-8);
   let top = (r.bottom+dpH+6>window.innerHeight && r.top-dpH-6>0) ? r.top-dpH-6 : r.bottom+4;
@@ -851,6 +870,8 @@ function roleLabel(r){
   if(r==='field_sales') return 'کارشناس میدانی';
   return 'کارشناس فروش';
 }
+/* Render a contextual help tooltip icon */
+function hlp(tip){ return `<span class="hlp" data-tip="${tip.replace(/"/g,'&quot;')}">?</span>`; }
 function isAdmin(){ return ME && ME.role==='admin'; }
 
 async function boot(){
@@ -1040,22 +1061,22 @@ function custModal(id){
   openModal(`
     <div class="modal-head"><h3>${id?'ویرایش مشتری':'مشتری جدید'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="modal-body"><div class="form-grid">
-      <div class="fg full"><label>نام فروشگاه *</label><input id="c-biz" value="${esc(c.biz||'')}"></div>
-      <div class="fg"><label>نام کامل</label><input id="c-owner" value="${esc(c.owner||'')}"></div>
-      <div class="fg"><label>شهر</label><input id="c-city" value="${esc(c.city||'')}"></div>
-      <div class="fg"><label>موبایل</label><input id="c-phone" value="${esc(c.phone||'')}"></div>
-      <div class="fg"><label>اینستاگرام</label><input id="c-insta" value="${esc(c.insta||'')}"></div>
-      <div class="fg"><label>نوع</label><select id="c-type">
+      <div class="fg full"><label>نام فروشگاه * ${hlp('نام تجاری فروشگاه یا برند مشتری. در فاکتورها، گزارش‌ها و پیگیری‌ها نمایش داده می‌شود.')}</label><input id="c-biz" value="${esc(c.biz||'')}"></div>
+      <div class="fg"><label>نام کامل ${hlp('نام و نام خانوادگی صاحب یا مسئول فروشگاه. برای شخصی‌سازی ارتباط مفید است.')}</label><input id="c-owner" value="${esc(c.owner||'')}"></div>
+      <div class="fg"><label>شهر ${hlp('شهر محل فروشگاه. برای فیلتر گزارش‌ها و برنامه‌ریزی ویزیت‌ها استفاده می‌شود.')}</label><input id="c-city" value="${esc(c.city||'')}"></div>
+      <div class="fg"><label>موبایل ${hlp('شماره تماس مستقیم. برای ارسال پیامک‌های یادآور و تماس استفاده می‌شود.')}</label><input id="c-phone" value="${esc(c.phone||'')}"></div>
+      <div class="fg"><label>اینستاگرام ${hlp('آیدی اینستاگرام فروشگاه (بدون @). برای پیگیری آنلاین و شناخت بهتر مشتری.')}</label><input id="c-insta" value="${esc(c.insta||'')}"></div>
+      <div class="fg"><label>نوع ${hlp('نوع کسب‌وکار مشتری. بوتیک: فروش خرده. عمده‌فروش: فروش به سایر فروشگاه‌ها. تولیدی: تولیدکننده.')}</label><select id="c-type">
         ${['بوتیک','عمده‌فروش','تولیدی','فروشگاه','آنلاین'].map(t=>`<option ${c.type===t?'selected':''}>${t}</option>`).join('')}
       </select></div>
-      <div class="fg"><label>وضعیت</label><select id="c-status">
+      <div class="fg"><label>وضعیت ${hlp('VIP: خرید بالا و منظم. فعال: تعامل جاری دارد. پیگیری: نیاز به پیگیری دارد. خاموش: مدتی سفارشی نداده. جدید: تازه ثبت شده.')}</label><select id="c-status">
         ${['new','active','vip','followup','silent'].map(s=>`<option value="${s}" ${c.status===s?'selected':''}>${STATUS_LABEL[s]}</option>`).join('')}
       </select></div>
-      <div class="fg"><label>منبع آشنایی</label><select id="c-source">
+      <div class="fg"><label>منبع آشنایی ${hlp('از چه طریقی این مشتری را پیدا کردید؟ برای تحلیل اثربخشی روش‌های بازاریابی.')}</label><select id="c-source">
         <option value="">-- انتخاب --</option>
         ${[['instagram','اینستاگرام'],['referral','معرفی آشنا'],['exhibition','نمایشگاه'],['store_front','مراجعه حضوری'],['online','آنلاین'],['other','سایر']].map(([v,l])=>`<option value="${v}" ${c.source===v?'selected':''}>${l}</option>`).join('')}
       </select></div>
-      <div class="fg full"><label>یادداشت</label><textarea id="c-note">${esc(c.note||'')}</textarea></div>
+      <div class="fg full"><label>یادداشت ${hlp('اطلاعات مهم درباره مشتری: روز بازید، ترجیحات، سلیقه، موارد حساس و هر چیزی که در تماس‌های بعدی مفید است.')}</label><textarea id="c-note">${esc(c.note||'')}</textarea></div>
     </div></div>
     <div class="modal-foot">
       <button class="btn" onclick="saveCust(${id||0})">💾 ذخیره</button>
@@ -1227,23 +1248,23 @@ function fupModal(id, defaultStage, presetCustId){
       <div class="fup-section">
         <div class="fup-section-title">اطلاعات پایه</div>
         <div class="form-grid">
-          <div class="fg"><label>مشتری *</label>${custSelect('f-cust', f.cust_id)}</div>
-          <div class="fg"><label>تاریخ تماس</label><input id="f-date" data-jdate value="${esc(f.date||'')}"></div>
-          <div class="fg"><label>نوع تماس</label><select id="f-type">
+          <div class="fg"><label>مشتری * ${hlp('فروشگاهی که این تماس را با آن داشتید. نام، تلفن یا نام صاحب را جستجو کنید.')}</label>${custSelect('f-cust', f.cust_id)}</div>
+          <div class="fg"><label>تاریخ تماس ${hlp('تاریخ واقعی انجام این تماس. اگر خالی بگذارید، امروز ثبت می‌شود.')}</label><input id="f-date" data-jdate value="${esc(f.date||'')}"></div>
+          <div class="fg"><label>نوع تماس ${hlp('روش ارتباطی این تماس: تلفنی، حضوری، واتس‌اپ، ایمیل یا پیام اینستاگرام.')}</label><select id="f-type">
             ${CONTACT_TYPES.map(t=>`<option ${f.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
-          <div class="fg"><label>وضعیت</label><select id="f-status">
+          <div class="fg"><label>وضعیت ${hlp('باز: هنوز نیاز به پیگیری دارد. انجام شد: کار تمام شد. لغو: این پیگیری دیگر لازم نیست.')}</label><select id="f-status">
             ${['open','done','cancel'].map(s=>`<option value="${s}" ${(f.status||'open')===s?'selected':''}>${STATUS_LABEL[s]||s}</option>`).join('')}</select></div>
         </div>
       </div>
       <div class="fup-section">
         <div class="fup-section-title">پایپ‌لاین فروش</div>
         <div class="form-grid">
-          <div class="fg"><label>مرحله</label><select id="f-stage" onchange="toggleLostReason()">
+          <div class="fg"><label>مرحله ${hlp('مشتری الان در کجای مسیر خرید است؟ سرنخ ← تماس ← پیشنهاد ← مذاکره ← برنده/ازدست‌رفته. هر بار که پیشرفت کردید، به‌روز کنید.')}</label><select id="f-stage" onchange="toggleLostReason()">
             ${PIPELINE_STAGES.map(s=>`<option value="${s.id}" ${(f.pipeline_stage||'lead')===s.id?'selected':''}>${s.icon} ${s.label}</option>`).join('')}</select></div>
-          <div class="fg"><label>سطح علاقه‌مندی</label><select id="f-interest">
+          <div class="fg"><label>سطح علاقه‌مندی ${hlp('چقدر به نظر می‌رسد مشتری واقعاً علاقه دارد؟ از خیلی کم تا خیلی زیاد. این در گزارش‌های پیش‌بینی فروش استفاده می‌شود.')}</label><select id="f-interest">
             ${INTEREST_LEVELS.map(l=>`<option value="${l.id}" ${(f.interest_level||'mid')===l.id?'selected':''}>${l.label}</option>`).join('')}</select></div>
-          <div class="fg"><label>احتمال خرید (٪)</label><input id="f-prob" type="number" min="0" max="100" value="${f.purchase_prob!=null?f.purchase_prob:50}"></div>
-          <div class="fg"><label>اولویت</label><select id="f-priority">
+          <div class="fg"><label>احتمال خرید (٪) ${hlp('به نظر شما چند درصد احتمال دارد این مشتری بخرد؟ صادقانه تخمین بزنید — برای پیش‌بینی دقیق‌تر فروش استفاده می‌شود.')}</label><input id="f-prob" type="number" min="0" max="100" value="${f.purchase_prob!=null?f.purchase_prob:50}"></div>
+          <div class="fg"><label>اولویت ${hlp('فوری: باید همین روزها پیگیری شود. معمولی: در روال عادی. کم: وقتی فرصت بود.')}</label><select id="f-priority">
             ${['high','mid','low'].map(p=>`<option value="${p}" ${(f.priority||'mid')===p?'selected':''}>${STATUS_LABEL[p]}</option>`).join('')}</select></div>
         </div>
         <div id="lostReasonDiv" style="${(f.pipeline_stage||'lead')==='lost'?'':'display:none'};margin-top:8px">
@@ -1254,12 +1275,12 @@ function fupModal(id, defaultStage, presetCustId){
       <div class="fup-section">
         <div class="fup-section-title">جزئیات تماس</div>
         <div class="form-grid">
-          <div class="fg full"><label>موضوع / هدف تماس</label><input id="f-subject" value="${esc(f.subject||'')}"></div>
-          <div class="fg full"><label>نتیجه و یادداشت</label><textarea id="f-note">${esc(f.note||'')}</textarea></div>
-          <div class="fg full"><label>اقدام بعدی</label><input id="f-action" value="${esc(f.action||'')}"></div>
-          <div class="fg"><label>تاریخ پیگیری بعدی</label><input id="f-next" data-jdate value="${esc(f.next_date||'')}"></div>
-          <div class="fg"><label>ساعت پیگیری <small style="color:var(--muted)">(اختیاری — پیامک در همین ساعت)</small></label><input id="f-next-time" type="time" value="${esc(f.next_time||'')}" style="font-family:inherit"></div>
-          <div class="fg"><label>تگ‌ها (با کاما)</label><input id="f-tags" value="${esc(f.tags||'')}" placeholder="VIP، فصلی، ..."></div>
+          <div class="fg full"><label>موضوع / هدف تماس ${hlp('در یک جمله کوتاه: چرا زنگ زدید یا رفتید؟ مثال: معرفی کلکسیون جدید، پیگیری سفارش، بررسی مشکل پرداخت.')}</label><input id="f-subject" value="${esc(f.subject||'')}"></div>
+          <div class="fg full"><label>نتیجه و یادداشت ${hlp('چه اتفاقی افتاد؟ آنچه مشتری گفت، نیازها، نگرانی‌ها یا تصمیماتش را بنویسید. این در تماس بعدی بسیار مفید است.')}</label><textarea id="f-note">${esc(f.note||'')}</textarea></div>
+          <div class="fg full"><label>اقدام بعدی ${hlp('دقیقاً چه کاری باید انجام دهید؟ مثال: ارسال کاتالوگ، ارسال نمونه، پیگیری تایید سفارش. مشخص و قابل اجرا بنویسید.')}</label><input id="f-action" value="${esc(f.action||'')}"></div>
+          <div class="fg"><label>تاریخ پیگیری بعدی ${hlp('کی باید دوباره با این مشتری تماس بگیرید؟ سیستم صبح آن روز ساعت ۸ پیامک یادآور می‌فرستد (مگر اینکه ساعت دقیق تعیین کنید).')}</label><input id="f-next" data-jdate value="${esc(f.next_date||'')}"></div>
+          <div class="fg"><label>ساعت پیگیری ${hlp('اگر ساعت دقیقی دارید، اینجا بنویسید. پیامک یادآور ۱ ساعت قبل از این ساعت ارسال می‌شود تا فرصت آماده شدن داشته باشید.')}</label><input id="f-next-time" type="time" value="${esc(f.next_time||'')}" style="font-family:inherit"></div>
+          <div class="fg"><label>تگ‌ها (با کاما) ${hlp('برچسب‌هایی برای دسته‌بندی. مثال: VIP، فصلی، نمایشگاه، تخفیف. بعداً می‌توانید بر اساس تگ فیلتر کنید.')}</label><input id="f-tags" value="${esc(f.tags||'')}" placeholder="VIP، فصلی، ..."></div>
         </div>
       </div>
       ${ME.role==='admin'&&userOpts?`<div class="fup-section">
@@ -1397,13 +1418,13 @@ function openInvBuilder(id){
     <div class="modal-head"><h3>${id?'ویرایش فاکتور':'فاکتور جدید'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="modal-body">
       <div class="form-grid" style="margin-bottom:14px">
-        <div class="fg"><label>مشتری *</label>${custSelect('inv-cust', inv?inv.cust_id:0)}</div>
-        <div class="fg"><label>نوع</label><select id="inv-type">
+        <div class="fg"><label>مشتری * ${hlp('فروشگاهی که این فاکتور برای او صادر می‌شود. نام یا تلفن را جستجو کنید.')}</label>${custSelect('inv-cust', inv?inv.cust_id:0)}</div>
+        <div class="fg"><label>نوع ${hlp('پیش‌فاکتور: برای اعلام قیمت به مشتری — در درآمد محاسبه نمی‌شود. فاکتور رسمی: فروش قطعی — در گزارش درآمد ثبت می‌شود.')}</label><select id="inv-type">
           <option value="proforma" ${inv&&inv.type==='proforma'?'selected':''}>پیش‌فاکتور</option>
           <option value="final" ${inv&&inv.type==='final'?'selected':''}>فاکتور رسمی</option></select></div>
-        <div class="fg"><label>تاریخ</label><input id="inv-date" data-jdate value="${esc(inv?inv.date:todayJalali())}"></div>
-        <div class="fg"><label>تخفیف (٪)</label><input id="inv-disc" type="number" value="${inv?inv.disc:0}" oninput="renderCart()"></div>
-        <div class="fg full"><label>توضیحات</label><input id="inv-note" value="${esc(inv?inv.note:'')}"></div>
+        <div class="fg"><label>تاریخ ${hlp('تاریخ صدور فاکتور. در گزارش‌های دوره‌ای بر اساس این تاریخ فیلتر می‌شود.')}</label><input id="inv-date" data-jdate value="${esc(inv?inv.date:todayJalali())}"></div>
+        <div class="fg"><label>تخفیف (٪) ${hlp('درصد تخفیف از مجموع کل فاکتور. علاوه بر تخفیف‌های احتمالی هر ردیف محاسبه می‌شود.')}</label><input id="inv-disc" type="number" value="${inv?inv.disc:0}" oninput="renderCart()"></div>
+        <div class="fg full"><label>توضیحات ${hlp('یادداشتی که روی فاکتور چاپ می‌شود. مثال: شرایط تحویل، زمان پرداخت، نکات خاص.')}</label><input id="inv-note" value="${esc(inv?inv.note:'')}"></div>
         <div class="fg"><label>نوع پرداخت</label><select id="inv-pay-type" onchange="toggleChequeFields()">
           <option value="cash" ${inv&&inv.pay_type==='cheque'?'':'selected'}>نقد</option>
           <option value="cheque" ${inv&&inv.pay_type==='cheque'?'selected':''}>چک</option>

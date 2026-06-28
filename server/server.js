@@ -124,7 +124,7 @@ async function runFollowupSMSBatch() {
   }
 }
 
-// ── Per-minute cron: send SMS for time-specific follow-ups ────────────────────
+// ── Per-minute cron: send SMS 1 hour BEFORE the scheduled follow-up time ──────
 async function runTimedFollowupSMS() {
   try {
     const db = getDB();
@@ -133,17 +133,23 @@ async function runTimedFollowupSMS() {
     const settings = getSMSSettings();
     if (!settings.sms_api_key) return;
 
+    // Compute what next_time value we're looking for: 1 hour from now
+    const [h, m] = now.split(':').map(Number);
+    const targetH = h + 1;
+    if (targetH >= 24) return; // skip: reminder would land past midnight
+    const targetTime = `${String(targetH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+
     const followups = db.prepare(
       "SELECT f.*,c.biz as cust_biz,c.owner as cust_owner,u.phone as user_phone,u.id as uid FROM followups f LEFT JOIN customers c ON f.cust_id=c.id LEFT JOIN users u ON f.user_id=u.id WHERE f.next_date=? AND f.next_time=? AND f.status='open' AND f.sms_sent=0"
-    ).all(today, now);
+    ).all(today, targetTime);
 
     for (const f of followups) {
       if (!f.uid || !f.user_phone) continue;
-      const text = `یادآور پیگیری\n\n• ${f.cust_biz || '-'}${f.cust_owner ? ' - ' + f.cust_owner : ''}\nساعت: ${now}`;
+      const text = `یادآور پیگیری (۱ ساعت دیگر)\n\n• ${f.cust_biz || '-'}${f.cust_owner ? ' - ' + f.cust_owner : ''}\nساعت پیگیری: ${targetTime}`;
       const result = await sendSMS(settings, f.user_phone, text);
       db.prepare('UPDATE followups SET sms_sent=1 WHERE id=?').run(f.id);
       logSMS(db, f.uid, f.cust_id, f.user_phone, text, result.ok ? 'sent' : 'failed');
-      console.log(`📱 SMS زمان‌بندی برای پیگیری ${f.id}: ${result.ok ? 'ارسال شد' : 'خطا'}`);
+      console.log(`📱 SMS ۱ ساعت قبل از پیگیری ${f.id} (ساعت ${targetTime}): ${result.ok ? 'ارسال شد' : 'خطا'}`);
     }
   } catch (e) {
     console.error('cron timed-sms error:', e.message);
