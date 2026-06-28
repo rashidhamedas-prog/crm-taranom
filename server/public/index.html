@@ -519,30 +519,29 @@ function statusTag(s){ return `<span class="tag t-${esc(s)}">${esc(STATUS_LABEL[
    JALALI DATE CONVERSION
 ============================================================ */
 function _g2j(gy,gm,gd){
-  var g2=[0,31,59,90,120,151,181,212,243,273,304,334],leap=(gy%4===0&&(gy%100!==0||gy%400===0));
-  var gDN=365*(gy-1)+Math.floor((gy-1)/4)-Math.floor((gy-1)/100)+Math.floor((gy-1)/400)+g2[gm-1]+(gm>2&&leap?1:0)+gd;
-  var jDN=gDN-1948320;
-  var j_np=Math.floor(jDN/1029983);var jDN2=jDN%1029983;
-  var jy,jd;
-  if(jDN2===1029982){jy=2820;}else{var a=Math.floor(jDN2/366);var b=jDN2%366;jy=Math.floor((2134*a+2816*b+2815)/(1028522))+a;}
-  jy+=2820*j_np+474;
-  if(jy<=0)jy--;
-  jd=jDN-(_jDFE(jy,1,1))+1;
-  var jm;for(jm=1;jm<=12;jm++){var dim=_jDIM(jm,jy);if(jd<=dim)break;jd-=dim;}
+  var g2=[0,31,59,90,120,151,181,212,243,273,304,334];
+  var gy2=(gm>2)?(gy+1):gy;
+  var days=355666+(365*gy)+Math.floor((gy2+3)/4)-Math.floor((gy2+99)/100)+Math.floor((gy2+399)/400)+gd+g2[gm-1];
+  var jy=-1595+(33*Math.floor(days/12053));
+  days%=12053; jy+=4*Math.floor(days/1461); days%=1461;
+  if(days>365){jy+=Math.floor((days-1)/365);days=(days-1)%365;}
+  var jm,jd;
+  if(days<186){jm=1+Math.floor(days/31);jd=1+(days%31);}
+  else{jm=7+Math.floor((days-186)/30);jd=1+((days-186)%30);}
   return[jy,jm,jd];
 }
 function _jIsLeap(y){return((((y-474)%2820)+474+38)*682)%2816<682;}
 function _jDIM(m,y){return m<=6?31:m<=11?30:_jIsLeap(y)?30:29;}
-function _jDFE(jy,jm,jd){
-  var y=jy-474;var yy=474+((y%2820)+2820)%2820;
-  return jd+Math.floor((yy*682-110)/2816)+Math.floor(yy/4)*1461+Math.floor(y/2820)*1029983+(yy-1)*365+(jm<=6?(jm-1)*31:Math.floor((jm-7)*30+186))+1948320-1;
-}
 function _j2g(jy,jm,jd){
-  var jDN=_jDFE(jy,jm,jd);
-  var L=jDN+68569;var N=Math.floor(4*L/146097);L-=Math.floor((146097*N+3)/4);
-  var I=Math.floor(4000*(L+1)/1461001);L-=Math.floor(1461*I/4)-31;
-  var J=Math.floor(80*L/2447);var gd=L-Math.floor(2447*J/80);
-  L=Math.floor(J/11);var gm=J+2-12*L;var gy=100*(N-49)+I+L;
+  jy+=1595;
+  var days=-355668+(365*jy)+(Math.floor(jy/33)*8)+Math.floor(((jy%33)+3)/4)+jd+((jm<7)?(jm-1)*31:((jm-7)*30+186));
+  var gy=400*Math.floor(days/146097); days%=146097;
+  if(days>36524){gy+=100*Math.floor(--days/36524);days%=36524;if(days>=365)days++;}
+  gy+=4*Math.floor(days/1461); days%=1461;
+  if(days>365){gy+=Math.floor((days-1)/365);days=(days-1)%365;}
+  var gd=days+1;
+  var sal=[0,31,((gy%4===0&&gy%100!==0)||(gy%400===0))?29:28,31,30,31,30,31,31,30,31,30,31];
+  var gm;for(gm=0;gm<13&&gd>sal[gm];gm++)gd-=sal[gm];
   return[gy,gm,gd];
 }
 const J_MONTHS = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
