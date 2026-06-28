@@ -152,9 +152,9 @@ table.tbl tr:hover td{background:#faf8ff}
 .fg input[readonly]{background:#f3f4f6;color:var(--muted)}
 
 /* ===== Jalali datepicker ===== */
-.dp-overlay{position:fixed;inset:0;background:transparent;z-index:599;display:none}
+.dp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:599;display:none}
 .dp-overlay.open{display:block}
-@media(max-width:480px){.dp-overlay.open{background:rgba(0,0,0,.4)}}
+@media(max-width:480px){.dp-overlay.open{background:rgba(0,0,0,.5)}}
 .dp{position:fixed;background:#fff;border:1px solid var(--border);border-radius:16px;
   box-shadow:0 16px 48px rgba(0,0,0,.22);padding:14px;width:308px;z-index:600;display:none}
 .dp.open{display:block}
@@ -585,9 +585,6 @@ function initCustSearches(scope){
     inp.addEventListener('keydown',e=>{
       if(e.key==='Escape'){hideCustDrop(id);}
     });
-    document.addEventListener('click',e=>{
-      if(!sw.contains(e.target)) hideCustDrop(id);
-    },{capture:true});
   });
 }
 function showCustDrop(id, q){
@@ -725,6 +722,8 @@ function pickDay(d){
 function pickToday(){ if(DP.input){ DP.input.value=todayJalali(); DP.input.dispatchEvent(new Event('change')); } closeDP(); }
 function pickClear(){ if(DP.input){ DP.input.value=''; DP.input.dispatchEvent(new Event('change')); } closeDP(); }
 document.addEventListener('click',(e)=>{ const dp=el('dpRoot').querySelector('.dp'); if(dp && dp.classList.contains('open') && !e.target.closest('.dp') && e.target!==DP.input) closeDP(); });
+// Single global handler for customer search dropdowns — avoids accumulation per modal open
+document.addEventListener('click',e=>{ if(!e.target.closest('.cust-sw')) document.querySelectorAll('.cust-si-drop').forEach(d=>{d.style.display='none';}); },true);
 
 /* ============================================================
    AUTH
