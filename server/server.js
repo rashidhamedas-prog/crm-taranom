@@ -11,6 +11,7 @@ const { hashKey } = require('./routes/api_keys');
 const { runBackup } = require('./backup');
 
 const app = express();
+app.set('trust proxy', 1); // trust Nginx reverse proxy
 const PORT = process.env.PORT || 3000;
 
 // Ensure uploads directory exists
