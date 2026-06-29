@@ -151,45 +151,37 @@ table.tbl tr:hover td{background:#faf8ff}
 .fg textarea{resize:vertical;min-height:70px}
 .fg input[readonly]{background:#f3f4f6;color:var(--muted)}
 
-/* ===== Jalali datepicker (modern redesign) ===== */
-.dp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.32);z-index:599;display:none;backdrop-filter:blur(3px)}
+/* ===== Jalali datepicker (minimal) ===== */
+.dp-overlay{position:fixed;inset:0;z-index:599;display:none}
 .dp-overlay.open{display:block}
-@media(max-width:480px){.dp-overlay.open{background:rgba(0,0,0,.55)}}
-.dp{position:fixed;background:#fff;border-radius:22px;box-shadow:0 24px 64px rgba(0,0,0,.28);width:326px;z-index:600;display:none;overflow:hidden}
-.dp.open{display:block;animation:dpPop .18s cubic-bezier(.34,1.56,.64,1)}
-@keyframes dpPop{from{opacity:0;transform:scale(.9) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
-/* Header */
-.dp-hd{background:linear-gradient(135deg,var(--purple) 0%,var(--purple2) 100%);padding:18px 16px 14px;color:#fff}
-.dp-hd-year{font-size:12px;opacity:.75;margin-bottom:2px;letter-spacing:.5px}
-.dp-hd-month{font-size:24px;font-weight:800;margin-bottom:10px}
-.dp-nav{display:flex;align-items:center;gap:8px}
-.dp-nav button{background:rgba(255,255,255,.2);color:#fff;border:none;width:34px;height:34px;border-radius:10px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0}
-.dp-nav button:hover{background:rgba(255,255,255,.38)}
-.dp-nav select{flex:1;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:10px;padding:6px 10px;font-size:13px;font-family:inherit;cursor:pointer;outline:none;direction:rtl;-webkit-appearance:none;text-align:center}
-.dp-nav select option{background:var(--purple);color:#fff}
-/* Body */
-.dp-body{padding:12px 10px 6px}
-.dp-week{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px}
-.dp-week span{text-align:center;font-size:10px;font-weight:700;color:var(--muted);padding:6px 0;text-transform:uppercase}
-.dp-days{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}
-.dp-days button{aspect-ratio:1;border:none;background:transparent;border-radius:12px;font-size:13px;color:var(--text);cursor:pointer;min-height:40px;display:flex;align-items:center;justify-content:center;transition:background .1s,color .1s,transform .1s;position:relative;font-family:inherit}
-.dp-days button:hover:not(.empty):not(.sel){background:var(--purple-light);color:var(--purple);transform:scale(1.12)}
-.dp-days button.today{font-weight:800;color:var(--purple)}
-.dp-days button.today::after{content:'';position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--purple)}
-.dp-days button.sel{background:var(--purple)!important;color:#fff!important;font-weight:800;box-shadow:0 4px 12px rgba(26,92,56,.4);transform:scale(1.08)}
+.dp{position:fixed;background:#fff;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.16);border:1px solid var(--border);width:224px;z-index:600;display:none;padding:10px}
+.dp.open{display:block;animation:dpPop .12s ease}
+@keyframes dpPop{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+/* Nav row */
+.dp-nav{display:flex;align-items:center;gap:4px;margin-bottom:8px}
+.dp-nav button{background:none;color:var(--text);border:1px solid var(--border);width:24px;height:24px;border-radius:5px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.1s;flex-shrink:0;padding:0}
+.dp-nav button:hover{background:var(--purple-light);border-color:var(--purple);color:var(--purple)}
+.dp-nav select{flex:1;background:#fff;color:var(--text);border:1px solid var(--border);border-radius:5px;padding:2px 4px;font-size:11px;font-family:inherit;cursor:pointer;outline:none;direction:rtl;text-align:center;height:24px}
+.dp-nav .dp-month-lbl{flex:1;text-align:center;font-size:12px;font-weight:700;color:var(--text)}
+/* Weekday headers */
+.dp-week{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:3px}
+.dp-week span{text-align:center;font-size:9px;font-weight:700;color:var(--muted);padding:2px 0}
+/* Day squares */
+.dp-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.dp-days button{width:100%;aspect-ratio:1;border:1px solid transparent;background:transparent;border-radius:4px;font-size:11px;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .08s,color .08s;position:relative;font-family:inherit;padding:0}
+.dp-days button:hover:not(.empty):not(.sel){background:var(--purple-light);color:var(--purple);border-color:var(--purple)}
+.dp-days button.today{font-weight:800;color:var(--purple);border-color:var(--purple)}
+.dp-days button.sel{background:var(--purple)!important;color:#fff!important;font-weight:700;border-color:var(--purple)!important}
 .dp-days button.empty{visibility:hidden;cursor:default;pointer-events:none}
 /* Footer */
-.dp-foot{display:flex;gap:8px;padding:8px 10px 12px}
-.dp-foot button{flex:1;font-size:13px;padding:10px;border:none;border-radius:12px;cursor:pointer;font-family:inherit;font-weight:600;transition:.15s}
-.dp-foot .today-btn{background:var(--purple-light);color:var(--purple)}
-.dp-foot .today-btn:hover{background:var(--purple);color:#fff}
-.dp-foot .clear-btn{background:#f3f4f6;color:var(--muted)}
-.dp-foot .clear-btn:hover{background:#e5e7eb;color:var(--text)}
+.dp-foot{display:flex;gap:5px;margin-top:8px;padding-top:7px;border-top:1px solid var(--border)}
+.dp-foot button{flex:1;font-size:11px;padding:4px 0;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-family:inherit;font-weight:600;background:#fff;color:var(--text);transition:.1s}
+.dp-foot .today-btn:hover{background:var(--purple);color:#fff;border-color:var(--purple)}
+.dp-foot .clear-btn:hover{background:#f3f4f6}
 @media(max-width:480px){
-  .dp{width:calc(100vw - 20px);left:10px!important;right:10px!important;bottom:10px!important;top:auto!important;border-radius:22px 22px 16px 16px;animation:dpSlideUp .22s ease}
-  @keyframes dpSlideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
-  .dp-days button{min-height:44px;font-size:15px}
-  .dp-hd-month{font-size:22px}
+  .dp{width:calc(100vw - 24px);left:12px!important;right:12px!important;bottom:12px!important;top:auto!important;border-radius:10px;animation:dpSlideUp .15s ease}
+  @keyframes dpSlideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  .dp-days button{font-size:13px}
 }
 
 /* ===== Product grid ===== */
@@ -379,8 +371,7 @@ table.tbl tr:hover td{background:#faf8ff}
   .pipeline-col{flex:0 0 168px}
   .pipeline-board{gap:8px}
   .content{padding:10px;width:100%}
-  .dp{max-width:calc(100vw - 16px)}
-  .dp-days button{font-size:13px}
+  .dp{max-width:calc(100vw - 24px)}
   .topbar{padding:8px 12px}
   .topbar h3{font-size:14px}
   .toolbar{gap:6px;flex-wrap:wrap;width:100%}
@@ -726,22 +717,17 @@ function renderDP(){
   const yearOpts = [];
   for(let y=1380;y<=1425;y++) yearOpts.push(`<option value="${y}" ${y===DP.y?'selected':''}>${toFa(y)}</option>`);
   el('dpRoot').innerHTML = `<div class="dp open" onclick="event.stopPropagation()">
-    <div class="dp-hd">
-      <div class="dp-hd-year">${toFa(DP.y)}</div>
-      <div class="dp-hd-month">${J_MONTHS[DP.m-1]}</div>
-      <div class="dp-nav">
-        <button onclick="dpNav(-1)" title="ماه قبل">‹</button>
-        <select onchange="DP.y=parseInt(this.value);renderDP()" title="انتخاب سال">${yearOpts.join('')}</select>
-        <button onclick="dpNav(1)" title="ماه بعد">›</button>
-      </div>
+    <div class="dp-nav">
+      <button onclick="dpNav(-1)" title="ماه قبل">‹</button>
+      <span class="dp-month-lbl">${J_MONTHS[DP.m-1]}</span>
+      <select onchange="DP.y=parseInt(this.value);renderDP()" title="انتخاب سال">${yearOpts.join('')}</select>
+      <button onclick="dpNav(1)" title="ماه بعد">›</button>
     </div>
-    <div class="dp-body">
-      <div class="dp-week">${J_WEEK.map(w=>`<span>${w}</span>`).join('')}</div>
-      <div class="dp-days">${cells}</div>
-    </div>
+    <div class="dp-week">${J_WEEK.map(w=>`<span>${w}</span>`).join('')}</div>
+    <div class="dp-days">${cells}</div>
     <div class="dp-foot">
       <button class="today-btn" onclick="pickToday()">امروز</button>
-      <button class="clear-btn" onclick="pickClear()">پاک کردن</button>
+      <button class="clear-btn" onclick="pickClear()">پاک</button>
     </div>
   </div>`;
   positionDP(DP.input);
@@ -751,7 +737,7 @@ function positionDP(inp){
   if(window.innerWidth<=480){ dp.style.cssText=''; return; }
   if(!inp){ dp.style.right='50%'; dp.style.top='50%'; return; }
   const r=inp.getBoundingClientRect();
-  const dpW=326, dpH=dp.offsetHeight||370;
+  const dpW=224, dpH=dp.offsetHeight||260;
   let right=Math.max(8, window.innerWidth-r.right);
   if(right+dpW>window.innerWidth-8) right=Math.max(8, window.innerWidth-dpW-8);
   let top = (r.bottom+dpH+6>window.innerHeight && r.top-dpH-6>0) ? r.top-dpH-6 : r.bottom+4;
