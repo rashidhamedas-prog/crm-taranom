@@ -64,6 +64,11 @@ app.get('/api/system/time', (req, res) => {
   res.json({ ts: Date.now() });
 });
 
+// Diagnostic: confirm which directory the server is running from
+app.get('/api/system/info', (req, res) => {
+  res.json({ cwd: __dirname, version: 'e178d2e' });
+});
+
 // Serve .well-known/assetlinks.json explicitly (TWA domain verification)
 app.get('/.well-known/assetlinks.json', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', '.well-known', 'assetlinks.json'));
