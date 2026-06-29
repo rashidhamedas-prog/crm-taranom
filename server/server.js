@@ -8,6 +8,7 @@ const { initDB, getDB } = require('./db');
 const { todayJalali, nowHHMM } = require('./jalali');
 const { sendSMS } = require('./sms');
 const { hashKey } = require('./routes/api_keys');
+const { runBackup } = require('./backup');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -193,6 +194,16 @@ cron.schedule('0 8 * * *', () => {
 
 // Every minute: timed follow-up SMS
 cron.schedule('* * * * *', runTimedFollowupSMS);
+
+// Daily at 00:00: full app backup → local file + Gmail
+cron.schedule('0 0 * * *', runBackup);
+
+// Manual backup endpoint (admin only)
+const { auth, adminOnly } = require('./middleware/auth');
+app.post('/api/admin/backup-now', auth, adminOnly, async (req, res) => {
+  const result = await runBackup();
+  res.json(result);
+});
 
 app.listen(PORT, () => {
   console.log(`CRM ترنم نسخه ۳ روی پورت ${PORT} اجرا شد`);

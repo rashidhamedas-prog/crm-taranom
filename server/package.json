@@ -17,6 +17,7 @@
     "xlsx": "^0.18.5",
     "express-rate-limit": "^7.1.5",
     "node-cron": "^3.0.3",
-    "sharp": "^0.33.3"
+    "sharp": "^0.33.3",
+    "nodemailer": "^6.9.13"
   }
 }

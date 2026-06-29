@@ -2245,13 +2245,31 @@ ROUTES.settings = async function(){
     </div>
     <p style="font-size:12px;color:var(--muted);margin-top:8px">برای ارسال پیامک، شماره موبایل هر کارشناس باید در اطلاعات کاربر ثبت شده باشد.</p>
     </div></div>
+    <div class="panel"><div class="panel-head"><h4>📦 پشتیبان‌گیری خودکار (Gmail)</h4></div><div class="panel-body">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">هر شب ساعت ۰۰:۰۰ یک فایل پشتیبان کامل از برنامه ساخته می‌شود و به Gmail ارسال می‌گردد. فایل محلی نیز در مسیر <code>backup/crm-latest.tar.gz</code> روی سرور نگه داشته می‌شود.</p>
+      <div class="form-grid">
+        <div class="fg"><label>آدرس Gmail فرستنده</label><input id="s-backup_smtp_user" value="${esc(s.backup_smtp_user||'')}" placeholder="example@gmail.com" dir="ltr"></div>
+        <div class="fg"><label>App Password گوگل <a href="https://myaccount.google.com/apppasswords" target="_blank" style="font-size:11px;color:var(--purple)">(دریافت از اینجا)</a></label><input id="s-backup_smtp_pass" value="${esc(s.backup_smtp_pass||'')}" placeholder="xxxx xxxx xxxx xxxx" dir="ltr" type="password"></div>
+        <div class="fg full"><label>ارسال پشتیبان به این آدرس Gmail</label><input id="s-backup_email" value="${esc(s.backup_email||'')}" placeholder="همان آدرس فرستنده یا ایمیل دیگر" dir="ltr"></div>
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-top:8px">📬 آدرس پیدا کردن پشتیبان در Gmail: جستجوی <strong>پشتیبان روزانه CRM ترنم</strong> در Gmail</p>
+      <button class="btn sm" style="margin-top:10px" onclick="triggerBackupNow()">⚡ پشتیبان‌گیری فوری همین الان</button>
+      <span id="backup-status" style="font-size:12px;margin-right:10px;color:var(--muted)"></span>
+    </div></div>
     <button class="btn green" onclick="saveSettings()">💾 ذخیره تنظیمات</button>`;
 };
 async function saveSettings(){
-  const keys=['company_name','company_phone','company_address','telegram_bot_token','telegram_chat_id','sms_provider','sms_api_key','sms_from','api_v1_enabled','api_rate_limit','webhook_secret'];
+  const keys=['company_name','company_phone','company_address','telegram_bot_token','telegram_chat_id','sms_provider','sms_api_key','sms_from','api_v1_enabled','api_rate_limit','webhook_secret','backup_smtp_user','backup_smtp_pass','backup_email'];
   const data={}; keys.forEach(k=>{ const e=el('s-'+k); if(e)data[k]=e.value; });
   CACHE.settings = await api('PUT','/settings',data);
   showToast('تنظیمات ذخیره شد');
+}
+async function triggerBackupNow(){
+  const st=el('backup-status'); if(st) st.textContent='در حال پشتیبان‌گیری...';
+  const r=await api('POST','/admin/backup-now');
+  if(!st) return;
+  if(r?.ok) st.textContent=`✅ پشتیبان ساخته شد${r.sizeMB?' ('+r.sizeMB+' MB)':''} ${r.email?'و به '+r.email+' ارسال شد':'(ایمیل تنظیم نشده)'}`;
+  else st.textContent='❌ خطا: '+(r?.error||'نامشخص');
 }
 
 /* ============================================================

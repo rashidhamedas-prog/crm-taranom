@@ -333,7 +333,10 @@ function initDB() {
     sms_from: '',
     api_v1_enabled: '1',
     api_rate_limit: '100',
-    webhook_secret: ''
+    webhook_secret: '',
+    backup_smtp_user: '',
+    backup_smtp_pass: '',
+    backup_email: ''
   };
   const insSetting = db.prepare('INSERT OR IGNORE INTO settings (key,value) VALUES (?,?)');
   for (const [k, v] of Object.entries(defaults)) insSetting.run(k, v);
