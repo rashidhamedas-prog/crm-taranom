@@ -76,13 +76,19 @@ All collections are ordered by `createdAt desc` in their Firestore queries.
 ## Production Server
 
 - **IP**: `45.90.98.99`
-- **User**: `root`
-- **App path**: `/root/crm-taranom`
+- **SSH port**: `2299`
+- **User**: `taranom-admin`
+- **SSH key** (client-side, never commit): `C:\Users\DayaTech\.ssh\taranom_server`
+- **App path**: `/home/taranom-admin/crm-taranom`
 - **Process manager**: PM2, process name `crm-taranom`
 - **Branch**: `claude/claude-md-docs-2ssrpy`
-- **Credentials**: stored in `.server` (gitignored — never commit SSH password to git)
+
+Connect:
+```bash
+ssh -p 2299 -i C:\Users\DayaTech\.ssh\taranom_server taranom-admin@45.90.98.99
+```
 
 Deploy command (run on server):
 ```bash
-cd /root/crm-taranom && git pull origin claude/claude-md-docs-2ssrpy && pm2 restart crm-taranom
+cd /home/taranom-admin/crm-taranom && git pull origin claude/claude-md-docs-2ssrpy && npm install && pm2 restart crm-taranom
 ```
