@@ -940,11 +940,13 @@ async function renderDashContent(){
     ? '?'+(dashDateFrom?'from='+encodeURIComponent(dashDateFrom):'')+(dashDateFrom&&dashDateTo?'&':'')+(dashDateTo?'to='+encodeURIComponent(dashDateTo):'')
     : '';
   if(ME.role==='admin'){
-    const [ov, board] = await Promise.all([
+    const [ov, board, balances] = await Promise.all([
       api('GET','/admin/stats/overview'+dq),
-      api('GET','/admin/dashboard'+dq)
+      api('GET','/admin/dashboard'+dq),
+      api('GET','/admin/customer-balances')
     ]);
     if(!ov) return;
+    const balRows = (balances||[]);
     body.innerHTML = `
       <div class="cards">
         ${statCard('p','👥', fmt(ov.totalCustomers),'کل مشتریان')}
@@ -966,10 +968,24 @@ async function renderDashContent(){
               <td>${fmt(u.openFup)}</td></tr>`).join('')||emptyRow(4)}</tbody>
           </table>
         </div>
-      </div>`;
+      </div>
+      ${balRows.length?`<div class="panel">
+        <div class="panel-head"><h4>💰 موجودی حساب مشتریان</h4></div>
+        <div class="panel-body tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th>فروشگاه</th><th>نام کامل</th><th>شهر</th><th>کارشناس</th><th>موجودی (تومان)</th></tr></thead>
+            <tbody>${balRows.map(c=>`<tr>
+              <td>${esc(c.biz)}</td><td>${esc(c.owner||'-')}</td><td>${esc(c.city||'-')}</td>
+              <td class="muted">${esc(c.salesperson||'-')}</td>
+              <td class="mono" style="font-weight:600;color:${c.balance>0?'var(--green)':'#dc2626'}">${fmt(c.balance)} تومان</td>
+            </tr>`).join('')}</tbody>
+          </table>
+        </div>
+      </div>`:''}`;
   } else {
-    const [followups, invoices] = await Promise.all([
-      api('GET','/followups'), api('GET','/invoices')
+    const [followups, invoices, balances] = await Promise.all([
+      api('GET','/followups'), api('GET','/invoices'),
+      api('GET','/customers/balances')
     ]);
     CACHE.followups=followups||[]; CACHE.invoices=invoices||[];
     let myComm = { totalComm:0, commRate:{cash:0,cheque:0} };
@@ -980,6 +996,7 @@ async function renderDashContent(){
     if(dashDateTo)   { finalInvs=finalInvs.filter(i=>i.date<=dashDateTo);   allInvs=allInvs.filter(i=>i.date<=dashDateTo); }
     const sales = finalInvs.reduce((a,i)=>a+(i.final||0),0);
     const openF = (followups||[]).filter(f=>f.status==='open').length;
+    const balRows = (balances||[]);
     body.innerHTML = `
       <div class="cards">
         ${statCard('p','👥', fmt(CACHE.customers.length),'مشتریان من')}
@@ -989,6 +1006,18 @@ async function renderDashContent(){
         ${statCard('b','📞', fmt(openF),'پیگیری باز')}
         ${statCard('g','🎯', fmt(Math.round(myComm.totalComm||0)),'کمیسیون تأیید شده (ت)')}
       </div>
+      ${balRows.length?`<div class="panel">
+        <div class="panel-head"><h4>💰 موجودی حساب مشتریان من</h4></div>
+        <div class="panel-body tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th>فروشگاه</th><th>نام کامل</th><th>شهر</th><th>موجودی (تومان)</th></tr></thead>
+            <tbody>${balRows.map(c=>`<tr>
+              <td>${esc(c.biz)}</td><td>${esc(c.owner||'-')}</td><td>${esc(c.city||'-')}</td>
+              <td class="mono" style="font-weight:600;color:${c.balance>0?'var(--green)':'#dc2626'}">${fmt(c.balance)} تومان</td>
+            </tr>`).join('')}</tbody>
+          </table>
+        </div>
+      </div>`:''}
       <div class="panel">
         <div class="panel-head"><h4>پیگیری‌های باز</h4><button class="btn sm" onclick="go('followups')">مشاهده همه</button></div>
         <div class="panel-body tbl-wrap">
@@ -1032,16 +1061,16 @@ function renderCustTable(){
   if(custFilter.status) rows=rows.filter(c=>c.status===custFilter.status);
   const isAdmin = ME.role==='admin';
   el('custTable').innerHTML = `<table class="tbl"><thead><tr>
-    <th>نام فروشگاه</th><th>نام کامل</th><th>شهر</th><th>موبایل</th><th>نوع</th><th>وضعیت</th>${isAdmin?'<th>کارشناس</th>':''}<th>عملیات</th>
+    <th>نام فروشگاه</th><th>نام کامل</th><th>شهر</th><th>موبایل</th><th>نوع</th><th>وضعیت</th>${isAdmin?'<th>کارشناس</th><th>موجودی</th>':''}<th>عملیات</th>
   </tr></thead><tbody>${rows.map(c=>`<tr>
     <td>${esc(c.biz)}</td><td>${esc(c.owner||'-')}</td><td>${esc(c.city||'-')}</td>
     <td class="mono">${esc(c.phone||'-')}</td><td>${esc(c.type||'-')}</td><td>${statusTag(c.status)}</td>
-    ${isAdmin?`<td class="muted">${esc(c.salesperson||'-')}</td>`:''}
+    ${isAdmin?`<td class="muted">${esc(c.salesperson||'-')}</td><td class="mono" style="color:${(c.balance||0)>0?'var(--green)':(c.balance||0)<0?'#dc2626':'var(--muted)'}">${(c.balance||0)!==0?fmt(c.balance)+' ت':'-'}</td>`:''}
     <td style="white-space:nowrap">
       <button class="btn sm ghost" onclick="custModal(${c.id})">✏️</button>
       <button class="btn sm blue icon" onclick="custActivityModal(${c.id})" title="تاریخچه پیگیری">📋</button>
       <button class="btn sm red" onclick="confirmDelete('customers',${c.id},'${esc(c.biz)}')">🗑️</button></td>
-  </tr>`).join('')||emptyRow(isAdmin?8:7)}</tbody></table>`;
+  </tr>`).join('')||emptyRow(isAdmin?9:7)}</tbody></table>`;
 }
 function custModal(id){
   const c = id ? CACHE.customers.find(x=>x.id===id) : {};
@@ -1064,6 +1093,11 @@ function custModal(id){
         ${[['instagram','اینستاگرام'],['referral','معرفی آشنا'],['exhibition','نمایشگاه'],['store_front','مراجعه حضوری'],['online','آنلاین'],['other','سایر']].map(([v,l])=>`<option value="${v}" ${c.source===v?'selected':''}>${l}</option>`).join('')}
       </select></div>
       <div class="fg full"><label>یادداشت ${hlp('اطلاعات مهم درباره مشتری: روز بازید، ترجیحات، سلیقه، موارد حساس و هر چیزی که در تماس‌های بعدی مفید است.')}</label><textarea id="c-note">${esc(c.note||'')}</textarea></div>
+      ${ME.role==='admin'?`<div class="fg full" style="border-top:1px dashed var(--border);margin-top:8px;padding-top:12px">
+        <label style="color:var(--purple);font-weight:600">💰 موجودی حساب (تومان) <span style="font-size:11px;font-weight:400;color:var(--muted)">— فقط مدیر</span></label>
+        <input id="c-balance" type="number" value="${c.balance||0}" placeholder="موجودی اولیه به تومان (منفی = بدهکار)" style="font-family:monospace;direction:ltr">
+        <p style="font-size:11px;color:var(--muted);margin-top:4px">عدد مثبت = بستانکار | عدد منفی = بدهکار</p>
+      </div>`:''}
     </div></div>
     <div class="modal-foot">
       <button class="btn" onclick="saveCust(${id||0})">💾 ذخیره</button>
@@ -1077,6 +1111,7 @@ async function saveCust(id){
     status:el('c-status').value, note:el('c-note').value,
     source:el('c-source')?.value||''
   };
+  if(ME.role==='admin' && el('c-balance')) data.balance = parseFloat(el('c-balance').value)||0;
   if(!data.biz){ showToast('نام فروشگاه الزامی است','error'); return; }
   if(id) await api('PUT','/customers/'+id, data); else await api('POST','/customers', data);
   await reloadCustomers(); closeModal(); renderCustTable(); showToast('ذخیره شد');
@@ -2054,62 +2089,94 @@ async function deleteSettlement(id){
 /* ============================================================
    MESSAGES
 ============================================================ */
-let msgTab='inbox', MSGS=[];
+let msgTab='inbox', MSGS=[], msgSearch='';
 ROUTES.messages = async function(){
   el('view').innerHTML='<div class="muted">در حال بارگذاری...</div>';
   MSGS=await api('GET','/messages')||[];
+  const inbox = MSGS.filter(m=>m.direction==='received');
+  const sent = MSGS.filter(m=>m.direction==='sent');
+  const unread = inbox.filter(m=>!m.is_read).length;
   el('view').innerHTML=`
-    <div class="msg-tabs">
-      <button id="tabInbox" class="${msgTab==='inbox'?'active':''}" onclick="switchMsgTab('inbox')">📥 دریافتی</button>
-      <button id="tabSent" class="${msgTab==='sent'?'active':''}" onclick="switchMsgTab('sent')">📤 ارسالی</button>
-      <button class="btn ghost" onclick="markAllRead()">✔️ همه خوانده شد</button>
+    <div class="msg-tabs" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <button id="tabInbox" class="btn${msgTab==='inbox'?' green':' ghost'}" onclick="switchMsgTab('inbox')">
+        📥 دریافتی ${unread>0?`<span style="background:#dc2626;color:#fff;border-radius:12px;padding:1px 7px;font-size:11px;margin-right:4px">${unread}</span>`:''}
+      </button>
+      <button id="tabSent" class="btn${msgTab==='sent'?' green':' ghost'}" onclick="switchMsgTab('sent')">📤 ارسالی (${sent.length})</button>
+      <input id="msgSearchInput" class="search" placeholder="جستجو در پیام‌ها..." value="${esc(msgSearch)}" style="flex:1;min-width:140px" oninput="msgSearch=this.value;renderMsgs()">
+      <button class="btn ghost" onclick="markAllRead()">✔️ خواندن همه</button>
       <button class="btn" onclick="composeMsg()">✉️ پیام جدید</button>
     </div>
     <div id="msgList"></div>`;
   renderMsgs();
-  await markVisibleRead();
+  setTimeout(async()=>{ await api('POST','/messages/read-all'); refreshMsgBadge(); }, 800);
 };
-function switchMsgTab(t){ msgTab=t; document.getElementById('tabInbox').classList.toggle('active',t==='inbox');
-  document.getElementById('tabSent').classList.toggle('active',t==='sent'); renderMsgs(); }
+function switchMsgTab(t){
+  msgTab=t;
+  const ib=el('tabInbox'), sn=el('tabSent');
+  if(ib){ ib.className=t==='inbox'?'btn green':'btn ghost'; }
+  if(sn){ sn.className=t==='sent'?'btn green':'btn ghost'; }
+  renderMsgs();
+}
 function renderMsgs(){
   let list = MSGS.filter(m=> msgTab==='inbox' ? m.direction==='received' : m.direction==='sent');
+  if(msgSearch){ const q=msgSearch.toLowerCase(); list=list.filter(m=>(m.body||'').toLowerCase().includes(q)||(m.from_name||'').toLowerCase().includes(q)||(m.to_name||'').toLowerCase().includes(q)); }
+  const canDelete = ME.role==='admin';
   el('msgList').innerHTML = list.map(m=>`
-    <div class="msg ${(msgTab==='inbox'&&!m.is_read)?'unread':''}">
-      <div class="mh">
-        <span>${msgTab==='inbox'?'از: '+esc(m.from_name||'سیستم'):'به: '+esc(m.to_name||'همه')}</span>
-        <span>${new Date(m.created_at*1000).toLocaleString('fa-IR')}</span>
+    <div class="msg ${(msgTab==='inbox'&&!m.is_read)?'unread':''}" style="border-radius:10px;margin-bottom:8px;border:1.5px solid ${(msgTab==='inbox'&&!m.is_read)?'var(--purple)':'var(--border)'}">
+      <div class="mh" style="display:flex;justify-content:space-between;align-items:center">
+        <span style="display:flex;align-items:center;gap:8px">
+          <span style="width:34px;height:34px;border-radius:50%;background:var(--purple-light);color:var(--purple);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700">
+            ${(msgTab==='inbox'?(m.from_name||'?'):(m.to_name||'؟'))[0]}
+          </span>
+          <span>
+            <div style="font-weight:600;font-size:13px">${msgTab==='inbox'?'از: '+esc(m.from_name||'سیستم'):'به: '+esc(m.to_name||'📢 همه')}</div>
+            <div style="font-size:11px;color:var(--muted)">${new Date(m.created_at*1000).toLocaleString('fa-IR',{dateStyle:'short',timeStyle:'short'})}</div>
+          </span>
+        </span>
+        <span style="display:flex;gap:6px;align-items:center">
+          ${(msgTab==='inbox'&&!m.is_read)?'<span style="width:8px;height:8px;border-radius:50%;background:var(--purple);display:inline-block"></span>':''}
+          <button class="btn sm ghost" title="پاسخ" onclick="replyMsg(${m.id},'${esc(m.from_name||'')}',${m.from_id||0})">↩️</button>
+          ${(canDelete||m.from_id===ME.id)?`<button class="btn sm red" onclick="deleteMsg(${m.id})">🗑️</button>`:''}
+        </span>
       </div>
-      <div class="mb">${esc(m.body)}</div>
-    </div>`).join('') || '<div class="empty">پیامی نیست</div>';
+      <div class="mb" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);white-space:pre-wrap;font-size:13px">${esc(m.body)}</div>
+    </div>`).join('') || '<div class="empty" style="padding:40px;text-align:center">📭 پیامی یافت نشد</div>';
 }
-async function markVisibleRead(){
-  // mark inbox unread as read after viewing
-  setTimeout(async()=>{ await api('POST','/messages/read-all'); refreshMsgBadge(); }, 800);
-}
+async function markVisibleRead(){ setTimeout(async()=>{ await api('POST','/messages/read-all'); refreshMsgBadge(); }, 800); }
 async function markAllRead(){ await api('POST','/messages/read-all'); MSGS=await api('GET','/messages'); renderMsgs(); refreshMsgBadge(); showToast('همه خوانده شد'); }
-function composeMsg(){
-  // salesperson can only message admins; admin can message anyone
-  let recipients = CACHE.users.filter(u=>u.active && u.id!==ME.id);
-  if(ME.role!=='admin') recipients = recipients.filter(u=>u.role==='admin');
-  // if salesperson has no users cache, fetch admins lazily via simple option
-  const opts = recipients.length
-    ? recipients.map(u=>`<option value="${u.id}">${esc(u.name)} (${roleLabel(u.role)})</option>`).join('')
-    : '<option value="">مدیر سیستم</option>';
+async function deleteMsg(id){
+  if(!confirm('این پیام حذف شود؟')) return;
+  await api('DELETE','/messages/'+id);
+  MSGS=MSGS.filter(m=>m.id!==id); renderMsgs(); showToast('پیام حذف شد');
+}
+async function composeMsg(toId, toName){
+  let recipients;
+  try{ recipients=await api('GET','/messages/users')||[]; }catch(e){ recipients=[]; }
+  const opts = recipients.map(u=>`<option value="${u.id}" ${(toId&&toId===u.id)?'selected':''}>${esc(u.name)}</option>`).join('');
+  const broadcastOpt = ME.role==='admin' ? '<option value="">📢 همه کاربران</option>' : '';
   openModal(`
-    <div class="modal-head"><h3>پیام جدید</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-head"><h3>✉️ پیام جدید</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="modal-body"><div class="form-grid">
-      <div class="fg full"><label>گیرنده</label><select id="m-to">${ME.role==='admin'?'<option value="">📢 همه کاربران</option>':''}${opts}</select></div>
-      <div class="fg full"><label>متن پیام</label><textarea id="m-body" style="min-height:110px"></textarea></div>
+      <div class="fg full"><label>گیرنده</label><select id="m-to">${broadcastOpt}${opts}</select></div>
+      <div class="fg full"><label>متن پیام</label><textarea id="m-body" style="min-height:110px" placeholder="متن پیام خود را اینجا بنویسید..."></textarea></div>
     </div></div>
-    <div class="modal-foot"><button class="btn" onclick="sendMsg()">📤 ارسال</button>
+    <div class="modal-foot"><button class="btn green" onclick="sendMsg()">📤 ارسال پیام</button>
       <button class="btn ghost" onclick="closeModal()">انصراف</button></div>`);
+  if(toName && !toId){ /* broadcast default */ }
+}
+function replyMsg(id, fromName, fromId){
+  if(!fromId || fromId===ME.id) return;
+  composeMsg(fromId, fromName);
 }
 async function sendMsg(){
-  const to_id = el('m-to').value ? +el('m-to').value : null;
+  const toVal = el('m-to').value;
+  const to_id = toVal ? +toVal : null;
   const body = el('m-body').value.trim();
   if(!body){ showToast('متن پیام الزامی است','error'); return; }
-  await api('POST','/messages',{to_id,body});
-  closeModal(); MSGS=await api('GET','/messages'); renderMsgs(); showToast('پیام ارسال شد');
+  try{
+    await api('POST','/messages',{to_id,body});
+    closeModal(); MSGS=await api('GET','/messages'); renderMsgs(); showToast('پیام ارسال شد');
+  }catch(e){}
 }
 async function refreshMsgBadge(){
   try{
@@ -2119,12 +2186,7 @@ async function refreshMsgBadge(){
     else b.classList.add('hide');
   }catch(e){}
 }
-// ensure salesperson has admin list for compose recipients
-async function ensureUsersForMsg(){
-  if(CACHE.users.length===0 && ME.role!=='admin'){
-    // salespeople cannot list users; messaging defaults to broadcast→admin path handled server-side (to_id null reaches admins via broadcast)
-  }
-}
+async function ensureUsersForMsg(){}
 async function refreshRemBadge(){
   try{
     const rows=await api('GET','/reminders/due')||[];
@@ -2237,22 +2299,37 @@ ROUTES.settings = async function(){
       <div class="fg"><label>Chat ID</label><input id="s-telegram_chat_id" value="${esc(s.telegram_chat_id||'')}"></div>
     </div></div></div>
     <div class="panel"><div class="panel-head"><h4>پیامک (SMS)</h4></div><div class="panel-body"><div class="form-grid">
-      <div class="fg"><label>سرویس‌دهنده</label><select id="s-sms_provider">
-        <option value="kavenegar" ${(s.sms_provider==='kavenegar'||!s.sms_provider)?'selected':''}>کاوه‌نگار</option>
+      <div class="fg"><label>سرویس‌دهنده</label><select id="s-sms_provider" onchange="toggleSmsProviderHint(this.value)">
+        <option value="kavenegar" ${(s.sms_provider==='kavenegar'||!s.sms_provider)?'selected':''}>کاوه‌نگار (Kavenegar)</option>
         <option value="melipayamak" ${s.sms_provider==='melipayamak'?'selected':''}>ملی‌پیامک (user:pass)</option>
+        <option value="niksms" ${s.sms_provider==='niksms'?'selected':''}>نیک‌اس‌ام‌اس (NikSMS)</option>
+        <option value="smsir" ${s.sms_provider==='smsir'?'selected':''}>اس‌ام‌اس‌آی‌آر (SMS.ir)</option>
       </select></div>
       <div class="fg"><label>کلید API</label><input id="s-sms_api_key" value="${esc(s.sms_api_key||'')}"></div>
-      <div class="fg"><label>شماره فرستنده</label><input id="s-sms_from" value="${esc(s.sms_from||'')}"></div>
+      <div class="fg"><label>شماره فرستنده (خط اختصاصی)</label><input id="s-sms_from" value="${esc(s.sms_from||'')}"></div>
     </div>
+    <div id="sms-hint" style="margin-top:10px;padding:10px;background:#f5f5f5;border-radius:8px;font-size:12px;color:var(--muted);line-height:1.8"></div>
     <p style="font-size:12px;color:var(--muted);margin-top:8px">برای ارسال پیامک، شماره موبایل هر کارشناس باید در اطلاعات کاربر ثبت شده باشد.</p>
     </div></div>
     <button class="btn green" onclick="saveSettings()">💾 ذخیره تنظیمات</button>`;
+  // Show hint for current provider on page load
+  toggleSmsProviderHint(s.sms_provider||'kavenegar');
 };
 async function saveSettings(){
   const keys=['company_name','company_phone','company_address','telegram_bot_token','telegram_chat_id','sms_provider','sms_api_key','sms_from','api_v1_enabled','api_rate_limit','webhook_secret','backup_smtp_user','backup_smtp_pass','backup_email'];
   const data={}; keys.forEach(k=>{ const e=el('s-'+k); if(e)data[k]=e.value; });
   CACHE.settings = await api('PUT','/settings',data);
   showToast('تنظیمات ذخیره شد');
+}
+function toggleSmsProviderHint(provider){
+  const hints = {
+    kavenegar: '🔑 <b>کاوه‌نگار:</b> کلید API را از پنل کاوه‌نگار کپی کنید. شماره فرستنده اختیاری است.',
+    melipayamak: '🔑 <b>ملی‌پیامک:</b> در فیلد کلید API وارد کنید: <code dir="ltr">username:password</code> (با دونقطه جدا کنید)',
+    niksms: '🔑 <b>نیک‌اس‌ام‌اس (niksms.com):</b> در فیلد کلید API وارد کنید: <code dir="ltr">username:password</code> — شماره فرستنده را هم وارد کنید',
+    smsir: '🔑 <b>اس‌ام‌اس‌آی‌آر (sms.ir):</b> کلید API (Bearer Token) را از پنل SMS.ir دریافت کنید. شماره خط را در فیلد شماره فرستنده وارد کنید',
+  };
+  const hint = el('sms-hint'); if(!hint) return;
+  hint.innerHTML = hints[provider] || '';
 }
 async function triggerBackupNow(){
   const st=el('backup-status'); if(st) st.textContent='در حال پشتیبان‌گیری...';

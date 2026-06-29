@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { getDB, audit } = require('../db');
 const { auth } = require('../middleware/auth');
+const { todayJalali, addDaysToJalali } = require('../jalali');
 
 function getScope(req) {
   if (req.user.role === 'admin' && req.query.user_id) return parseInt(req.query.user_id);
@@ -153,6 +154,25 @@ router.post('/', auth, (req, res) => {
         pay_type || 'cash', cheque_duration || '', cheque_due_date || '', cheque_info || '',
         stockDeducted);
   const row = db.prepare('SELECT i.*,c.biz as cust_biz FROM invoices i LEFT JOIN customers c ON i.cust_id=c.id WHERE i.id=?').get(result.lastInsertRowid);
+
+  // Auto-create a 7-day quality follow-up for every new invoice
+  try {
+    const invoiceDate = date || todayJalali();
+    const followupDate = addDaysToJalali(invoiceDate, 7);
+    const productList = built.rows.map(r => r.name).join('، ') || '-';
+    db.prepare(
+      'INSERT INTO followups (user_id,cust_id,date,type,subject,note,next_date,status,priority) VALUES (?,?,?,?,?,?,?,?,?)'
+    ).run(
+      req.user.id, cust_id, invoiceDate,
+      '🧾 پیگیری فاکتور',
+      'بررسی رضایت از کیفیت کالا',
+      `پیگیری پس از فاکتور ${num}\nمحصولات: ${productList}`,
+      followupDate, 'open', 'mid'
+    );
+  } catch (e) {
+    console.error('auto-followup error:', e.message);
+  }
+
   res.json({ ...row, rows: JSON.parse(row.rows || '[]') });
 });
 

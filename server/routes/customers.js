@@ -25,12 +25,14 @@ router.get('/', auth, (req, res) => {
 });
 
 router.post('/', auth, (req, res) => {
-  const { biz, owner, city, phone, insta, type, status, note, source } = req.body;
+  const { biz, owner, city, phone, insta, type, status, note, source, balance } = req.body;
   if (!biz) return res.status(400).json({ error: 'نام فروشگاه الزامی است' });
   const db = getDB();
+  // balance is admin-only field
+  const bal = (req.user.role === 'admin') ? (parseFloat(balance) || 0) : 0;
   const result = db.prepare(
-    'INSERT INTO customers (user_id,biz,owner,city,phone,insta,type,status,note,source) VALUES (?,?,?,?,?,?,?,?,?,?)'
-  ).run(req.user.id, biz, owner || '', city || '', phone || '', insta || '', type || 'بوتیک', status || 'new', note || '', source || '');
+    'INSERT INTO customers (user_id,biz,owner,city,phone,insta,type,status,note,source,balance) VALUES (?,?,?,?,?,?,?,?,?,?,?)'
+  ).run(req.user.id, biz, owner || '', city || '', phone || '', insta || '', type || 'بوتیک', status || 'new', note || '', source || '', bal);
   const row = db.prepare('SELECT * FROM customers WHERE id=?').get(result.lastInsertRowid);
   res.json(row);
 });
@@ -40,9 +42,11 @@ router.put('/:id', auth, (req, res) => {
   const row = db.prepare('SELECT * FROM customers WHERE id=?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'یافت نشد' });
   if (req.user.role !== 'admin' && row.user_id !== req.user.id) return res.status(403).json({ error: 'دسترسی ندارید' });
-  const { biz, owner, city, phone, insta, type, status, note, source } = req.body;
-  db.prepare('UPDATE customers SET biz=?,owner=?,city=?,phone=?,insta=?,type=?,status=?,note=?,source=? WHERE id=?')
-    .run(biz, owner || '', city || '', phone || '', insta || '', type || 'بوتیک', status || 'new', note || '', source || '', req.params.id);
+  const { biz, owner, city, phone, insta, type, status, note, source, balance } = req.body;
+  // balance only updated by admin
+  const bal = (req.user.role === 'admin' && balance !== undefined) ? (parseFloat(balance) || 0) : row.balance || 0;
+  db.prepare('UPDATE customers SET biz=?,owner=?,city=?,phone=?,insta=?,type=?,status=?,note=?,source=?,balance=? WHERE id=?')
+    .run(biz, owner || '', city || '', phone || '', insta || '', type || 'بوتیک', status || 'new', note || '', source || '', bal, req.params.id);
   res.json({ ok: true });
 });
 
@@ -56,6 +60,19 @@ router.delete('/:id', auth, (req, res) => {
   res.json({ ok: true });
 });
 
+// Customer balances for current user's customers (non-zero only)
+router.get('/balances', auth, (req, res) => {
+  const db = getDB();
+  const scope = getScope(req);
+  let rows;
+  if (scope === null) {
+    rows = db.prepare('SELECT id,biz,owner,city,balance FROM customers WHERE balance<>0 ORDER BY ABS(balance) DESC').all();
+  } else {
+    rows = db.prepare('SELECT id,biz,owner,city,balance FROM customers WHERE user_id=? AND balance<>0 ORDER BY ABS(balance) DESC').all(scope);
+  }
+  res.json(rows);
+});
+
 router.get('/export/excel', auth, (req, res) => {
   const db = getDB();
   const scope = getScope(req);
@@ -65,10 +82,12 @@ router.get('/export/excel', auth, (req, res) => {
   } else {
     rows = db.prepare('SELECT * FROM customers WHERE user_id=? ORDER BY created_at DESC').all(scope);
   }
+  const isAdmin = req.user.role === 'admin';
   const data = rows.map(r => ({
     'نام فروشگاه': r.biz, 'نام کامل': r.owner, 'شهر': r.city,
     'موبایل': r.phone, 'اینستاگرام': r.insta, 'نوع': r.type, 'وضعیت': r.status,
     'منبع آشنایی': r.source || '', 'کارشناس': r.salesperson || '',
+    ...(isAdmin ? { 'موجودی حساب': r.balance || 0 } : {}),
     'یادداشت': r.note
   }));
   const wb = XLSX.utils.book_new();
@@ -91,7 +110,7 @@ router.post('/import', auth, adminOnly, memUpload.single('file'), (req, res) => 
     let inserted = 0;
     const allUsers = db.prepare('SELECT id,name FROM users').all();
     const stmt = db.prepare(
-      'INSERT INTO customers (user_id,biz,owner,city,phone,insta,type,status,source) VALUES (?,?,?,?,?,?,?,?,?)'
+      'INSERT INTO customers (user_id,biz,owner,city,phone,insta,type,status,source,balance) VALUES (?,?,?,?,?,?,?,?,?,?)'
     );
     const insertMany = db.transaction((rows) => {
       for (const row of rows) {
@@ -106,6 +125,7 @@ router.post('/import', auth, adminOnly, memUpload.single('file'), (req, res) => 
         } else if (row['user_id']) {
           targetUserId = parseInt(row['user_id']);
         }
+        const balance = parseFloat(row['موجودی حساب'] || row['balance'] || 0) || 0;
         stmt.run(
           targetUserId, biz,
           row['نام کامل'] || row['owner'] || row['نام مالک'] || '',
@@ -114,7 +134,8 @@ router.post('/import', auth, adminOnly, memUpload.single('file'), (req, res) => 
           row['اینستاگرام'] || row['insta'] || '',
           row['نوع'] || row['type'] || 'بوتیک',
           row['وضعیت'] || row['status'] || 'new',
-          row['منبع آشنایی'] || row['source'] || ''
+          row['منبع آشنایی'] || row['source'] || '',
+          balance
         );
         inserted++;
       }
@@ -132,12 +153,12 @@ router.get('/template', auth, adminOnly, (req, res) => {
   const XLSX = require('xlsx');
   const wb = XLSX.utils.book_new();
   const data = [
-    { 'نام فروشگاه': 'بوتیک بهار', 'نام کامل': 'زهره احمدی', 'شهر': 'مشهد', 'موبایل': '09151234567', 'اینستاگرام': 'bahar_boutique', 'نوع': 'بوتیک', 'وضعیت': 'active', 'منبع آشنایی': 'instagram', 'کارشناس': '' },
-    { 'نام فروشگاه': 'فروشگاه نسیم', 'نام کامل': 'فاطمه حسینی', 'شهر': 'تهران', 'موبایل': '09121234567', 'اینستاگرام': 'nasim_shop', 'نوع': 'فروشگاه', 'وضعیت': 'new', 'منبع آشنایی': 'referral', 'کارشناس': '' },
+    { 'نام فروشگاه': 'بوتیک بهار', 'نام کامل': 'زهره احمدی', 'شهر': 'مشهد', 'موبایل': '09151234567', 'اینستاگرام': 'bahar_boutique', 'نوع': 'بوتیک', 'وضعیت': 'active', 'منبع آشنایی': 'instagram', 'کارشناس': '', 'موجودی حساب': 0 },
+    { 'نام فروشگاه': 'فروشگاه نسیم', 'نام کامل': 'فاطمه حسینی', 'شهر': 'تهران', 'موبایل': '09121234567', 'اینستاگرام': 'nasim_shop', 'نوع': 'فروشگاه', 'وضعیت': 'new', 'منبع آشنایی': 'referral', 'کارشناس': '', 'موجودی حساب': 0 },
   ];
   const ws = XLSX.utils.json_to_sheet(data);
   // Add column widths
-  ws['!cols'] = [30,20,15,15,20,15,15,20,20].map(w=>({wch:w}));
+  ws['!cols'] = [30,20,15,15,20,15,15,20,20,15].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws, 'مشتریان');
   // Instructions sheet
   const info = [
@@ -145,6 +166,7 @@ router.get('/template', auth, adminOnly, (req, res) => {
     { 'راهنما': 'مقادیر مجاز برای منبع آشنایی: instagram, referral, exhibition, store_front, online, other' },
     { 'راهنما': 'مقادیر مجاز برای نوع: بوتیک، عمده‌فروش، تولیدی، فروشگاه، آنلاین' },
     { 'راهنما': 'ستون کارشناس: نام کارشناس دقیقاً همانطور که در سیستم ثبت شده (اختیاری)' },
+    { 'راهنما': 'ستون موجودی حساب: موجودی اولیه مشتری به تومان (فقط مدیر می‌تواند تنظیم کند)' },
   ];
   const ws2 = XLSX.utils.json_to_sheet(info);
   ws2['!cols'] = [{wch:80}];

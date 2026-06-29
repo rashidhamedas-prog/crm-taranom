@@ -115,4 +115,16 @@ router.get('/audit', auth, adminOnly, (req, res) => {
   res.json({ rows, total, page, limit });
 });
 
+// Customer balances — admin sees all, others handled in /customers/balances
+router.get('/customer-balances', auth, adminOnly, (req, res) => {
+  const db = getDB();
+  const rows = db.prepare(`
+    SELECT c.id, c.biz, c.owner, c.city, c.balance, u.name as salesperson
+    FROM customers c LEFT JOIN users u ON c.user_id=u.id
+    WHERE c.balance <> 0
+    ORDER BY ABS(c.balance) DESC
+  `).all();
+  res.json(rows);
+});
+
 module.exports = router;

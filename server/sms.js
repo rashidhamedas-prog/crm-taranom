@@ -1,6 +1,6 @@
 const https = require('https');
 
-function postJSON(hostname, path, body) {
+function postJSON(hostname, path, body, headers = {}) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify(body);
     const options = {
@@ -10,7 +10,8 @@ function postJSON(hostname, path, body) {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Content-Length': Buffer.byteLength(data)
+        'Content-Length': Buffer.byteLength(data),
+        ...headers
       }
     };
     const req = https.request(options, res => {
@@ -57,6 +58,30 @@ async function sendSMS(settings, to, text) {
         { username, password, to: [phone], from, text, isFlash: false }
       );
       return { ok: r.status === 200, data: r.body };
+    }
+
+    if (provider === 'niksms') {
+      // NikSMS REST API — api_key stores "username:password"
+      const [username = '', password = ''] = apiKey.split(':');
+      const r = await postJSON(
+        'api.niksms.com',
+        '/fa/api/sms/single',
+        { username, password, textBody: text, receiver: phone, senderNumber: from || '' }
+      );
+      const ok = r.status === 200 && r.body && r.body.status !== false;
+      return { ok, data: r.body };
+    }
+
+    if (provider === 'smsir') {
+      // SMS.ir REST API v1 — api_key is the Bearer token
+      const r = await postJSON(
+        'api.sms.ir',
+        '/v1/send/bulk',
+        { lineNumber: from || '', MessageTexts: [text], Mobiles: [phone] },
+        { Authorization: `Bearer ${apiKey}` }
+      );
+      const ok = r.status === 200 && r.body && r.body.status === 1;
+      return { ok, data: r.body };
     }
 
     return { ok: false, reason: `unsupported provider: ${provider}` };

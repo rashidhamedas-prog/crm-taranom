@@ -41,4 +41,20 @@ function nowHHMM() {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-module.exports = { g2j, j2g, todayJalali, nowHHMM };
+// Add N calendar days to a Jalali date string "YYYY/MM/DD"
+function addDaysToJalali(jalaliStr, days) {
+  try {
+    const parts = jalaliStr.split('/').map(Number);
+    if (parts.length !== 3 || parts.some(isNaN)) return todayJalali();
+    const [jy, jm, jd] = parts;
+    const [gy, gm, gd] = j2g(jy, jm, jd);
+    const d = new Date(gy, gm - 1, gd);
+    d.setDate(d.getDate() + days);
+    const [ny, nm, nd] = g2j(d.getFullYear(), d.getMonth() + 1, d.getDate());
+    return `${ny}/${String(nm).padStart(2, '0')}/${String(nd).padStart(2, '0')}`;
+  } catch {
+    return todayJalali();
+  }
+}
+
+module.exports = { g2j, j2g, todayJalali, nowHHMM, addDaysToJalali };

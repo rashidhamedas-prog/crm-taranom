@@ -292,6 +292,8 @@ function initDB() {
   ensureColumn(db, 'followups', 'sms_sent', 'INTEGER DEFAULT 0');
   // Customer CRM fields
   ensureColumn(db, 'customers', 'source', "TEXT DEFAULT ''");
+  // Customer account balance (admin-only, applied as initial credit/debit)
+  ensureColumn(db, 'customers', 'balance', 'REAL DEFAULT 0');
   // Salesperson role migration: generic 'salesperson' → 'field_sales'
   db.exec("UPDATE users SET role='field_sales' WHERE role='salesperson'");
 
