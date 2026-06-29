@@ -43,6 +43,13 @@ app.use('/api/followups', require('./routes/followups'));
 app.use('/api/invoices', require('./routes/invoices'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/admin', require('./routes/admin'));
+
+// Manual backup endpoint — registered before admin router catch-all
+const { auth, adminOnly } = require('./middleware/auth');
+app.post('/api/admin/backup-now', auth, adminOnly, async (req, res) => {
+  const result = await runBackup();
+  res.json(result);
+});
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/reminders', require('./routes/reminders'));
 app.use('/api/reports', require('./routes/reports'));
@@ -197,13 +204,6 @@ cron.schedule('* * * * *', runTimedFollowupSMS);
 
 // Daily at 00:00: full app backup → local file + Gmail
 cron.schedule('0 0 * * *', runBackup);
-
-// Manual backup endpoint (admin only)
-const { auth, adminOnly } = require('./middleware/auth');
-app.post('/api/admin/backup-now', auth, adminOnly, async (req, res) => {
-  const result = await runBackup();
-  res.json(result);
-});
 
 app.listen(PORT, () => {
   console.log(`CRM ترنم نسخه ۳ روی پورت ${PORT} اجرا شد`);
