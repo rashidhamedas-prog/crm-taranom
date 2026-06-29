@@ -5,7 +5,8 @@ const nodemailer = require('nodemailer');
 const { getDB } = require('./db');
 
 const APP_ROOT = path.resolve(__dirname, '..');
-const BACKUP_DIR = path.join(APP_ROOT, 'backup');
+// Dedicated backup folder outside the app directory so it survives git operations
+const BACKUP_DIR = '/home/taranom-admin/backups';
 const BACKUP_FILE = path.join(BACKUP_DIR, 'crm-latest.tar.gz');
 
 function getBackupSettings() {
@@ -43,11 +44,13 @@ async function runBackup() {
     const now = new Date();
     const dateStr = now.toLocaleDateString('fa-IR', { year: 'numeric', month: '2-digit', day: '2-digit' });
 
+    // Google App Passwords work with or without spaces — strip to be safe
+    const appPass = s.backup_smtp_pass.replace(/\s+/g, '');
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 587,
       secure: false,
-      auth: { user: s.backup_smtp_user, pass: s.backup_smtp_pass }
+      auth: { user: s.backup_smtp_user, pass: appPass }
     });
 
     await transporter.sendMail({

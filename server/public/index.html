@@ -2270,12 +2270,22 @@ ROUTES.backup = async function(){
   const s = await api('GET','/settings')||{};
   el('view').innerHTML=`
     <div class="panel">
-      <div class="panel-head"><h4>📦 پشتیبان‌گیری خودکار (Gmail)</h4></div>
+      <div class="panel-head"><h4>📦 پشتیبان‌گیری</h4></div>
       <div class="panel-body">
         <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
-          هر شب ساعت ۰۰:۰۰ یک فایل پشتیبان کامل از برنامه (کد + دیتابیس + آپلودها) ساخته می‌شود و به Gmail ارسال می‌گردد.<br>
-          فایل محلی نیز روی سرور در مسیر <strong>backup/crm-latest.tar.gz</strong> نگه داشته می‌شود (همیشه یک فایل، هر شب بازنویسی می‌شود).
+          هر شب ساعت ۰۰:۰۰ یک فایل پشتیبان کامل از برنامه (کد + دیتابیس + آپلودها) روی سرور ذخیره می‌شود.<br>
+          مسیر سرور: <strong dir="ltr">/home/taranom-admin/backups/crm-latest.tar.gz</strong><br>
+          همیشه فقط یک فایل نگه داشته می‌شود و هر شب بازنویسی می‌گردد.
         </p>
+
+        <div style="padding:16px;background:var(--purple-light);border-radius:10px;margin-bottom:20px">
+          <p style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--purple)">💾 دانلود پشتیبان به سیستم شما</p>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:12px">با کلیک روی دکمه زیر، فایل پشتیبان مستقیم روی سیستم شما دانلود می‌شود. مرورگر محل ذخیره را می‌پرسد.</p>
+          <button class="btn green" onclick="downloadBackup()">⬇️ دانلود پشتیبان همین الان</button>
+          <span id="bk-dl-status" style="font-size:12px;color:var(--muted);margin-right:10px"></span>
+        </div>
+
+        <div class="panel-head" style="margin-bottom:14px"><h5>📧 ارسال خودکار به Gmail (اختیاری)</h5></div>
         <div class="form-grid">
           <div class="fg">
             <label>آدرس Gmail فرستنده</label>
@@ -2292,11 +2302,11 @@ ROUTES.backup = async function(){
           </div>
         </div>
         <div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <button class="btn green" onclick="saveBackupSettings()">💾 ذخیره تنظیمات پشتیبان</button>
-          <button class="btn" onclick="triggerBackup()">⚡ پشتیبان‌گیری فوری همین الان</button>
+          <button class="btn green" onclick="saveBackupSettings()">💾 ذخیره تنظیمات Gmail</button>
+          <button class="btn" onclick="triggerBackup()">⚡ پشتیبان + ارسال Gmail همین الان</button>
           <span id="bk-status" style="font-size:13px;color:var(--muted)"></span>
         </div>
-        <div style="margin-top:24px;padding:14px;background:var(--purple-light);border-radius:10px;font-size:12px;color:var(--purple)">
+        <div style="margin-top:16px;padding:14px;background:#f8f8f8;border-radius:10px;font-size:12px;color:var(--muted)">
           📬 برای پیدا کردن پشتیبان در Gmail: جستجو کنید <strong>پشتیبان روزانه CRM ترنم</strong>
         </div>
       </div>
@@ -2317,6 +2327,19 @@ async function triggerBackup(){
   if(!st) return;
   if(r?.ok) st.textContent='✅ پشتیبان ساخته شد'+(r.sizeMB?' ('+r.sizeMB+' MB)':'')+' '+(r.email?'و به '+r.email+' ارسال شد':'— ایمیل تنظیم نشده');
   else st.textContent='❌ خطا: '+(r?.error||'نامشخص');
+}
+async function downloadBackup(){
+  const st=el('bk-dl-status'); if(st) st.textContent='در حال آماده‌سازی...';
+  try {
+    const token=localStorage.getItem('crm_token');
+    const res=await fetch('/api/admin/backup-download',{headers:{'Authorization':'Bearer '+token}});
+    if(!res.ok){ const j=await res.json(); if(st) st.textContent='❌ '+(j.error||'خطا'); return; }
+    const blob=await res.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download='crm-latest.tar.gz'; a.click();
+    URL.revokeObjectURL(url);
+    if(st) st.textContent='✅ دانلود شروع شد';
+  } catch(e){ if(st) st.textContent='❌ '+e.message; }
 }
 
 /* ============================================================

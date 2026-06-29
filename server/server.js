@@ -51,6 +51,17 @@ app.post('/api/admin/backup-now', auth, adminOnly, async (req, res) => {
   const result = await runBackup();
   res.json(result);
 });
+
+// Download latest backup file directly to admin's browser
+app.get('/api/admin/backup-download', auth, adminOnly, async (req, res) => {
+  const { BACKUP_FILE } = require('./backup');
+  if (!fs.existsSync(BACKUP_FILE)) {
+    // No backup yet — create one first
+    const result = await runBackup();
+    if (!result.ok) return res.status(500).json({ error: result.error });
+  }
+  res.download(BACKUP_FILE, 'crm-latest.tar.gz');
+});
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/reminders', require('./routes/reminders'));
 app.use('/api/reports', require('./routes/reports'));
