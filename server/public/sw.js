@@ -1,5 +1,5 @@
 // CRM ترنم - basic cache-first service worker
-const CACHE = 'crm-taranom-v4';
+const CACHE = 'crm-taranom-v5';
 const ASSETS = [
   '/',
   '/index.html',
