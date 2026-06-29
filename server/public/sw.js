@@ -1,16 +1,7 @@
-// CRM ترنم - basic cache-first service worker
-const CACHE = 'crm-taranom-v5';
-const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/logo.png'
-];
+// CRM ترنم - service worker: network-first for HTML, cache-first for assets
+const CACHE = 'crm-taranom-v6';
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(ASSETS).catch(() => {}))
-  );
   self.skipWaiting();
 });
 
@@ -25,22 +16,35 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   const req = e.request;
-  // Never cache API calls — always go to network.
-  if (req.method !== 'GET' || req.url.includes('/api/')) {
-    return; // default network behavior
-  }
-  e.respondWith(
-    caches.match(req).then((cached) => {
-      const network = fetch(req)
+  if (req.method !== 'GET' || req.url.includes('/api/')) return;
+
+  const isHTML = req.headers.get('accept')?.includes('text/html') ||
+                 req.url.endsWith('/') || req.url.endsWith('.html');
+
+  if (isHTML) {
+    // Network-first for HTML: always get the latest app, fall back to cache offline
+    e.respondWith(
+      fetch(req)
         .then((res) => {
-          if (res && res.status === 200 && res.type === 'basic') {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(req, copy));
+          if (res && res.status === 200) {
+            caches.open(CACHE).then((c) => c.put(req, res.clone()));
           }
           return res;
         })
-        .catch(() => cached);
-      return cached || network;
-    })
-  );
+        .catch(() => caches.match(req))
+    );
+  } else {
+    // Cache-first for static assets (images, icons, manifest)
+    e.respondWith(
+      caches.match(req).then((cached) => {
+        if (cached) return cached;
+        return fetch(req).then((res) => {
+          if (res && res.status === 200 && res.type === 'basic') {
+            caches.open(CACHE).then((c) => c.put(req, res.clone()));
+          }
+          return res;
+        });
+      })
+    );
+  }
 });
