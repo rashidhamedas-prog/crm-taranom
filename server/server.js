@@ -18,9 +18,40 @@ const PORT = process.env.PORT || 3000;
 const UPLOADS = path.join(__dirname, 'public', 'uploads', 'products');
 fs.mkdirSync(UPLOADS, { recursive: true });
 
-app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Security headers (helmet if available, manual fallback)
+let helmet = null;
+try { helmet = require('helmet'); } catch {}
+if (helmet) {
+  app.use(helmet({
+    contentSecurityPolicy: false, // SPA manages its own CSP
+    crossOriginEmbedderPolicy: false,
+  }));
+} else {
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-XSS-Protection', '0'); // modern browsers ignore it; rely on CSP
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+    next();
+  });
+}
+
+// CORS — restrict to same origin in production, allow dev origins
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+app.use(cors({
+  origin(origin, cb) {
+    // Same-origin requests (origin===undefined) and explicitly listed origins are allowed
+    if (!origin || ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    cb(new Error('CORS origin not allowed'));
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
+
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 // Static assets (includes /uploads/products/* and /logo.png if present)
 app.use(express.static(path.join(__dirname, 'public'), {
@@ -33,8 +64,20 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 2000 });
+// General API rate limit (generous — protects against runaway loops)
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 1000, standardHeaders: true, legacyHeaders: false });
 app.use('/api', limiter);
+
+// Strict rate limit on authentication endpoints — brute-force protection
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'تعداد تلاش‌های ورود بیش از حد مجاز است. ۱۵ دقیقه دیگر تلاش کنید.' },
+  skipSuccessfulRequests: true,
+});
+app.use('/api/auth/login', authLimiter);
 
 initDB();
 
@@ -73,11 +116,6 @@ app.use('/api/v1', require('./routes/api_v1'));
 // Server time endpoint — returns Unix timestamp (UTC) for reliable client clock sync
 app.get('/api/system/time', (req, res) => {
   res.json({ ts: Date.now() });
-});
-
-// Diagnostic: confirm which directory the server is running from
-app.get('/api/system/info', (req, res) => {
-  res.json({ cwd: __dirname, version: 'e178d2e' });
 });
 
 // Serve .well-known/assetlinks.json explicitly (TWA domain verification)
@@ -222,6 +260,12 @@ cron.schedule('* * * * *', runTimedFollowupSMS);
 
 // Daily at 00:00: full app backup → local file + Gmail
 cron.schedule('0 0 * * *', runBackup);
+
+// Global error handler — never leak stack traces to clients
+app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
+  console.error('unhandled error:', err.message);
+  res.status(err.status || 500).json({ error: 'خطای داخلی سرور' });
+});
 
 app.listen(PORT, () => {
   console.log(`CRM ترنم نسخه ۳ روی پورت ${PORT} اجرا شد`);

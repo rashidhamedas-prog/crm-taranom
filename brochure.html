@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>بروشور CRM ترنم — نرم‌افزار مدیریت مشتریان پوشاک</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --purple:#7c3aed;
+  --purple-dark:#5b21b6;
+  --purple-light:#ede9fe;
+  --purple-mid:#a78bfa;
+  --green:#059669;
+  --green-light:#d1fae5;
+  --amber:#d97706;
+  --amber-light:#fef3c7;
+  --rose:#e11d48;
+  --blue:#2563eb;
+  --blue-light:#dbeafe;
+  --gray-50:#f9fafb;
+  --gray-100:#f3f4f6;
+  --gray-200:#e5e7eb;
+  --gray-300:#d1d5db;
+  --gray-600:#4b5563;
+  --gray-700:#374151;
+  --gray-800:#1f2937;
+  --gray-900:#111827;
+}
+body{
+  font-family:'Vazirmatn',sans-serif;
+  background:#f0f0f0;
+  color:var(--gray-800);
+  font-size:14px;
+  line-height:1.7;
+}
+
+/* ── PAGE LAYOUT ── */
+.page{
+  width:210mm;
+  min-height:297mm;
+  margin:10mm auto;
+  background:#fff;
+  position:relative;
+  overflow:hidden;
+  box-shadow:0 4px 32px rgba(0,0,0,.18);
+  page-break-after:always;
+}
+
+/* ══════════════════════════════════════
+   PAGE 1 — COVER
+══════════════════════════════════════ */
+.cover{
+  background:linear-gradient(145deg,#3b0764 0%,#5b21b6 40%,#7c3aed 70%,#a78bfa 100%);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:297mm;
+  text-align:center;
+  padding:20mm 16mm;
+  position:relative;
+}
+.cover-bg{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse at 20% 30%,rgba(255,255,255,.08) 0%,transparent 60%),
+    radial-gradient(ellipse at 80% 70%,rgba(167,139,250,.25) 0%,transparent 50%);
+}
+.cover-circles{
+  position:absolute;inset:0;overflow:hidden;pointer-events:none;
+}
+.cc{
+  position:absolute;border-radius:50%;
+  border:1px solid rgba(255,255,255,.12);
+}
+.cc1{width:300px;height:300px;top:-80px;right:-80px;}
+.cc2{width:500px;height:500px;bottom:-150px;left:-150px;}
+.cc3{width:180px;height:180px;top:50%;left:10%;}
+
+.cover-logo{
+  width:80px;height:80px;
+  background:rgba(255,255,255,.15);
+  border:2px solid rgba(255,255,255,.3);
+  border-radius:20px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:36px;
+  margin-bottom:16px;
+  position:relative;z-index:1;
+  backdrop-filter:blur(8px);
+}
+.cover h1{
+  font-size:42px;font-weight:900;
+  color:#fff;
+  line-height:1.2;
+  margin-bottom:8px;
+  position:relative;z-index:1;
+  letter-spacing:-1px;
+}
+.cover h1 span{color:#c4b5fd;}
+.cover-sub{
+  font-size:18px;color:rgba(255,255,255,.85);font-weight:300;
+  margin-bottom:32px;position:relative;z-index:1;
+}
+.cover-divider{
+  width:60px;height:3px;
+  background:linear-gradient(90deg,transparent,#c4b5fd,transparent);
+  margin:0 auto 32px;position:relative;z-index:1;
+}
+.cover-tagline{
+  font-size:22px;font-weight:700;color:#fff;
+  max-width:400px;line-height:1.5;
+  position:relative;z-index:1;
+  margin-bottom:40px;
+}
+.cover-badges{
+  display:flex;gap:12px;flex-wrap:wrap;justify-content:center;
+  position:relative;z-index:1;
+}
+.cbadge{
+  background:rgba(255,255,255,.15);
+  border:1px solid rgba(255,255,255,.25);
+  backdrop-filter:blur(8px);
+  color:#fff;
+  padding:8px 18px;
+  border-radius:100px;
+  font-size:13px;font-weight:500;
+}
+.cover-footer{
+  position:absolute;bottom:24px;left:50%;transform:translateX(-50%);
+  color:rgba(255,255,255,.5);font-size:12px;
+  z-index:1;white-space:nowrap;
+}
+
+/* ══════════════════════════════════════
+   PAGE 2 — ABOUT + FEATURES
+══════════════════════════════════════ */
+.p-header{
+  background:linear-gradient(135deg,var(--purple),var(--purple-dark));
+  padding:20px 24px 18px;
+  display:flex;align-items:center;gap:14px;
+}
+.p-header-icon{
+  width:44px;height:44px;border-radius:12px;
+  background:rgba(255,255,255,.2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;flex-shrink:0;
+}
+.p-header h2{font-size:22px;font-weight:800;color:#fff;line-height:1.2;}
+.p-header p{font-size:13px;color:rgba(255,255,255,.8);margin-top:2px;}
+
+.p-body{padding:22px 24px;}
+
+.section-title{
+  font-size:17px;font-weight:700;color:var(--purple-dark);
+  margin-bottom:14px;
+  padding-bottom:8px;
+  border-bottom:2px solid var(--purple-light);
+  display:flex;align-items:center;gap:8px;
+}
+.section-title::before{content:attr(data-icon);font-size:18px;}
+
+/* About box */
+.about-box{
+  background:var(--gray-50);
+  border:1px solid var(--gray-200);
+  border-radius:12px;
+  padding:18px 20px;
+  margin-bottom:22px;
+  line-height:1.9;
+  color:var(--gray-700);
+  font-size:13.5px;
+}
+.about-box strong{color:var(--purple-dark);}
+
+/* Features grid */
+.features-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-bottom:22px;
+}
+.feat-card{
+  background:#fff;
+  border:1px solid var(--gray-200);
+  border-radius:12px;
+  padding:16px;
+  transition:box-shadow .2s;
+}
+.feat-card:hover{box-shadow:0 4px 16px rgba(124,58,237,.12);}
+.feat-icon{
+  width:42px;height:42px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;margin-bottom:10px;
+}
+.feat-icon.purple{background:var(--purple-light);}
+.feat-icon.green{background:var(--green-light);}
+.feat-icon.amber{background:var(--amber-light);}
+.feat-icon.blue{background:var(--blue-light);}
+.feat-card h3{font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:5px;}
+.feat-card p{font-size:12.5px;color:var(--gray-600);line-height:1.6;}
+
+/* ══════════════════════════════════════
+   PAGE 3 — MODULES
+══════════════════════════════════════ */
+.modules-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-bottom:22px;
+}
+.module-card{
+  border-radius:12px;
+  padding:18px;
+  border:1px solid var(--gray-200);
+}
+.module-card.purple-card{background:linear-gradient(135deg,#f5f3ff,#ede9fe);}
+.module-card.green-card{background:linear-gradient(135deg,#f0fdf4,#d1fae5);}
+.module-card.blue-card{background:linear-gradient(135deg,#eff6ff,#dbeafe);}
+.module-card.amber-card{background:linear-gradient(135deg,#fffbeb,#fef3c7);}
+.module-card.rose-card{background:linear-gradient(135deg,#fff1f2,#ffe4e6);}
+.module-card.teal-card{background:linear-gradient(135deg,#f0fdfa,#ccfbf1);}
+.module-num{
+  font-size:28px;font-weight:900;opacity:.15;line-height:1;margin-bottom:6px;
+}
+.module-card h3{font-size:15px;font-weight:700;margin-bottom:8px;}
+.module-card ul{padding-right:16px;font-size:12.5px;color:var(--gray-700);line-height:1.9;}
+.module-card.purple-card h3{color:#5b21b6;}
+.module-card.green-card h3{color:#065f46;}
+.module-card.blue-card h3{color:#1e40af;}
+.module-card.amber-card h3{color:#92400e;}
+.module-card.rose-card h3{color:#9f1239;}
+.module-card.teal-card h3{color:#134e4a;}
+
+/* ══════════════════════════════════════
+   PAGE 4 — PIVOT TABLE SHOWCASE
+══════════════════════════════════════ */
+.pivot-showcase{
+  background:linear-gradient(135deg,#0f172a,#1e1b4b);
+  border-radius:16px;
+  padding:24px;
+  margin-bottom:20px;
+  position:relative;overflow:hidden;
+}
+.pivot-showcase::before{
+  content:'';position:absolute;
+  top:-60px;right:-60px;
+  width:200px;height:200px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(124,58,237,.3),transparent 70%);
+}
+.pivot-showcase h3{
+  font-size:20px;font-weight:800;color:#fff;margin-bottom:6px;
+}
+.pivot-showcase p{color:#a5b4fc;font-size:13px;margin-bottom:20px;}
+
+.mock-pivot{
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:10px;
+  overflow:hidden;
+}
+.mock-pivot table{width:100%;border-collapse:collapse;font-size:12px;}
+.mock-pivot th{
+  background:rgba(124,58,237,.4);
+  color:#e0e7ff;
+  padding:8px 12px;
+  text-align:center;
+  font-weight:600;
+  border:1px solid rgba(255,255,255,.08);
+}
+.mock-pivot td{
+  padding:7px 12px;
+  text-align:center;
+  color:#c7d2fe;
+  border:1px solid rgba(255,255,255,.06);
+  font-size:11px;
+}
+.mock-pivot tr:nth-child(odd) td{background:rgba(255,255,255,.03);}
+.mock-pivot tr:hover td{background:rgba(124,58,237,.15);}
+.cell-hot{background:rgba(236,72,153,.3)!important;color:#fbcfe8!important;font-weight:700;}
+.cell-warm{background:rgba(245,158,11,.2)!important;color:#fde68a!important;font-weight:600;}
+.cell-cool{background:rgba(59,130,246,.2)!important;color:#bfdbfe!important;}
+
+.pivot-features{
+  display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;
+}
+.pf-badge{
+  background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.15);
+  color:#c4b5fd;
+  padding:5px 12px;
+  border-radius:6px;
+  font-size:11.5px;
+}
+
+/* ══════════════════════════════════════
+   PAGE 5 — TECH + SECURITY
+══════════════════════════════════════ */
+.tech-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:12px;
+  margin-bottom:20px;
+}
+.tech-card{
+  background:var(--gray-50);
+  border:1px solid var(--gray-200);
+  border-radius:10px;
+  padding:14px;
+  text-align:center;
+}
+.tech-icon{font-size:28px;margin-bottom:8px;}
+.tech-card h4{font-size:13px;font-weight:700;color:var(--gray-800);margin-bottom:4px;}
+.tech-card p{font-size:11.5px;color:var(--gray-600);}
+
+.security-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-bottom:20px;
+}
+.sec-item{
+  display:flex;gap:12px;align-items:flex-start;
+  padding:14px;
+  background:linear-gradient(135deg,#f0fdf4,#dcfce7);
+  border:1px solid #bbf7d0;
+  border-radius:10px;
+}
+.sec-item-icon{
+  width:36px;height:36px;
+  background:#d1fae5;
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0;
+}
+.sec-item h4{font-size:13px;font-weight:700;color:#065f46;margin-bottom:4px;}
+.sec-item p{font-size:12px;color:#047857;}
+
+/* ══════════════════════════════════════
+   PAGE 6 — PRICING + CTA
+══════════════════════════════════════ */
+.pricing-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:16px;
+  margin-bottom:24px;
+}
+.price-card{
+  border-radius:16px;
+  padding:22px 18px;
+  text-align:center;
+  border:2px solid transparent;
+  position:relative;overflow:hidden;
+}
+.price-card.basic{
+  background:var(--gray-50);
+  border-color:var(--gray-200);
+}
+.price-card.pro{
+  background:linear-gradient(135deg,#5b21b6,#7c3aed);
+  border-color:#7c3aed;
+  transform:scale(1.03);
+  box-shadow:0 8px 32px rgba(124,58,237,.35);
+}
+.price-card.enterprise{
+  background:#0f172a;
+  border-color:#334155;
+}
+.price-badge{
+  position:absolute;top:12px;left:50%;transform:translateX(-50%);
+  background:#fbbf24;color:#92400e;
+  padding:3px 10px;border-radius:100px;
+  font-size:11px;font-weight:700;
+  white-space:nowrap;
+}
+.price-card h3{font-size:16px;font-weight:700;margin-bottom:10px;margin-top:16px;}
+.price-card.basic h3{color:var(--gray-700);}
+.price-card.pro h3{color:#fff;}
+.price-card.enterprise h3{color:#e2e8f0;}
+.price-amount{
+  font-size:26px;font-weight:900;line-height:1;margin-bottom:4px;
+}
+.price-card.basic .price-amount{color:var(--purple);}
+.price-card.pro .price-amount{color:#fff;}
+.price-card.enterprise .price-amount{color:#a78bfa;}
+.price-unit{font-size:11px;margin-bottom:14px;}
+.price-card.basic .price-unit{color:var(--gray-600);}
+.price-card.pro .price-unit{color:rgba(255,255,255,.7);}
+.price-card.enterprise .price-unit{color:#94a3b8;}
+.price-divider{height:1px;margin:10px 0;}
+.price-card.basic .price-divider{background:var(--gray-200);}
+.price-card.pro .price-divider{background:rgba(255,255,255,.2);}
+.price-card.enterprise .price-divider{background:#334155;}
+.price-list{
+  list-style:none;text-align:right;
+  font-size:12px;line-height:2;
+}
+.price-card.basic .price-list{color:var(--gray-700);}
+.price-card.pro .price-list{color:rgba(255,255,255,.9);}
+.price-card.enterprise .price-list{color:#cbd5e1;}
+.price-list li::before{content:"✓ ";color:#10b981;font-weight:700;}
+.price-card.pro .price-list li::before{color:#c4b5fd;}
+.price-cta{
+  display:block;margin-top:14px;
+  padding:9px 16px;
+  border-radius:8px;
+  font-size:13px;font-weight:700;
+  text-align:center;text-decoration:none;
+  cursor:pointer;border:none;
+  font-family:inherit;
+}
+.price-card.basic .price-cta{background:var(--purple-light);color:var(--purple-dark);}
+.price-card.pro .price-cta{background:#fff;color:var(--purple-dark);}
+.price-card.enterprise .price-cta{background:#7c3aed;color:#fff;}
+
+.market-note{
+  background:linear-gradient(135deg,#fffbeb,#fef3c7);
+  border:1px solid #fde68a;
+  border-radius:12px;
+  padding:16px 20px;
+  font-size:13px;
+  color:#92400e;
+  line-height:1.8;
+  margin-bottom:20px;
+}
+.market-note strong{color:#78350f;}
+
+.cta-banner{
+  background:linear-gradient(135deg,var(--purple-dark),var(--purple));
+  border-radius:16px;
+  padding:28px 24px;
+  text-align:center;
+  position:relative;overflow:hidden;
+}
+.cta-banner::before{
+  content:'';position:absolute;
+  top:-40px;left:-40px;
+  width:150px;height:150px;
+  border-radius:50%;
+  background:rgba(255,255,255,.06);
+}
+.cta-banner h3{font-size:22px;font-weight:800;color:#fff;margin-bottom:8px;}
+.cta-banner p{color:rgba(255,255,255,.8);font-size:14px;margin-bottom:20px;}
+.cta-contacts{
+  display:flex;gap:20px;justify-content:center;flex-wrap:wrap;
+}
+.cta-contact{
+  background:rgba(255,255,255,.15);
+  border:1px solid rgba(255,255,255,.25);
+  backdrop-filter:blur(8px);
+  border-radius:10px;
+  padding:12px 20px;
+  color:#fff;
+  font-size:13px;
+  display:flex;align-items:center;gap:8px;
+}
+.cta-contact span{font-size:18px;}
+
+/* ══════════════════════════════════════
+   STATS ROW
+══════════════════════════════════════ */
+.stats-row{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+  margin-bottom:22px;
+}
+.stat-box{
+  background:linear-gradient(135deg,var(--purple-light),#f5f3ff);
+  border:1px solid #ddd6fe;
+  border-radius:12px;
+  padding:14px;
+  text-align:center;
+}
+.stat-num{
+  font-size:28px;font-weight:900;color:var(--purple-dark);line-height:1;
+}
+.stat-label{font-size:11.5px;color:var(--gray-600);margin-top:4px;}
+
+/* ══════════════════════════════════════
+   TESTIMONIALS
+══════════════════════════════════════ */
+.testimonials{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-bottom:22px;
+}
+.testimonial{
+  background:var(--gray-50);
+  border:1px solid var(--gray-200);
+  border-radius:12px;
+  padding:16px;
+}
+.testimonial-text{
+  font-size:12.5px;color:var(--gray-700);
+  line-height:1.8;margin-bottom:10px;
+  font-style:italic;
+}
+.testimonial-text::before{content:'"';font-size:24px;color:var(--purple-mid);line-height:0;vertical-align:-4px;}
+.testimonial-text::after{content:'"';font-size:24px;color:var(--purple-mid);line-height:0;vertical-align:-4px;}
+.testimonial-author{
+  display:flex;align-items:center;gap:10px;
+}
+.t-avatar{
+  width:34px;height:34px;border-radius:50%;
+  background:linear-gradient(135deg,var(--purple),var(--purple-mid));
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:700;font-size:13px;flex-shrink:0;
+}
+.t-name{font-size:13px;font-weight:700;color:var(--gray-800);}
+.t-biz{font-size:11px;color:var(--gray-600);}
+.stars{color:#fbbf24;font-size:12px;margin-top:2px;}
+
+/* ══════════════════════════════════════
+   COMPARISON TABLE
+══════════════════════════════════════ */
+.compare-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:20px;}
+.compare-table th{
+  background:var(--purple-dark);color:#fff;
+  padding:10px 14px;text-align:center;font-weight:600;
+  border:1px solid #4c1d95;
+}
+.compare-table th:first-child{text-align:right;}
+.compare-table td{
+  padding:9px 14px;
+  border:1px solid var(--gray-200);
+  text-align:center;
+}
+.compare-table td:first-child{text-align:right;font-weight:500;color:var(--gray-700);}
+.compare-table tr:nth-child(even) td{background:var(--gray-50);}
+.compare-table tr:hover td{background:var(--purple-light);}
+.check-yes{color:#059669;font-size:16px;font-weight:700;}
+.check-no{color:#d1d5db;font-size:16px;}
+.check-partial{color:#d97706;font-size:14px;}
+.col-us{background:linear-gradient(180deg,#ede9fe,#f5f3ff)!important;font-weight:700!important;color:var(--purple-dark)!important;}
+
+/* ══════════════════════════════════════
+   FOOTER BAR
+══════════════════════════════════════ */
+.page-footer{
+  position:absolute;bottom:0;left:0;right:0;
+  background:linear-gradient(135deg,var(--gray-800),var(--gray-900));
+  padding:10px 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:11px;color:rgba(255,255,255,.5);
+}
+.page-footer-brand{
+  font-weight:700;color:var(--purple-mid);font-size:12px;
+}
+
+/* ══════════════════════════════════════
+   PRINT
+══════════════════════════════════════ */
+@media print{
+  body{background:#fff;}
+  .page{
+    margin:0;
+    box-shadow:none;
+    page-break-after:always;
+  }
+  .print-btn{display:none!important;}
+}
+
+/* Print button (screen only) */
+.print-btn{
+  position:fixed;bottom:24px;left:24px;z-index:999;
+  background:var(--purple);color:#fff;border:none;
+  padding:12px 22px;border-radius:10px;
+  font-family:'Vazirmatn',sans-serif;font-size:14px;font-weight:700;
+  cursor:pointer;box-shadow:0 4px 16px rgba(124,58,237,.4);
+  display:flex;align-items:center;gap:8px;
+}
+.print-btn:hover{background:var(--purple-dark);}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     PAGE 1: COVER
+══════════════════════════════════════ -->
+<div class="page cover">
+  <div class="cover-bg"></div>
+  <div class="cover-circles">
+    <div class="cc cc1"></div>
+    <div class="cc cc2"></div>
+    <div class="cc cc3"></div>
+  </div>
+
+  <div class="cover-logo">👗</div>
+  <h1>CRM <span>ترنم</span></h1>
+  <p class="cover-sub">نرم‌افزار هوشمند مدیریت مشتریان پوشاک</p>
+  <div class="cover-divider"></div>
+  <p class="cover-tagline">
+    فروش بیشتر، مدیریت بهتر،<br>مشتریان وفادارتر
+  </p>
+  <div class="cover-badges">
+    <span class="cbadge">🏪 مختص پوشاک عمده</span>
+    <span class="cbadge">☁️ ابری و آنلاین</span>
+    <span class="cbadge">📱 موبایل‌پسند</span>
+    <span class="cbadge">🔒 امنیت بالا</span>
+    <span class="cbadge">🇮🇷 فارسی ۱۰۰٪</span>
+  </div>
+  <p class="cover-footer">نرم‌افزار پوشاک ترنم — مشهد · نسخه ۳.۰ · ۱۴۰۵</p>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 2: ABOUT + KEY FEATURES
+══════════════════════════════════════ -->
+<div class="page" style="padding-bottom:50px">
+  <div class="p-header">
+    <div class="p-header-icon">💡</div>
+    <div>
+      <h2>CRM ترنم چیست؟</h2>
+      <p>معرفی و ویژگی‌های اصلی نرم‌افزار</p>
+    </div>
+  </div>
+  <div class="p-body">
+
+    <div class="about-box">
+      <strong>CRM ترنم</strong> یک نرم‌افزار جامع مدیریت ارتباط با مشتریان است که به طور اختصاصی برای
+      <strong>تولیدکنندگان و توزیع‌کنندگان عمده پوشاک</strong> در ایران طراحی شده است.
+      این سامانه تمام چرخه فروش — از ثبت مشتری تا صدور فاکتور رسمی — را در یک پلتفرم
+      <strong>فارسی</strong> و <strong>کاربرپسند</strong> یکجا گرد می‌آورد.
+      بدون پیچیدگی‌های نرم‌افزارهای خارجی، بدون هزینه‌های ترجمه، و با درک عمیق از
+      <strong>نیاز بازار پوشاک ایران</strong>.
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-num">۶</div>
+        <div class="stat-label">ماژول کامل</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num">۵۰+</div>
+        <div class="stat-label">ویژگی فعال</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num">۱۰۰٪</div>
+        <div class="stat-label">فارسی کامل</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num">۲۴/۷</div>
+        <div class="stat-label">دسترسی آنلاین</div>
+      </div>
+    </div>
+
+    <div class="section-title" data-icon="⭐">ویژگی‌های کلیدی</div>
+    <div class="features-grid">
+      <div class="feat-card">
+        <div class="feat-icon purple">👥</div>
+        <h3>مدیریت هوشمند مشتریان</h3>
+        <p>پروفایل کامل هر مشتری با سابقه خرید، وضعیت VIP، و دسته‌بندی هوشمند. جستجو و فیلتر آنی.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon green">📊</div>
+        <h3>گزارش‌گیری و تحلیل</h3>
+        <p>داشبورد تعاملی با نمودارهای فروش ماهانه، تحلیل مشتریان فعال، و شاخص‌های کلیدی عملکرد.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon amber">🧾</div>
+        <h3>فاکتورسازی حرفه‌ای</h3>
+        <p>صدور پیش‌فاکتور و فاکتور رسمی با قابلیت پرینت، مدیریت تخفیف، و شماره‌گذاری خودکار.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon blue">📦</div>
+        <h3>مدیریت انبار محصولات</h3>
+        <p>کنترل موجودی، هشدار اتمام کالا، آپلود تصویر محصول، و ورود/خروج انبار با اکسل.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon purple">🔔</div>
+        <h3>سیستم پیگیری</h3>
+        <p>ثبت و پیگیری تماس‌ها با اولویت‌بندی، یادآوری خودکار، و Kanban Board بصری.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon green">📱</div>
+        <h3>واتساپ و اعلان‌ها</h3>
+        <p>ارسال پیام واتساپ مستقیم به مشتریان از داخل نرم‌افزار. اعلان‌های SMS برای سررسیدها.</p>
+      </div>
+    </div>
+
+  </div>
+  <div class="page-footer">
+    <span class="page-footer-brand">CRM ترنم</span>
+    <span>صفحه ۲ از ۶</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 3: MODULES DETAIL
+══════════════════════════════════════ -->
+<div class="page" style="padding-bottom:50px">
+  <div class="p-header">
+    <div class="p-header-icon">🗂️</div>
+    <div>
+      <h2>ماژول‌های نرم‌افزار</h2>
+      <p>شرح کامل بخش‌های مختلف سیستم</p>
+    </div>
+  </div>
+  <div class="p-body">
+
+    <div class="section-title" data-icon="🗂️">بخش‌های اصلی سیستم</div>
+    <div class="modules-grid">
+      <div class="module-card purple-card">
+        <div class="module-num">۰۱</div>
+        <h3>📊 داشبورد مدیریتی</h3>
+        <ul>
+          <li>نمودار فروش ماهانه تعاملی</li>
+          <li>کارت‌های شاخص کلیدی (KPI)</li>
+          <li>مشتریان جدید این ماه</li>
+          <li>سفارشات در راه و معوق</li>
+          <li>هشدار موجودی کم انبار</li>
+          <li>تقسیم‌بندی نمودار مشتریان</li>
+        </ul>
+      </div>
+      <div class="module-card green-card">
+        <div class="module-num">۰۲</div>
+        <h3>👥 مدیریت مشتریان</h3>
+        <ul>
+          <li>ثبت اطلاعات کامل مشتری</li>
+          <li>دسته‌بندی: VIP، فعال، پیگیری، ساکت</li>
+          <li>جستجو بر اساس نام، شهر، نوع</li>
+          <li>پروفایل کامل با سابقه خرید</li>
+          <li>لینک واتساپ مستقیم</li>
+          <li>خروجی اکسل لیست مشتریان</li>
+        </ul>
+      </div>
+      <div class="module-card blue-card">
+        <div class="module-num">۰۳</div>
+        <h3>🛒 مدیریت سفارشات</h3>
+        <ul>
+          <li>ثبت سفارش با تاریخ شمسی</li>
+          <li>وضعیت: در انتظار، در راه، تحویل، لغو</li>
+          <li>پیگیری مبلغ پرداختی / مانده</li>
+          <li>تاریخ تحویل و یادآوری</li>
+          <li>گزارش سفارشات بر اساس مشتری</li>
+          <li>فیلتر وضعیت و بازه زمانی</li>
+        </ul>
+      </div>
+      <div class="module-card amber-card">
+        <div class="module-num">۰۴</div>
+        <h3>🧾 فاکتور و پیش‌فاکتور</h3>
+        <ul>
+          <li>پیش‌فاکتور و فاکتور رسمی</li>
+          <li>شماره‌گذاری خودکار T-0001</li>
+          <li>ردیف‌های چندگانه کالا</li>
+          <li>محاسبه تخفیف درصدی</li>
+          <li>چاپ مستقیم از مرورگر</li>
+          <li>نمای پیش‌نمایش قبل از چاپ</li>
+        </ul>
+      </div>
+      <div class="module-card rose-card">
+        <div class="module-num">۰۵</div>
+        <h3>📦 انبار و محصولات</h3>
+        <ul>
+          <li>کارت کالا با تصویر و کد</li>
+          <li>مدیریت موجودی و هشدار</li>
+          <li>دسته‌بندی محصولات</li>
+          <li>ورود اطلاعات از اکسل (bulk)</li>
+          <li>خروجی فایل اکسل</li>
+          <li>تاریخچه تغییرات موجودی</li>
+        </ul>
+      </div>
+      <div class="module-card teal-card">
+        <div class="module-num">۰۶</div>
+        <h3>🔔 پیگیری و یادآوری</h3>
+        <ul>
+          <li>ثبت تماس با نوع: تلفنی، حضوری</li>
+          <li>اولویت: بالا، متوسط، پایین</li>
+          <li>Kanban Board بصری</li>
+          <li>تاریخ پیگیری بعدی</li>
+          <li>وضعیت: باز، انجام شده، لغو</li>
+          <li>یادآوری خودکار واتساپ</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section-title" data-icon="🌐">قابلیت‌های پشتیبانی</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:28px;margin-bottom:6px">📱</div>
+        <div style="font-size:13px;font-weight:700;color:#065f46">واکنش‌گرا</div>
+        <div style="font-size:11.5px;color:#047857;margin-top:4px">بهینه موبایل، تبلت و دسکتاپ</div>
+      </div>
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:28px;margin-bottom:6px">🔄</div>
+        <div style="font-size:13px;font-weight:700;color:#1e40af">همگام‌سازی</div>
+        <div style="font-size:11.5px;color:#1d4ed8;margin-top:4px">Firebase real-time چند کاربره</div>
+      </div>
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:28px;margin-bottom:6px">📶</div>
+        <div style="font-size:13px;font-weight:700;color:#92400e">آفلاین</div>
+        <div style="font-size:11.5px;color:#b45309;margin-top:4px">کار بدون اینترنت، ذخیره محلی</div>
+      </div>
+    </div>
+
+  </div>
+  <div class="page-footer">
+    <span class="page-footer-brand">CRM ترنم</span>
+    <span>صفحه ۳ از ۶</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 4: ADVANCED ANALYTICS (PIVOT)
+══════════════════════════════════════ -->
+<div class="page" style="padding-bottom:50px">
+  <div class="p-header">
+    <div class="p-header-icon">📈</div>
+    <div>
+      <h2>تحلیل پیشرفته داده‌ها</h2>
+      <p>جدول محوری هوشمند — قابلیتی که رقبا ندارند</p>
+    </div>
+  </div>
+  <div class="p-body">
+
+    <div class="section-title" data-icon="🔬">جدول محوری (Pivot Table) پیشرفته</div>
+
+    <div class="pivot-showcase">
+      <h3>جدول محوری هوشمند با Drag & Drop</h3>
+      <p>تنها نرم‌افزار CRM پوشاک ایرانی با جدول محوری تعاملی — داده‌های خود را بکشید و رها کنید</p>
+
+      <div class="mock-pivot">
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align:right;min-width:90px">مشتری \ ماه</th>
+              <th>فروردین</th>
+              <th>اردیبهشت</th>
+              <th>خرداد</th>
+              <th>تیر</th>
+              <th style="background:rgba(167,139,250,.4)">جمع کل</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="text-align:right;color:#e0e7ff;font-weight:600">بوتیک ستاره</td>
+              <td class="cell-hot">۱۲.۵م</td>
+              <td class="cell-warm">۹.۸م</td>
+              <td>۷.۲م</td>
+              <td class="cell-cool">۴.۱م</td>
+              <td style="color:#a78bfa;font-weight:700">۳۳.۶م</td>
+            </tr>
+            <tr>
+              <td style="text-align:right;color:#e0e7ff;font-weight:600">مد برتر</td>
+              <td>۶.۳م</td>
+              <td class="cell-hot">۱۱.۲م</td>
+              <td class="cell-warm">۸.۵م</td>
+              <td>۵.۷م</td>
+              <td style="color:#a78bfa;font-weight:700">۳۱.۷م</td>
+            </tr>
+            <tr>
+              <td style="text-align:right;color:#e0e7ff;font-weight:600">بوتیک نگار</td>
+              <td class="cell-cool">۳.۸م</td>
+              <td>۵.۱م</td>
+              <td class="cell-hot">۱۰.۴م</td>
+              <td class="cell-warm">۸.۹م</td>
+              <td style="color:#a78bfa;font-weight:700">۲۸.۲م</td>
+            </tr>
+            <tr>
+              <td style="text-align:right;color:#e0e7ff;font-weight:600">فروشگاه رویا</td>
+              <td class="cell-warm">۸.۷م</td>
+              <td>۶.۴م</td>
+              <td class="cell-cool">۴.۳م</td>
+              <td class="cell-hot">۱۳.۱م</td>
+              <td style="color:#a78bfa;font-weight:700">۳۲.۵م</td>
+            </tr>
+            <tr style="background:rgba(167,139,250,.15)">
+              <td style="text-align:right;color:#a78bfa;font-weight:700">جمع کل</td>
+              <td style="color:#a78bfa;font-weight:700">۳۱.۳م</td>
+              <td style="color:#a78bfa;font-weight:700">۳۲.۵م</td>
+              <td style="color:#a78bfa;font-weight:700">۳۰.۴م</td>
+              <td style="color:#a78bfa;font-weight:700">۳۱.۸م</td>
+              <td style="color:#fbbf24;font-weight:800;font-size:13px">۱۲۶م</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pivot-features">
+        <span class="pf-badge">🖱️ Drag & Drop فیلدها</span>
+        <span class="pf-badge">🌈 Heat Map رنگی</span>
+        <span class="pf-badge">📊 نمودار تعاملی</span>
+        <span class="pf-badge">🔍 Drill-Down سلول</span>
+        <span class="pf-badge">📥 خروجی CSV</span>
+        <span class="pf-badge">∑ جمع / تعداد / میانگین</span>
+        <span class="pf-badge">🏷️ سرتیترهای چندسطحی</span>
+        <span class="pf-badge">⚡ محاسبه آنی</span>
+      </div>
+    </div>
+
+    <div class="section-title" data-icon="📉">سایر قابلیت‌های تحلیلی</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:12px;padding:16px">
+        <div style="font-size:18px;margin-bottom:8px">📈</div>
+        <h4 style="font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:6px">نمودار فروش ماهانه</h4>
+        <p style="font-size:12.5px;color:var(--gray-600);line-height:1.7">نمودار میله‌ای تعاملی با مقایسه ماه به ماه. امکان فیلتر بر اساس محصول، دسته‌بندی یا مشتری.</p>
+      </div>
+      <div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:12px;padding:16px">
+        <div style="font-size:18px;margin-bottom:8px">🥧</div>
+        <h4 style="font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:6px">تحلیل مشتریان</h4>
+        <p style="font-size:12.5px;color:var(--gray-600);line-height:1.7">نمودار دایره‌ای وضعیت مشتریان. شناسایی مشتریان کم‌فعال و VIP با یک نگاه.</p>
+      </div>
+      <div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:12px;padding:16px">
+        <div style="font-size:18px;margin-bottom:8px">🏆</div>
+        <h4 style="font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:6px">رتبه‌بندی محصولات</h4>
+        <p style="font-size:12.5px;color:var(--gray-600);line-height:1.7">نمودار افقی پرفروش‌ترین محصولات. کمک به تصمیم‌گیری موجودی و خرید.</p>
+      </div>
+      <div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:12px;padding:16px">
+        <div style="font-size:18px;margin-bottom:8px">🔮</div>
+        <h4 style="font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:6px">گزارش‌های صادراتی</h4>
+        <p style="font-size:12.5px;color:var(--gray-600);line-height:1.7">خروجی Excel و CSV از تمام بخش‌ها برای گزارش‌دهی به حسابداری و مدیریت.</p>
+      </div>
+    </div>
+
+  </div>
+  <div class="page-footer">
+    <span class="page-footer-brand">CRM ترنم</span>
+    <span>صفحه ۴ از ۶</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 5: TECH + SECURITY + COMPARISON
+══════════════════════════════════════ -->
+<div class="page" style="padding-bottom:50px">
+  <div class="p-header">
+    <div class="p-header-icon">🛡️</div>
+    <div>
+      <h2>فناوری و امنیت</h2>
+      <p>زیرساخت مدرن، امنیت سازمانی</p>
+    </div>
+  </div>
+  <div class="p-body">
+
+    <div class="section-title" data-icon="⚙️">فناوری‌های استفاده شده</div>
+    <div class="tech-grid">
+      <div class="tech-card">
+        <div class="tech-icon">🟢</div>
+        <h4>Node.js + Express</h4>
+        <p>بک‌اند سریع و مقیاس‌پذیر</p>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon">🗄️</div>
+        <h4>SQLite / Firebase</h4>
+        <p>ذخیره‌سازی دوگانه: محلی + ابری</p>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon">🔐</div>
+        <h4>JWT + bcrypt</h4>
+        <p>احراز هویت رمزنگاری‌شده</p>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon">📊</div>
+        <h4>Chart.js 4</h4>
+        <p>نمودارهای تعاملی زیبا</p>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon">🚀</div>
+        <h4>PM2 Process</h4>
+        <p>مدیریت سرویس ۲۴/۷</p>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon">📱</div>
+        <h4>PWA + آفلاین</h4>
+        <p>نصب روی موبایل بدون اپ‌استور</p>
+      </div>
+    </div>
+
+    <div class="section-title" data-icon="🔒">لایه‌های امنیتی</div>
+    <div class="security-grid">
+      <div class="sec-item">
+        <div class="sec-item-icon">🔑</div>
+        <div>
+          <h4>احراز هویت چندلایه</h4>
+          <p>JWT با انقضا، bcrypt قوی، rate limiting روی ورود</p>
+        </div>
+      </div>
+      <div class="sec-item">
+        <div class="sec-item-icon">🛡️</div>
+        <div>
+          <h4>Helmet.js + CORS</h4>
+          <p>هدرهای امنیتی HTTP، محدودیت دامنه‌های مجاز</p>
+        </div>
+      </div>
+      <div class="sec-item">
+        <div class="sec-item-icon">⚡</div>
+        <div>
+          <h4>محدودکننده نرخ درخواست</h4>
+          <p>جلوگیری از حملات brute-force و DDoS</p>
+        </div>
+      </div>
+      <div class="sec-item">
+        <div class="sec-item-icon">📝</div>
+        <div>
+          <h4>ثبت رویدادها (Audit Log)</h4>
+          <p>هر تغییر در سیستم ثبت و قابل پیگیری است</p>
+        </div>
+      </div>
+      <div class="sec-item">
+        <div class="sec-item-icon">✅</div>
+        <div>
+          <h4>اعتبارسنجی ورودی</h4>
+          <p>جلوگیری از SQL Injection و XSS با express-validator</p>
+        </div>
+      </div>
+      <div class="sec-item">
+        <div class="sec-item-icon">👁️</div>
+        <div>
+          <h4>سطح دسترسی نقش‌محور</h4>
+          <p>ادمین، کارمند، مشاهده‌گر — هر کاربر فقط آنچه باید می‌بیند</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title" data-icon="🏁">مقایسه با رقبا</div>
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>ویژگی</th>
+          <th class="col-us">CRM ترنم</th>
+          <th>نرم‌افزارهای عمومی</th>
+          <th>اکسل دستی</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>تخصصی پوشاک عمده</td>
+          <td class="col-us"><span class="check-yes">✓</span></td>
+          <td><span class="check-no">✗</span></td>
+          <td><span class="check-no">✗</span></td>
+        </tr>
+        <tr>
+          <td>فارسی کامل + تاریخ شمسی</td>
+          <td class="col-us"><span class="check-yes">✓</span></td>
+          <td><span class="check-partial">~</span></td>
+          <td><span class="check-partial">~</span></td>
+        </tr>
+        <tr>
+          <td>جدول محوری تعاملی</td>
+          <td class="col-us"><span class="check-yes">✓</span></td>
+          <td><span class="check-no">✗</span></td>
+          <td><span class="check-partial">~</span></td>
+        </tr>
+        <tr>
+          <td>همگام‌سازی ابری real-time</td>
+          <td class="col-us"><span class="check-yes">✓</span></td>
+          <td><span class="check-yes">✓</span></td>
+          <td><span class="check-no">✗</span></td>
+        </tr>
+        <tr>
+          <td>فاکتور + پیش‌فاکتور یکجا</td>
+          <td class="col-us"><span class="check-yes">✓</span></td>
+          <td><span class="check-partial">~</span></td>
+          <td><span class="check-no">✗</span></td>
+        </tr>
+        <tr>
+          <td>واتساپ مستقیم از نرم‌افزار</td>
+          <td class="col-us"><span class="check-yes">✓</span></td>
+          <td><span class="check-no">✗</span></td>
+          <td><span class="check-no">✗</span></td>
+        </tr>
+        <tr>
+          <td>قیمت ماهانه (تومان)</td>
+          <td class="col-us" style="color:#059669;font-weight:800">از ۱۵۰,۰۰۰</td>
+          <td>۵۰۰,۰۰۰+</td>
+          <td>رایگان (هزینه وقت)</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </div>
+  <div class="page-footer">
+    <span class="page-footer-brand">CRM ترنم</span>
+    <span>صفحه ۵ از ۶</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 6: PRICING + TESTIMONIALS + CTA
+══════════════════════════════════════ -->
+<div class="page" style="padding-bottom:50px">
+  <div class="p-header">
+    <div class="p-header-icon">💎</div>
+    <div>
+      <h2>قیمت‌گذاری و شروع همکاری</h2>
+      <p>طرح‌های انعطاف‌پذیر برای هر مقیاس کسب‌وکار</p>
+    </div>
+  </div>
+  <div class="p-body">
+
+    <div class="pricing-grid">
+      <div class="price-card basic">
+        <h3>🌱 استارتر</h3>
+        <div class="price-amount">۱۵۰,۰۰۰</div>
+        <div class="price-unit">تومان / ماه</div>
+        <div class="price-divider"></div>
+        <ul class="price-list">
+          <li>تا ۳ کاربر</li>
+          <li>تا ۵۰۰ مشتری</li>
+          <li>ماژول‌های اصلی</li>
+          <li>پشتیبانی پیام</li>
+          <li>فاکتورسازی</li>
+        </ul>
+        <button class="price-cta">شروع رایگان ۱۴ روزه</button>
+      </div>
+      <div class="price-card pro">
+        <span class="price-badge">⭐ محبوب‌ترین</span>
+        <h3>🚀 حرفه‌ای</h3>
+        <div class="price-amount">۳۵۰,۰۰۰</div>
+        <div class="price-unit">تومان / ماه</div>
+        <div class="price-divider"></div>
+        <ul class="price-list">
+          <li>تا ۱۰ کاربر</li>
+          <li>مشتریان نامحدود</li>
+          <li>جدول محوری پیشرفته</li>
+          <li>پشتیبانی تلفنی</li>
+          <li>یکپارچگی واتساپ</li>
+          <li>خروجی Excel/CSV</li>
+          <li>Audit Log کامل</li>
+        </ul>
+        <button class="price-cta">مشاوره رایگان</button>
+      </div>
+      <div class="price-card enterprise">
+        <h3>🏢 سازمانی</h3>
+        <div class="price-amount">توافقی</div>
+        <div class="price-unit">سفارشی‌سازی کامل</div>
+        <div class="price-divider"></div>
+        <ul class="price-list">
+          <li>کاربران نامحدود</li>
+          <li>سرور اختصاصی</li>
+          <li>API اختصاصی</li>
+          <li>پشتیبانی ۲۴/۷</li>
+          <li>آموزش تیم</li>
+          <li>سفارشی‌سازی</li>
+          <li>SLA ضمانت‌شده</li>
+        </ul>
+        <button class="price-cta">تماس با ما</button>
+      </div>
+    </div>
+
+    <div class="market-note">
+      <strong>نکته بازار:</strong> بر اساس بررسی بازار نرم‌افزارهای CRM ایرانی در سال ۱۴۰۵، متوسط هزینه نرم‌افزارهای عمومی
+      (مانند CRM‌های بر پایه ابر) بین ۴۰۰,۰۰۰ تا ۲,۰۰۰,۰۰۰ تومان در ماه است — و هیچ‌کدام
+      <strong>تخصص پوشاک</strong> ندارند. CRM ترنم با قیمت ۳-۵ برابر پایین‌تر، ویژگی‌های منحصربه‌فرد صنعت پوشاک را ارائه می‌دهد.
+    </div>
+
+    <div class="section-title" data-icon="💬">نظر مشتریان</div>
+    <div class="testimonials">
+      <div class="testimonial">
+        <p class="testimonial-text">از وقتی CRM ترنم رو استفاده می‌کنم، دیگه هیچ مشتری فراموش نمیشه. پیگیری‌ها منظم شده و فروشم ۳۰٪ بالا رفته.</p>
+        <div class="testimonial-author">
+          <div class="t-avatar">ز</div>
+          <div>
+            <div class="t-name">زهرا احمدی</div>
+            <div class="t-biz">بوتیک ستاره — مشهد</div>
+            <div class="stars">★★★★★</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial">
+        <p class="testimonial-text">جدول محوریش رو که دیدم باور نمی‌کردم اینقدر ساده بشه فروش هر محصول رو تحلیل کرد. عالیه!</p>
+        <div class="testimonial-author">
+          <div class="t-avatar">م</div>
+          <div>
+            <div class="t-name">محمد رضایی</div>
+            <div class="t-biz">تولیدی مد برتر — تهران</div>
+            <div class="stars">★★★★★</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cta-banner">
+      <h3>همین امروز شروع کنید</h3>
+      <p>۱۴ روز استفاده رایگان بدون نیاز به کارت بانکی. نصب در کمتر از ۵ دقیقه.</p>
+      <div class="cta-contacts">
+        <div class="cta-contact">
+          <span>📱</span>
+          واتساپ: ۰۹۱۵-XXX-XXXX
+        </div>
+        <div class="cta-contact">
+          <span>📧</span>
+          info@taranom-crm.ir
+        </div>
+        <div class="cta-contact">
+          <span>🌐</span>
+          taranom-crm.ir
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="page-footer">
+    <span class="page-footer-brand">CRM ترنم</span>
+    <span>صفحه ۶ از ۶ — ©۱۴۰۵ پوشاک ترنم</span>
+  </div>
+</div>
+
+<!-- Print Button -->
+<button class="print-btn" onclick="window.print()">
+  🖨️ چاپ / ذخیره PDF
+</button>
+
+</body>
+</html>
