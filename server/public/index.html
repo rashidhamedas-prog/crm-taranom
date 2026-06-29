@@ -1567,7 +1567,9 @@ async function loadProductsFiltered(){
   if(prodFilter.category) qs.set('category',prodFilter.category);
   if(prodFilter.search) qs.set('search',prodFilter.search);
   if(prodFilter.stock_status && prodFilter.stock_status!=='all') qs.set('stock_status',prodFilter.stock_status);
+  const noFilters = !prodFilter.category && !prodFilter.search && (!prodFilter.stock_status || prodFilter.stock_status==='all');
   CACHE.products = await api('GET','/products?'+qs.toString())||[];
+  if(noFilters) CACHE.allProducts = CACHE.products;
 }
 ROUTES.products = function(){ productsPage(true); };
 ROUTES.catalog = function(){ productsPage(false); };

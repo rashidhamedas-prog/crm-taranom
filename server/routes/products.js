@@ -16,21 +16,23 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 async function saveImage(buffer, originalName) {
-  const filename = 'p_' + Date.now() + '_' + Math.round(Math.random() * 1e6) + '.webp';
-  const dest = path.join(UPLOAD_DIR, filename);
   if (sharp) {
-    // Center-crop to square then resize — ensures consistent card display
-    await sharp(buffer)
-      .resize(600, 600, { fit: 'cover', position: 'centre' })
-      .webp({ quality: 82 })
-      .toFile(dest);
-  } else {
-    const ext = path.extname(originalName || '').toLowerCase() || '.jpg';
-    const fallback = 'p_' + Date.now() + '_' + Math.round(Math.random() * 1e6) + ext;
-    fs.writeFileSync(path.join(UPLOAD_DIR, fallback), buffer);
-    return fallback;
+    try {
+      const filename = 'p_' + Date.now() + '_' + Math.round(Math.random() * 1e6) + '.webp';
+      const dest = path.join(UPLOAD_DIR, filename);
+      await sharp(buffer)
+        .resize(600, 600, { fit: 'cover', position: 'centre' })
+        .webp({ quality: 82 })
+        .toFile(dest);
+      return filename;
+    } catch (e) {
+      console.error('sharp processing failed, saving original:', e.message);
+    }
   }
-  return filename;
+  const ext = path.extname(originalName || '').toLowerCase() || '.jpg';
+  const fallback = 'p_' + Date.now() + '_' + Math.round(Math.random() * 1e6) + ext;
+  fs.writeFileSync(path.join(UPLOAD_DIR, fallback), buffer);
+  return fallback;
 }
 const memUpload = multer({ storage: multer.memoryStorage() });
 
