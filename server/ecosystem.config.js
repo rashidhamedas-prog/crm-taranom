@@ -2,7 +2,7 @@ module.exports = {
   apps: [{
     name: 'crm-taranom',
     script: 'server.js',
-    cwd: '/root/crm-taranom/server',
+    cwd: '/home/taranom-admin/crm-taranom/server',
     instances: 1,
     autorestart: true,
     watch: false,
