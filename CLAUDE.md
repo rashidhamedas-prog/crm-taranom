@@ -90,5 +90,5 @@ ssh -p 2299 -i C:\Users\DayaTech\.ssh\taranom_server taranom-admin@45.90.98.99
 
 Deploy command (run on server):
 ```bash
-cd /home/taranom-admin/crm-taranom && git pull origin claude/claude-md-docs-2ssrpy && npm install && pm2 restart crm-taranom
+cd /home/taranom-admin/crm-taranom && git pull origin claude/claude-md-docs-2ssrpy && cd server && npm install && pm2 restart crm-taranom
 ```
