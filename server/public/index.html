@@ -2599,7 +2599,7 @@ function toggleSmsProviderHint(provider){
     kavenegar: '🔑 <b>کاوه‌نگار:</b> کلید API را از پنل کاوه‌نگار کپی کنید. شماره فرستنده اختیاری است.',
     melipayamak: '🔑 <b>ملی‌پیامک:</b> در فیلد کلید API وارد کنید: <code dir="ltr">username:password</code> (با دونقطه جدا کنید)',
     niksms: '🔑 <b>نیک‌اس‌ام‌اس (niksms.com):</b> در فیلد کلید API وارد کنید: <code dir="ltr">username:password</code> — شماره فرستنده را هم وارد کنید',
-    smsir: '🔑 <b>اس‌ام‌اس‌آی‌آر (sms.ir):</b> کلید API (X-API-KEY) را از پنل SMS.ir → تنظیمات → API دریافت کنید. <b>شماره خط اختصاصی الزامی است</b> — بدون آن پیامک ارسال نمی‌شود.',
+    smsir: '🔑 <b>اس‌ام‌اس‌آی‌آر (sms.ir):</b> کلید API را از پنل SMS.ir → تنظیمات → API دریافت کنید. شماره فرستنده اختیاری است — اگر خالی باشد از خط پیش‌فرض حساب استفاده می‌شود.',
   };
   const hint = el('sms-hint'); if(!hint) return;
   hint.innerHTML = hints[provider] || '';
