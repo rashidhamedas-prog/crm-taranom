@@ -296,6 +296,12 @@ function initDB() {
   ensureColumn(db, 'customers', 'balance', 'REAL DEFAULT 0');
   // Salesperson role migration: generic 'salesperson' → 'field_sales'
   db.exec("UPDATE users SET role='field_sales' WHERE role='salesperson'");
+  // update_crm.md Phase 3 migrations
+  ensureColumn(db, 'customers', 'province', "TEXT DEFAULT ''");
+  ensureColumn(db, 'customers', 'address', "TEXT DEFAULT ''");
+  ensureColumn(db, 'customers', 'assigned_to', 'INTEGER');
+  ensureColumn(db, 'products', 'colors', 'INTEGER DEFAULT 1');
+  ensureColumn(db, 'products', 'pack_size', 'INTEGER DEFAULT 1');
 
   // ---- Indexes ----
   db.exec(`

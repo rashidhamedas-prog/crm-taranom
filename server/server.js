@@ -249,10 +249,31 @@ function runSilentCustomerCheck() {
   }
 }
 
-// Daily at 08:00: batch SMS + silent customer check
+// ── Daily cron: active customers with no final invoice in 14 days → 'followup' ──
+function runActiveToFollowupCheck() {
+  try {
+    const db = getDB();
+    const cutoff = Math.floor(Date.now() / 1000) - 14 * 24 * 3600;
+    const customers = db.prepare("SELECT * FROM customers WHERE status='active'").all();
+    let updated = 0;
+    for (const c of customers) {
+      const lastInv = db.prepare("SELECT created_at FROM invoices WHERE cust_id=? AND type='final' ORDER BY created_at DESC LIMIT 1").get(c.id);
+      if (!lastInv || lastInv.created_at < cutoff) {
+        db.prepare("UPDATE customers SET status='followup' WHERE id=?").run(c.id);
+        updated++;
+      }
+    }
+    if (updated) console.log(`🔄 ${updated} مشتری فعال بدون خرید ۱۴ روزه به وضعیت پیگیری تغییر یافت`);
+  } catch (e) {
+    console.error('cron active-to-followup error:', e.message);
+  }
+}
+
+// Daily at 08:00: batch SMS + silent customer check + active→followup
 cron.schedule('0 8 * * *', () => {
   runFollowupSMSBatch();
   runSilentCustomerCheck();
+  runActiveToFollowupCheck();
 });
 
 // Every minute: timed follow-up SMS

@@ -194,4 +194,53 @@ router.post('/invoices/:id/approve', auth, adminOnly, (req, res) => {
   res.json({ ok: true });
 });
 
+// General Accounting — P&L, cash flow, ledger summary
+router.get('/general', auth, adminOnly, (req, res) => {
+  const db = getDB();
+  const { from, to } = req.query;
+  const safeDate = v => (v && /^[\d/]+$/.test(v)) ? v : null;
+  const sf = safeDate(from), st = safeDate(to);
+  const invDateWhere = sf || st ? `AND date >= '${sf||''}' AND date <= '${st||'9999'}'` : '';
+  const settDateWhere = sf || st ? `AND date >= '${sf||''}' AND date <= '${st||'9999'}'` : '';
+
+  const revenue     = db.prepare(`SELECT COALESCE(SUM(final),0) s FROM invoices WHERE type='final' ${invDateWhere}`).get().s;
+  const subtotal    = db.prepare(`SELECT COALESCE(SUM(subtotal),0) s FROM invoices WHERE type='final' ${invDateWhere}`).get().s;
+  const discAmt     = db.prepare(`SELECT COALESCE(SUM(disc_amt),0) s FROM invoices WHERE type='final' ${invDateWhere}`).get().s;
+  const settled     = db.prepare(`SELECT COALESCE(SUM(amount),0) s FROM settlements WHERE 1=1 ${settDateWhere}`).get().s;
+  const cashSettled = db.prepare(`SELECT COALESCE(SUM(amount),0) s FROM settlements WHERE pay_type='cash' ${settDateWhere}`).get().s;
+  const cheqSettled = db.prepare(`SELECT COALESCE(SUM(amount),0) s FROM settlements WHERE pay_type='cheque' ${settDateWhere}`).get().s;
+  const commExpense = (() => {
+    const users = db.prepare("SELECT id,commission_cash,commission_cheque FROM users WHERE active=1").all();
+    let total = 0;
+    for (const u of users) {
+      const cs = db.prepare(`SELECT COALESCE(SUM(final),0) s FROM invoices WHERE user_id=? AND type='final' AND approved=1 AND pay_type='cash' ${invDateWhere}`).get(u.id).s;
+      const qs = db.prepare(`SELECT COALESCE(SUM(final),0) s FROM invoices WHERE user_id=? AND type='final' AND approved=1 AND pay_type='cheque' ${invDateWhere}`).get(u.id).s;
+      total += cs * (u.commission_cash || 0) / 100 + qs * (u.commission_cheque || 0) / 100;
+    }
+    return Math.round(total);
+  })();
+
+  // Monthly revenue & collections for chart
+  const monthlyInv = db.prepare(`SELECT substr(date,1,7) ym, SUM(final) rev FROM invoices WHERE type='final' AND date<>'' GROUP BY ym ORDER BY ym DESC LIMIT 12`).all();
+  const monthlySett = db.prepare(`SELECT substr(date,1,7) ym, SUM(amount) col FROM settlements WHERE date<>'' GROUP BY ym ORDER BY ym DESC LIMIT 12`).all();
+
+  // Recent transactions journal
+  const invJournal = db.prepare(`SELECT 'invoice' as entry_type, num ref, date, final amount, cust_id, 0 is_credit FROM invoices WHERE type='final' ORDER BY created_at DESC LIMIT 30`).all();
+  const settJournal = db.prepare(`SELECT 'settlement' as entry_type, id||'' ref, date, amount, cust_id, 1 is_credit FROM settlements ORDER BY created_at DESC LIMIT 30`).all();
+  const journal = [...invJournal, ...settJournal].sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 50);
+
+  // Enrich journal with customer name
+  const custMap = {};
+  db.prepare('SELECT id,biz FROM customers').all().forEach(c => { custMap[c.id] = c.biz; });
+  journal.forEach(j => { j.cust_biz = custMap[j.cust_id] || '-'; });
+
+  res.json({
+    revenue, subtotal, discAmt, settled, cashSettled, cheqSettled,
+    outstanding: revenue - settled,
+    commExpense,
+    netProfit: revenue - commExpense,
+    monthlyInv, monthlySett, journal
+  });
+});
+
 module.exports = router;

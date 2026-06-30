@@ -70,7 +70,7 @@ router.get('/categories', auth, (req, res) => {
 
 // Create product (admin only) — multipart form-data for optional image
 router.post('/', auth, adminOnly, upload.single('image'), async (req, res) => {
-  const { category, code, name, price, stock, stock_alert, unit, note } = req.body;
+  const { category, code, name, price, stock, stock_alert, unit, note, colors, pack_size } = req.body;
   if (!name) return res.status(400).json({ error: 'نام محصول الزامی است' });
   const db = getDB();
   let image = null;
@@ -78,9 +78,10 @@ router.post('/', auth, adminOnly, upload.single('image'), async (req, res) => {
     try { image = await saveImage(req.file.buffer, req.file.originalname); } catch (e) { image = null; }
   }
   const result = db.prepare(
-    'INSERT INTO products (user_id,category,code,name,price,stock,stock_alert,unit,note,image) VALUES (?,?,?,?,?,?,?,?,?,?)'
+    'INSERT INTO products (user_id,category,code,name,price,stock,stock_alert,unit,note,image,colors,pack_size) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
   ).run(req.user.id, category || '', code || '', name, parseFloat(price) || 0, parseInt(stock) || 0,
-        parseInt(stock_alert) || 5, unit || 'عدد', note || '', image);
+        parseInt(stock_alert) || 5, unit || 'عدد', note || '', image,
+        parseInt(colors) || 1, parseInt(pack_size) || 1);
   audit(req.user.id, 'create', 'product', result.lastInsertRowid, `ساخت محصول ${name}`);
   res.json(db.prepare('SELECT * FROM products WHERE id=?').get(result.lastInsertRowid));
 });
@@ -90,7 +91,7 @@ router.put('/:id', auth, adminOnly, upload.single('image'), async (req, res) => 
   const db = getDB();
   const prod = db.prepare('SELECT * FROM products WHERE id=?').get(req.params.id);
   if (!prod) return res.status(404).json({ error: 'یافت نشد' });
-  const { category, code, name, price, stock, stock_alert, unit, note } = req.body;
+  const { category, code, name, price, stock, stock_alert, unit, note, colors, pack_size } = req.body;
   let image = prod.image;
   if (req.file) {
     try {
@@ -98,9 +99,11 @@ router.put('/:id', auth, adminOnly, upload.single('image'), async (req, res) => 
       if (prod.image) { try { fs.unlinkSync(path.join(UPLOAD_DIR, prod.image)); } catch (e) {} }
     } catch (e) { image = prod.image; }
   }
-  db.prepare('UPDATE products SET category=?,code=?,name=?,price=?,stock=?,stock_alert=?,unit=?,note=?,image=? WHERE id=?')
+  db.prepare('UPDATE products SET category=?,code=?,name=?,price=?,stock=?,stock_alert=?,unit=?,note=?,image=?,colors=?,pack_size=? WHERE id=?')
     .run(category || '', code || '', name || prod.name, parseFloat(price) || 0, parseInt(stock) || 0,
-         parseInt(stock_alert) || 5, unit || 'عدد', note || '', image, req.params.id);
+         parseInt(stock_alert) || 5, unit || 'عدد', note || '', image,
+         parseInt(colors) || prod.colors || 1, parseInt(pack_size) || prod.pack_size || 1,
+         req.params.id);
   audit(req.user.id, 'update', 'product', req.params.id, `ویرایش محصول ${name || prod.name}`);
   res.json(db.prepare('SELECT * FROM products WHERE id=?').get(req.params.id));
 });
@@ -129,6 +132,15 @@ router.delete('/:id', auth, adminOnly, (req, res) => {
   res.json({ ok: true });
 });
 
+function normalizeStr(s) {
+  if (!s) return '';
+  return String(s)
+    .replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/ة/g, 'ه')
+    .replace(/[٠١٢٣٤٥٦٧٨٩]/g, d => d.charCodeAt(0) - 0x0660)
+    .replace(/[۰۱۲۳۴۵۶۷۸۹]/g, d => d.charCodeAt(0) - 0x06F0)
+    .trim();
+}
+
 // Import from Excel (admin only)
 router.post('/import', auth, adminOnly, memUpload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'فایل آپلود نشد' });
@@ -138,20 +150,22 @@ router.post('/import', auth, adminOnly, memUpload.single('file'), (req, res) => 
     const data = XLSX.utils.sheet_to_json(ws);
     const db = getDB();
     let inserted = 0;
-    const stmt = db.prepare('INSERT INTO products (user_id,category,code,name,price,stock,stock_alert,unit) VALUES (?,?,?,?,?,?,?,?)');
+    const stmt = db.prepare('INSERT INTO products (user_id,category,code,name,price,stock,stock_alert,unit,colors,pack_size) VALUES (?,?,?,?,?,?,?,?,?,?)');
     const insertMany = db.transaction((rows) => {
       for (const row of rows) {
-        const name = row['نام محصول'] || row['name'] || row['Name'];
+        const name = normalizeStr(row['نام محصول'] || row['name'] || row['Name'] || '');
         if (!name) continue;
         stmt.run(
           req.user.id,
-          row['دسته‌بندی'] || row['category'] || '',
-          row['کد محصول'] || row['code'] || '',
+          normalizeStr(row['دسته‌بندی'] || row['category'] || ''),
+          normalizeStr(row['کد محصول'] || row['code'] || ''),
           name,
           parseFloat(row['قیمت'] || row['price'] || 0),
           parseInt(row['موجودی'] || row['stock'] || 0),
           parseInt(row['هشدار موجودی'] || row['stock_alert'] || 5),
-          row['واحد'] || row['unit'] || 'عدد'
+          row['واحد'] || row['unit'] || 'عدد',
+          parseInt(row['تعداد رنگ'] || row['colors'] || 1),
+          parseInt(row['تعداد در پک'] || row['pack_size'] || 1)
         );
         inserted++;
       }

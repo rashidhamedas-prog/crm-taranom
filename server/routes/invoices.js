@@ -153,6 +153,12 @@ router.post('/', auth, (req, res) => {
         seller ? seller.name : '', seller ? (seller.phone || '') : '',
         pay_type || 'cash', cheque_duration || '', cheque_due_date || '', cheque_info || '',
         stockDeducted);
+
+  // Auto-update customer status to 'active' when a final invoice is issued
+  if (invType === 'final') {
+    db.prepare("UPDATE customers SET status='active' WHERE id=?").run(cust_id);
+  }
+
   const row = db.prepare('SELECT i.*,c.biz as cust_biz FROM invoices i LEFT JOIN customers c ON i.cust_id=c.id WHERE i.id=?').get(result.lastInsertRowid);
 
   // Auto-create a 7-day quality follow-up for every new invoice
@@ -212,6 +218,18 @@ router.delete('/:id', auth, (req, res) => {
   const row = db.prepare('SELECT * FROM invoices WHERE id=?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'یافت نشد' });
   if (req.user.role !== 'admin' && row.user_id !== req.user.id) return res.status(403).json({ error: 'دسترسی ندارید' });
+
+  // Restore inventory when a final invoice with deducted stock is deleted
+  if (row.stock_deducted) {
+    const invRows = JSON.parse(row.rows || '[]');
+    for (const r of invRows) {
+      db.prepare('UPDATE products SET stock=stock+? WHERE id=?').run(r.qty, r.product_id);
+      db.prepare('INSERT INTO stock_logs (product_id,user_id,change,note) VALUES (?,?,?,?)').run(
+        r.product_id, req.user.id, r.qty, `بازگشت موجودی از حذف فاکتور ${row.num}`
+      );
+    }
+  }
+
   db.prepare('DELETE FROM invoices WHERE id=?').run(req.params.id);
   audit(req.user.id, 'delete', 'invoice', req.params.id, `حذف فاکتور ${row.num}`);
   res.json({ ok: true });
@@ -237,6 +255,8 @@ router.post('/:id/convert', auth, (req, res) => {
   }
 
   db.prepare('UPDATE invoices SET type=?,converted=1,stock_deducted=? WHERE id=?').run('final', stockDeducted, inv.id);
+  // Auto-update customer status to 'active' when proforma is converted to final
+  db.prepare("UPDATE customers SET status='active' WHERE id=?").run(inv.cust_id);
   audit(req.user.id, 'convert', 'invoice', inv.id, `تبدیل پیش‌فاکتور ${inv.num} به فاکتور رسمی`);
   res.json({ ok: true });
 });
@@ -252,6 +272,7 @@ router.get('/:id/print', auth, (req, res) => {
   const companyAddr = getSetting(db, 'company_address') || '';
   const companyPhone = getSetting(db, 'company_phone') || '';
   const typeLabel = inv.type === 'final' ? 'فاکتور رسمی' : 'پیش‌فاکتور';
+  const paperSize = (req.query.paper || 'A4').toUpperCase() === 'A5' ? 'A5' : 'A4';
 
   const payTypeLabel = inv.pay_type === 'cheque' ? 'چک' : 'نقد';
   let payInfo = `<div><b>نوع پرداخت:</b> ${payTypeLabel}</div>`;
@@ -270,6 +291,8 @@ router.get('/:id/print', auth, (req, res) => {
       <td>${faNum(r.sum)}</td>
     </tr>`).join('');
 
+  const sheetMaxWidth = paperSize === 'A5' ? '560px' : '800px';
+  const baseFontSize = paperSize === 'A5' ? '11px' : '13px';
   const html = `<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
@@ -279,8 +302,8 @@ router.get('/:id/print', auth, (req, res) => {
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Vazirmatn',sans-serif;background:#f3f4f6;color:#1f2937;padding:20px}
-  .sheet{max-width:800px;margin:0 auto;background:#fff;padding:34px;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+  body{font-family:'Vazirmatn',sans-serif;background:#f3f4f6;color:#1f2937;padding:20px;font-size:${baseFontSize}}
+  .sheet{max-width:${sheetMaxWidth};margin:0 auto;background:#fff;padding:${paperSize==='A5'?'20px':'34px'};border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.08)}
   .head{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1A5C38;padding-bottom:16px;margin-bottom:18px}
   .logo{display:flex;align-items:center;gap:12px}
   .logo img{height:64px}
@@ -303,7 +326,7 @@ router.get('/:id/print', auth, (req, res) => {
   .note{margin-top:18px;font-size:12px;color:#6b7280;background:#f9fafb;border-radius:8px;padding:10px 14px}
   .footer{margin-top:26px;text-align:center;font-size:12px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:14px;line-height:2}
   .pbtn{display:block;margin:20px auto 0;background:#1A5C38;color:#fff;border:none;padding:11px 30px;border-radius:8px;font-family:inherit;font-size:14px;cursor:pointer}
-  @media print{body{background:#fff;padding:0}.sheet{box-shadow:none;border-radius:0;max-width:100%}.pbtn{display:none}}
+  @media print{body{background:#fff;padding:0}.sheet{box-shadow:none;border-radius:0;max-width:100%}.pbtn{display:none}@page{size:${paperSize};margin:10mm}}
 </style>
 </head>
 <body>

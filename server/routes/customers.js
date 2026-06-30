@@ -6,6 +6,18 @@ const multer = require('multer');
 
 const memUpload = multer({ storage: multer.memoryStorage() });
 
+// Normalize Arabic characters to Persian and convert Arabic/Persian digits to ASCII
+function normalizeStr(s) {
+  if (!s) return '';
+  return String(s)
+    .replace(/ي/g, 'ی')
+    .replace(/ك/g, 'ک')
+    .replace(/ة/g, 'ه')
+    .replace(/[٠١٢٣٤٥٦٧٨٩]/g, d => d.charCodeAt(0) - 0x0660)
+    .replace(/[۰۱۲۳۴۵۶۷۸۹]/g, d => d.charCodeAt(0) - 0x06F0)
+    .trim();
+}
+
 function getScope(req) {
   if (req.user.role === 'admin' && req.query.user_id) return parseInt(req.query.user_id);
   if (req.user.role === 'admin') return null; // all
@@ -25,14 +37,15 @@ router.get('/', auth, (req, res) => {
 });
 
 router.post('/', auth, (req, res) => {
-  const { biz, owner, city, phone, insta, type, status, note, source, balance } = req.body;
+  const { biz, owner, city, province, address, phone, insta, type, status, note, source, balance, assigned_to } = req.body;
   if (!biz) return res.status(400).json({ error: 'نام فروشگاه الزامی است' });
   const db = getDB();
-  // balance is admin-only field
   const bal = (req.user.role === 'admin') ? (parseFloat(balance) || 0) : 0;
+  // admin can assign customer to a specific salesperson
+  const uid = (req.user.role === 'admin' && assigned_to) ? parseInt(assigned_to) : req.user.id;
   const result = db.prepare(
-    'INSERT INTO customers (user_id,biz,owner,city,phone,insta,type,status,note,source,balance) VALUES (?,?,?,?,?,?,?,?,?,?,?)'
-  ).run(req.user.id, biz, owner || '', city || '', phone || '', insta || '', type || 'بوتیک', status || 'new', note || '', source || '', bal);
+    'INSERT INTO customers (user_id,biz,owner,city,province,address,phone,insta,type,status,note,source,balance,assigned_to) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+  ).run(uid, biz, owner || '', city || '', province || '', address || '', phone || '', insta || '', type || 'بوتیک', status || 'new', note || '', source || '', bal, assigned_to ? parseInt(assigned_to) : null);
   const row = db.prepare('SELECT * FROM customers WHERE id=?').get(result.lastInsertRowid);
   res.json(row);
 });
@@ -42,11 +55,11 @@ router.put('/:id', auth, (req, res) => {
   const row = db.prepare('SELECT * FROM customers WHERE id=?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'یافت نشد' });
   if (req.user.role !== 'admin' && row.user_id !== req.user.id) return res.status(403).json({ error: 'دسترسی ندارید' });
-  const { biz, owner, city, phone, insta, type, status, note, source, balance } = req.body;
-  // balance only updated by admin
+  const { biz, owner, city, province, address, phone, insta, type, status, note, source, balance, assigned_to } = req.body;
   const bal = (req.user.role === 'admin' && balance !== undefined) ? (parseFloat(balance) || 0) : row.balance || 0;
-  db.prepare('UPDATE customers SET biz=?,owner=?,city=?,phone=?,insta=?,type=?,status=?,note=?,source=?,balance=? WHERE id=?')
-    .run(biz, owner || '', city || '', phone || '', insta || '', type || 'بوتیک', status || 'new', note || '', source || '', bal, req.params.id);
+  const uid = (req.user.role === 'admin' && assigned_to) ? parseInt(assigned_to) : row.user_id;
+  db.prepare('UPDATE customers SET user_id=?,biz=?,owner=?,city=?,province=?,address=?,phone=?,insta=?,type=?,status=?,note=?,source=?,balance=?,assigned_to=? WHERE id=?')
+    .run(uid, biz, owner || '', city || '', province || '', address || '', phone || '', insta || '', type || 'بوتیک', status || 'new', note || '', source || '', bal, assigned_to ? parseInt(assigned_to) : row.assigned_to, req.params.id);
   res.json({ ok: true });
 });
 
@@ -110,15 +123,15 @@ router.post('/import', auth, adminOnly, memUpload.single('file'), (req, res) => 
     let inserted = 0;
     const allUsers = db.prepare('SELECT id,name FROM users').all();
     const stmt = db.prepare(
-      'INSERT INTO customers (user_id,biz,owner,city,phone,insta,type,status,source,balance) VALUES (?,?,?,?,?,?,?,?,?,?)'
+      'INSERT INTO customers (user_id,biz,owner,city,province,address,phone,insta,type,status,source,balance) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
     );
     const insertMany = db.transaction((rows) => {
       for (const row of rows) {
-        const biz = row['نام فروشگاه'] || row['biz'] || row['نام کسب‌وکار'] || '';
+        const biz = normalizeStr(row['نام فروشگاه'] || row['biz'] || row['نام کسب‌وکار'] || '');
         if (!biz) continue;
         // Resolve salesperson by name or id
         let targetUserId = req.user.id;
-        const salesRep = row['کارشناس'] || row['نام کارشناس'] || row['salesperson'] || '';
+        const salesRep = normalizeStr(row['کارشناس'] || row['نام کارشناس'] || row['salesperson'] || '');
         if (salesRep) {
           const found = allUsers.find(u => u.name === salesRep || String(u.id) === String(salesRep));
           if (found) targetUserId = found.id;
@@ -128,9 +141,11 @@ router.post('/import', auth, adminOnly, memUpload.single('file'), (req, res) => 
         const balance = parseFloat(row['موجودی حساب'] || row['balance'] || 0) || 0;
         stmt.run(
           targetUserId, biz,
-          row['نام کامل'] || row['owner'] || row['نام مالک'] || '',
-          row['شهر'] || row['city'] || '',
-          row['موبایل'] || row['phone'] || '',
+          normalizeStr(row['نام کامل'] || row['owner'] || row['نام مالک'] || ''),
+          normalizeStr(row['شهر'] || row['city'] || ''),
+          normalizeStr(row['استان'] || row['province'] || ''),
+          normalizeStr(row['آدرس'] || row['address'] || ''),
+          normalizeStr(row['موبایل'] || row['phone'] || ''),
           row['اینستاگرام'] || row['insta'] || '',
           row['نوع'] || row['type'] || 'بوتیک',
           row['وضعیت'] || row['status'] || 'new',

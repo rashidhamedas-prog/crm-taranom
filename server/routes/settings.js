@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { getDB, audit } = require('../db');
 const { auth, adminOnly } = require('../middleware/auth');
+const { sendSMS } = require('../sms');
 
 const ALLOWED_KEYS = [
   'telegram_bot_token', 'telegram_chat_id',
@@ -39,6 +40,18 @@ router.put('/', auth, adminOnly, (req, res) => {
   const obj = {};
   for (const r of rows) obj[r.key] = r.value;
   res.json(obj);
+});
+
+// Test SMS — sends a test message to the given phone number
+router.post('/test-sms', auth, adminOnly, async (req, res) => {
+  const db = getDB();
+  const rows = db.prepare("SELECT key,value FROM settings WHERE key IN ('sms_provider','sms_api_key','sms_from')").all();
+  const settings = {};
+  for (const r of rows) settings[r.key] = r.value;
+  const to = (req.body.phone || '').trim();
+  if (!to) return res.status(400).json({ error: 'شماره موبایل الزامی است' });
+  const result = await sendSMS(settings, to, 'این یک پیامک آزمایشی از سیستم مدیریت مشتریان ترنم است.');
+  res.json(result);
 });
 
 module.exports = router;
