@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { getDB, audit } = require('../db');
 const { auth, adminOnly } = require('../middleware/auth');
+const { sendSMS } = require('../sms');
 const XLSX = require('xlsx');
 const multer = require('multer');
 
@@ -16,6 +17,32 @@ function normalizeStr(s) {
     .replace(/[٠١٢٣٤٥٦٧٨٩]/g, d => d.charCodeAt(0) - 0x0660)
     .replace(/[۰۱۲۳۴۵۶۷۸۹]/g, d => d.charCodeAt(0) - 0x06F0)
     .trim();
+}
+
+const DEFAULT_WELCOME_SMS = `سلام 🌸 به خانواده پوشاک ترنم خوش‌آمدید!
+
+برای اطلاع از جدیدترین محصولات و تخفیف‌های ویژه، ما را دنبال کنید:
+
+📱 روبیکا: rubika.ir/toliditaranom_omde
+✈️ تلگرام: t.me/toliditaranom
+💬 بله: bale.ai/toliditaranom
+{address}
+پوشاک ترنم 🌿`;
+
+async function sendWelcomeSMSToCust(db, phone) {
+  try {
+    const rows = db.prepare(
+      "SELECT key,value FROM settings WHERE key IN ('sms_provider','sms_api_key','sms_from','welcome_sms_text','kimia_address')"
+    ).all();
+    const s = {};
+    for (const r of rows) s[r.key] = r.value;
+    if (!s.sms_api_key || !phone) return;
+    const addrLine = s.kimia_address ? `\n🏢 آدرس دفتر: ${s.kimia_address}` : '';
+    const text = (s.welcome_sms_text || DEFAULT_WELCOME_SMS).replace('{address}', addrLine);
+    return await sendSMS(s, phone, text);
+  } catch (e) {
+    console.error('welcome SMS error:', e.message);
+  }
 }
 
 function getScope(req) {
@@ -48,6 +75,8 @@ router.post('/', auth, (req, res) => {
   ).run(uid, biz, owner || '', city || '', province || '', address || '', phone || '', insta || '', type || 'بوتیک', status || 'new', note || '', source || '', bal, assigned_to ? parseInt(assigned_to) : null);
   const row = db.prepare('SELECT * FROM customers WHERE id=?').get(result.lastInsertRowid);
   res.json(row);
+  // Fire welcome SMS after response — non-blocking
+  if (phone) sendWelcomeSMSToCust(db, phone);
 });
 
 router.put('/:id', auth, (req, res) => {
@@ -161,6 +190,16 @@ router.post('/import', auth, adminOnly, memUpload.single('file'), (req, res) => 
   } catch (e) {
     res.status(400).json({ error: 'خطا در خواندن فایل: ' + e.message });
   }
+});
+
+// Manually send welcome SMS to a specific customer
+router.post('/:id/welcome-sms', auth, async (req, res) => {
+  const db = getDB();
+  const c = db.prepare('SELECT * FROM customers WHERE id=?').get(req.params.id);
+  if (!c) return res.status(404).json({ error: 'مشتری یافت نشد' });
+  if (!c.phone) return res.status(400).json({ error: 'این مشتری شماره موبایل ندارد' });
+  const result = await sendWelcomeSMSToCust(db, c.phone);
+  res.json(result || { ok: false, reason: 'خطای نامشخص' });
 });
 
 // Downloadable Excel template for customer import

@@ -1093,6 +1093,7 @@ ROUTES.customers = function(){
       <button class="btn sm ghost" onclick="bulkCustStatus('followup')">🔔 پیگیری</button>
       <button class="btn sm ghost" onclick="bulkCustStatus('vip')">⭐ VIP</button>
       <button class="btn sm ghost" onclick="bulkCustStatus('silent')">💤 خاموش</button>
+      <button class="btn sm ghost" onclick="bulkWelcomeSMS()">📤 پیامک خوش‌آمدگویی</button>
       ${ME.role==='admin'?`<button class="btn sm red" onclick="bulkCustDelete()">🗑️ حذف</button>`:''}
       <button class="btn sm ghost" onclick="custSelected.clear();renderCustTable()">✕ لغو</button>
     </div>
@@ -1124,6 +1125,7 @@ function renderCustTable(){
     <td style="white-space:nowrap">
       <button class="btn sm ghost" onclick="custModal(${c.id})">✏️</button>
       <button class="btn sm blue icon" onclick="custActivityModal(${c.id})" title="تاریخچه پیگیری">📋</button>
+      ${c.phone?`<button class="btn sm ghost" onclick="sendWelcomeSMS(${c.id})" title="ارسال پیامک خوش‌آمدگویی">📤</button>`:''}
       <button class="btn sm red" onclick="confirmDelete('customers',${c.id},'${esc(c.biz)}')">🗑️</button></td>
   </tr>`).join('')||emptyRow(isAdmin?10:8)}</tbody></table>`;
 }
@@ -1143,6 +1145,26 @@ async function bulkCustDelete(){
   if(!confirm(`${custSelected.size} مشتری حذف شود؟ این عمل برگشت‌پذیر نیست!`)) return;
   for(const id of custSelected) await api('DELETE','/customers/'+id);
   custSelected.clear(); await reloadCustomers(); renderCustTable(); showToast('حذف شد');
+}
+async function sendWelcomeSMS(id){
+  const c = CACHE.customers.find(x=>x.id===id);
+  if(!c?.phone){ showToast('این مشتری شماره موبایل ندارد','error'); return; }
+  showToast('در حال ارسال پیامک...');
+  const r = await api('POST','/customers/'+id+'/welcome-sms');
+  if(r?.ok) showToast(`✅ پیامک خوش‌آمدگویی به ${c.biz} ارسال شد`);
+  else showToast('❌ خطا: '+(r?.reason||r?.error||JSON.stringify(r?.data||'')),'error');
+}
+async function bulkWelcomeSMS(){
+  if(!custSelected.size) return;
+  const custs = CACHE.customers.filter(c=>custSelected.has(c.id)&&c.phone);
+  if(!custs.length){ showToast('هیچ مشتری انتخاب‌شده‌ای شماره موبایل ندارد','error'); return; }
+  if(!confirm(`پیامک خوش‌آمدگویی برای ${custs.length} مشتری ارسال شود؟`)) return;
+  let ok=0, fail=0;
+  for(const c of custs){
+    const r = await api('POST','/customers/'+c.id+'/welcome-sms');
+    if(r?.ok) ok++; else fail++;
+  }
+  showToast(`📤 ارسال پیامک: ✅ ${ok} موفق${fail?' — ❌ '+fail+' ناموفق':''}`);
 }
 function custModal(id){
   const c = id ? CACHE.customers.find(x=>x.id===id) : {};
@@ -2514,22 +2536,48 @@ ROUTES.settings = async function(){
       <strong style="color:var(--text)">📱 پیامک در این موارد ارسال می‌شود:</strong><br>
       ۱. <b>هر روز ساعت ۸ صبح:</b> لیست پیگیری‌های آن روز به شماره هر کارشناس<br>
       ۲. <b>۱ ساعت قبل:</b> اگر پیگیری ساعت مشخصی داشته باشد، یادآور ۶۰ دقیقه قبل ارسال می‌شود<br>
-      ۳. <b>تست دستی:</b> از طریق دکمه زیر می‌توانید اتصال پیامک را آزمایش کنید
+      ۳. <b>ثبت مشتری جدید:</b> پیامک خوش‌آمدگویی با معرفی کانال‌های ارتباطی به مشتری ارسال می‌شود<br>
+      ۴. <b>ارسال دستی:</b> از طریق دکمه 📤 در لیست مشتریان می‌توانید برای هر مشتری پیامک ارسال کنید
     </div>
-    <div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--border)">
+    <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border)">
+      <p style="font-size:12px;font-weight:600;margin-bottom:6px">🧪 تست ارسال پیامک</p>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <input id="sms-test-phone" placeholder="شماره آزمایشی مثلاً 09151234567" style="flex:1;min-width:200px;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;direction:ltr">
         <button class="btn orange" onclick="testSMS()">📤 ارسال پیامک آزمایشی</button>
       </div>
       <div id="sms-test-result" style="margin-top:8px;font-size:12px"></div>
+      <p style="font-size:11px;color:var(--muted);margin-top:6px">متن ارسالی: متن پیامک خوش‌آمدگویی (تنظیم‌شده در بخش زیر)</p>
     </div>
+    </div></div>
+    <div class="panel"><div class="panel-head"><h4>پیامک خوش‌آمدگویی مشتریان</h4></div><div class="panel-body">
+      <div class="form-grid">
+        <div class="fg full"><label>آدرس دفتر کیمیا <span style="color:var(--muted);font-size:11px">(در پیامک نمایش داده می‌شود)</span></label>
+          <input id="s-kimia_address" value="${esc(s.kimia_address||'')}" placeholder="مثلاً: مشهد، بلوار فردوسی، ...">
+        </div>
+        <div class="fg full"><label>متن پیامک خوش‌آمدگویی <span style="color:var(--muted);font-size:11px">(از {address} برای درج آدرس استفاده کنید)</span></label>
+          <textarea id="s-welcome_sms_text" rows="8" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;resize:vertical"
+            placeholder="پیش‌فرض سیستم استفاده می‌شود اگر خالی بماند">${esc(s.welcome_sms_text||'')}</textarea>
+        </div>
+      </div>
+      <div style="padding:10px;background:#f0fdf4;border-radius:8px;font-size:11px;color:var(--muted);line-height:2">
+        <strong style="color:var(--text)">متن پیش‌فرض (اگر فیلد بالا خالی باشد):</strong><br>
+        <span dir="rtl" style="white-space:pre-line">سلام 🌸 به خانواده پوشاک ترنم خوش‌آمدید!
+
+برای اطلاع از جدیدترین محصولات، ما را دنبال کنید:
+📱 روبیکا: rubika.ir/toliditaranom_omde
+✈️ تلگرام: t.me/toliditaranom
+💬 بله: bale.ai/toliditaranom
+🏢 آدرس دفتر: {address}
+
+پوشاک ترنم 🌿</span>
+      </div>
     </div></div>
     <button class="btn green" onclick="saveSettings()">💾 ذخیره تنظیمات</button>`;
   // Show hint for current provider on page load
   toggleSmsProviderHint(s.sms_provider||'kavenegar');
 };
 async function saveSettings(){
-  const keys=['company_name','company_phone','company_address','telegram_bot_token','telegram_chat_id','sms_provider','sms_api_key','sms_from','api_v1_enabled','api_rate_limit','webhook_secret','backup_smtp_user','backup_smtp_pass','backup_email'];
+  const keys=['company_name','company_phone','company_address','kimia_address','welcome_sms_text','telegram_bot_token','telegram_chat_id','sms_provider','sms_api_key','sms_from','api_v1_enabled','api_rate_limit','webhook_secret','backup_smtp_user','backup_smtp_pass','backup_email'];
   const data={}; keys.forEach(k=>{ const e=el('s-'+k); if(e)data[k]=e.value; });
   CACHE.settings = await api('PUT','/settings',data);
   showToast('تنظیمات ذخیره شد');
@@ -2538,11 +2586,11 @@ async function testSMS(){
   const phone = (el('sms-test-phone')?.value||'').trim();
   if(!phone){ showToast('شماره موبایل وارد کنید','error'); return; }
   const res = el('sms-test-result');
-  if(res) res.innerHTML='<span style="color:var(--muted)">در حال ارسال...</span>';
+  if(res) res.innerHTML='<span style="color:var(--muted)">در حال ارسال پیامک آزمایشی...</span>';
   try{
     const r = await api('POST','/settings/test-sms',{phone});
     if(res) res.innerHTML = r.ok
-      ? '<span style="color:var(--green)">✅ پیامک با موفقیت ارسال شد</span>'
+      ? '<span style="color:var(--green)">✅ پیامک خوش‌آمدگویی آزمایشی با موفقیت ارسال شد</span>'
       : `<span style="color:var(--red)">❌ خطا: ${esc(r.reason||JSON.stringify(r.data||''))}</span>`;
   }catch(e){ if(res) res.innerHTML='<span style="color:var(--red)">❌ خطا در ارتباط با سرور</span>'; }
 }
@@ -2551,7 +2599,7 @@ function toggleSmsProviderHint(provider){
     kavenegar: '🔑 <b>کاوه‌نگار:</b> کلید API را از پنل کاوه‌نگار کپی کنید. شماره فرستنده اختیاری است.',
     melipayamak: '🔑 <b>ملی‌پیامک:</b> در فیلد کلید API وارد کنید: <code dir="ltr">username:password</code> (با دونقطه جدا کنید)',
     niksms: '🔑 <b>نیک‌اس‌ام‌اس (niksms.com):</b> در فیلد کلید API وارد کنید: <code dir="ltr">username:password</code> — شماره فرستنده را هم وارد کنید',
-    smsir: '🔑 <b>اس‌ام‌اس‌آی‌آر (sms.ir):</b> کلید API (Bearer Token) را از پنل SMS.ir دریافت کنید. شماره خط را در فیلد شماره فرستنده وارد کنید',
+    smsir: '🔑 <b>اس‌ام‌اس‌آی‌آر (sms.ir):</b> کلید API (X-API-KEY) را از پنل SMS.ir → تنظیمات → API دریافت کنید. <b>شماره خط اختصاصی الزامی است</b> — بدون آن پیامک ارسال نمی‌شود.',
   };
   const hint = el('sms-hint'); if(!hint) return;
   hint.innerHTML = hints[provider] || '';

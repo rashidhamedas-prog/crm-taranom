@@ -73,11 +73,12 @@ async function sendSMS(settings, to, text) {
     }
 
     if (provider === 'smsir') {
-      // SMS.ir REST API v1 — uses X-API-KEY header, not Bearer token
+      // SMS.ir REST API v1 — X-API-KEY header; lineNumber must be omitted (not empty) if not set
+      if (!from) return { ok: false, reason: 'شماره فرستنده (خط اختصاصی) برای SMS.ir الزامی است. آن را در تنظیمات پیامک وارد کنید.' };
       const r = await postJSON(
         'api.sms.ir',
         '/v1/send/bulk',
-        { lineNumber: from || '', messageTexts: [text], mobiles: [phone] },
+        { lineNumber: from, messageTexts: [text], mobiles: [phone] },
         { 'x-api-key': apiKey }
       );
       const ok = r.status === 200 && r.body && r.body.status === 1;
