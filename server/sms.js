@@ -78,7 +78,7 @@ async function sendSMS(settings, to, text) {
       const r = await postJSON(
         'api.sms.ir',
         '/v1/send/bulk',
-        { lineNumber: from, messageTexts: [text], mobiles: [phone] },
+        { lineNumber: from, MessageTexts: [text], Mobiles: [phone] },
         { 'x-api-key': apiKey }
       );
       const ok = r.status === 200 && r.body && r.body.status === 1;
