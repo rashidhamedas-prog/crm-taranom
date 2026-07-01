@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { getDB, audit } = require('../db');
+const { getDB, audit, createLedgerEntry, createJournalEntry } = require('../db');
 const { auth } = require('../middleware/auth');
 const { todayJalali, addDaysToJalali } = require('../jalali');
 
@@ -161,6 +161,26 @@ router.post('/', auth, (req, res) => {
 
   const row = db.prepare('SELECT i.*,c.biz as cust_biz FROM invoices i LEFT JOIN customers c ON i.cust_id=c.id WHERE i.id=?').get(result.lastInsertRowid);
 
+  // Customer ledger + journal entries for final invoices
+  if (invType === 'final') {
+    const invId = result.lastInsertRowid;
+    createLedgerEntry(db, {
+      customer_id: cust_id, date: date || '', entry_type: 'invoice',
+      ref_type: 'invoice', ref_id: invId,
+      description: `فاکتور رسمی ${num}`,
+      debit: final, credit: 0, user_id: req.user.id
+    });
+    const jLines = [
+      { code: '1103', name: 'حساب‌های دریافتنی از مشتریان', debit: final, credit: 0 }
+    ];
+    if (discAmt > 0) jLines.push({ code: '4103', name: 'تخفیفات فروش', debit: discAmt, credit: 0, description: 'تخفیف فاکتور' });
+    jLines.push({ code: '4101', name: 'درآمد فروش کالا', debit: 0, credit: subtotal });
+    createJournalEntry(db, {
+      date: date || '', description: `فاکتور رسمی ${num}`,
+      ref_type: 'invoice', ref_id: invId, created_by: req.user.id, lines: jLines
+    });
+  }
+
   // Auto-create a 7-day quality follow-up for every new invoice
   try {
     const invoiceDate = date || todayJalali();
@@ -230,6 +250,25 @@ router.delete('/:id', auth, (req, res) => {
     }
   }
 
+  // Reverse ledger + journal entries for deleted final invoices
+  if (row.type === 'final') {
+    createLedgerEntry(db, {
+      customer_id: row.cust_id, date: row.date || '', entry_type: 'reversal',
+      ref_type: 'invoice', ref_id: row.id,
+      description: `ابطال فاکتور ${row.num}`,
+      debit: 0, credit: row.final, user_id: req.user.id
+    });
+    const jLines = [
+      { code: '4101', name: 'درآمد فروش کالا', debit: row.subtotal, credit: 0, description: 'ابطال' }
+    ];
+    if ((row.disc_amt || 0) > 0) jLines.push({ code: '4103', name: 'تخفیفات فروش', debit: 0, credit: row.disc_amt, description: 'ابطال تخفیف' });
+    jLines.push({ code: '1103', name: 'حساب‌های دریافتنی از مشتریان', debit: 0, credit: row.final });
+    createJournalEntry(db, {
+      date: row.date || '', description: `ابطال فاکتور ${row.num}`,
+      ref_type: 'invoice_reversal', ref_id: row.id, created_by: req.user.id, lines: jLines
+    });
+  }
+
   db.prepare('DELETE FROM invoices WHERE id=?').run(req.params.id);
   audit(req.user.id, 'delete', 'invoice', req.params.id, `حذف فاکتور ${row.num}`);
   res.json({ ok: true });
@@ -258,6 +297,24 @@ router.post('/:id/convert', auth, (req, res) => {
   // Auto-update customer status to 'active' when proforma is converted to final
   db.prepare("UPDATE customers SET status='active' WHERE id=?").run(inv.cust_id);
   audit(req.user.id, 'convert', 'invoice', inv.id, `تبدیل پیش‌فاکتور ${inv.num} به فاکتور رسمی`);
+
+  // Customer ledger + journal entries on conversion
+  createLedgerEntry(db, {
+    customer_id: inv.cust_id, date: inv.date || '', entry_type: 'invoice',
+    ref_type: 'invoice', ref_id: inv.id,
+    description: `تبدیل پیش‌فاکتور ${inv.num} به فاکتور رسمی`,
+    debit: inv.final, credit: 0, user_id: req.user.id
+  });
+  const cvLines = [
+    { code: '1103', name: 'حساب‌های دریافتنی از مشتریان', debit: inv.final, credit: 0 }
+  ];
+  if ((inv.disc_amt || 0) > 0) cvLines.push({ code: '4103', name: 'تخفیفات فروش', debit: inv.disc_amt, credit: 0 });
+  cvLines.push({ code: '4101', name: 'درآمد فروش کالا', debit: 0, credit: inv.subtotal });
+  createJournalEntry(db, {
+    date: inv.date || '', description: `فاکتور رسمی ${inv.num} (تبدیل از پیش‌فاکتور)`,
+    ref_type: 'invoice', ref_id: inv.id, created_by: req.user.id, lines: cvLines
+  });
+
   res.json({ ok: true });
 });
 

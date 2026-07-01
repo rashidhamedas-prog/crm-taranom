@@ -1047,7 +1047,7 @@ async function renderDashContent(){
         ${statCard('o','🧾', fmt(finalInvs.length),'فاکتور رسمی'+(dq?' در بازه':''))}
         ${statCard('b','📋', fmt(allInvs.filter(i=>i.type==='proforma').length),'پیش‌فاکتور'+(dq?' در بازه':''))}
         ${statCard('b','📞', fmt(openF),'پیگیری باز')}
-        ${statCard('g','🎯', fmt(Math.round(myComm.totalComm||0)),'کمیسیون تأیید شده (ت)')}
+        ${statCard('g','🎯', fmt(Math.round(myComm.totalComm||0)),'انگیزه فروش تأیید شده (ت)')}
       </div>
       ${balRows.length?`<div class="panel">
         <div class="panel-head"><h4>💰 موجودی حساب مشتریان من</h4></div>
@@ -1945,12 +1945,13 @@ function userModal(id){
       <div class="fg"><label>وضعیت</label><select id="u-active">
         <option value="1" ${u.active?'selected':''}>فعال</option>
         <option value="0" ${!u.active?'selected':''}>غیرفعال</option></select></div>
-      <div class="fg"><label>کمیسیون نقد (٪)</label><input id="u-comm-cash" type="number" step="0.1" value="${u.commission_cash||0}"></div>
-      <div class="fg"><label>کمیسیون چک (٪)</label><input id="u-comm-cheque" type="number" step="0.1" value="${u.commission_cheque||0}"></div>
+      <div class="fg"><label>انگیزه فروش نقد (٪) ${u.incentive_locked?'<span style="font-size:11px;color:var(--orange)">🔒 قفل</span>':''}</label><input id="u-comm-cash" type="number" step="0.1" value="${u.commission_cash||0}" data-orig="${u.commission_cash||0}" data-locked="${u.incentive_locked||0}"></div>
+      <div class="fg"><label>انگیزه فروش چک (٪)</label><input id="u-comm-cheque" type="number" step="0.1" value="${u.commission_cheque||0}" data-orig="${u.commission_cheque||0}"></div>
     </div></div>
     <div class="modal-foot"><button class="btn" onclick="saveUser(${id||0})">💾 ذخیره</button>
       <button class="btn ghost" onclick="closeModal()">انصراف</button></div>`);
 }
+let _pendingUserSave = null;
 async function saveUser(id){
   const name=el('u-name').value.trim(), username=el('u-username').value.trim(),
         pass=el('u-pass').value, role=el('u-role').value,
@@ -1958,9 +1959,38 @@ async function saveUser(id){
         commission_cash=parseFloat(el('u-comm-cash')?.value||0)||0,
         commission_cheque=parseFloat(el('u-comm-cheque')?.value||0)||0;
   if(!name){ showToast('نام الزامی است','error'); return; }
+  const commInput=el('u-comm-cash');
+  const isLocked=commInput?.dataset.locked==='1';
+  const origCash=parseFloat(commInput?.dataset.orig||0);
+  const origCheque=parseFloat(el('u-comm-cheque')?.dataset.orig||0);
+  const rateChanged=id&&(Math.abs(commission_cash-origCash)>0.001||Math.abs(commission_cheque-origCheque)>0.001);
+  if(id && isLocked && rateChanged){
+    _pendingUserSave={id,name,username,pass,role,phone,active,commission_cash,commission_cheque};
+    openModal(`
+      <div class="modal-head"><h3>🔒 تغییر نرخ انگیزه فروش</h3><button class="x" onclick="closeModal()">×</button></div>
+      <div class="modal-body">
+        <p style="margin-bottom:12px">نرخ انگیزه فروش <b>${esc(name)}</b> قفل است.</p>
+        <p style="margin-bottom:16px;color:var(--muted);font-size:13px">نقد: ${origCash}٪ ← ${commission_cash}٪ &nbsp;|&nbsp; چک: ${origCheque}٪ ← ${commission_cheque}٪</p>
+        <p>آیا می‌خواهید محاسبه انگیزه فروش همه فاکتورهای قبلی این کارشناس با نرخ جدید مجدداً انجام شود؟</p>
+      </div>
+      <div class="modal-foot">
+        <button class="btn green" onclick="confirmIncentiveChange(true)">بله، همه فاکتورها محاسبه مجدد شوند</button>
+        <button class="btn ghost" onclick="closeModal()">انصراف (بدون تغییر نرخ)</button>
+      </div>`);
+    return;
+  }
+  await _doSaveUser(id,{name,username,pass,role,phone,active,commission_cash,commission_cheque});
+}
+async function confirmIncentiveChange(yes){
+  closeModal();
+  if(!_pendingUserSave) return;
+  const {id,...data}=_pendingUserSave; _pendingUserSave=null;
+  if(yes) await _doSaveUser(id,{...data,force:true});
+}
+async function _doSaveUser(id,{name,username,pass,role,phone,active,commission_cash,commission_cheque,force}){
   try{
     if(id){
-      await api('PUT','/admin/users/'+id,{name,role,phone,active,password:pass||undefined,commission_cash,commission_cheque});
+      await api('PUT','/admin/users/'+id,{name,role,phone,active,password:pass||undefined,commission_cash,commission_cheque,force:force||undefined});
     } else {
       if(!username||!pass){ showToast('نام کاربری و رمز الزامی است','error'); return; }
       await api('POST','/admin/users',{name,username,password:pass,phone,role,commission_cash,commission_cheque});
@@ -2060,7 +2090,9 @@ ROUTES.accounting = async function(){
           <button data-acc-tab="receivables" class="btn ${accTab==='receivables'?'':'ghost'}" onclick="switchAccTab('receivables')">مطالبات</button>
           <button data-acc-tab="settlements" class="btn ${accTab==='settlements'?'':'ghost'}" onclick="switchAccTab('settlements')">تسویه‌ها</button>
           <button data-acc-tab="cheques" class="btn ${accTab==='cheques'?'':'ghost'}" onclick="switchAccTab('cheques')">🧾 چک‌ها</button>
-          <button data-acc-tab="commissions" class="btn ${accTab==='commissions'?'':'ghost'}" onclick="switchAccTab('commissions')">تأیید و کمیسیون</button>
+          <button data-acc-tab="commissions" class="btn ${accTab==='commissions'?'':'ghost'}" onclick="switchAccTab('commissions')">تأیید و انگیزه فروش</button>
+          <button data-acc-tab="journal" class="btn ${accTab==='journal'?'':'ghost'}" onclick="switchAccTab('journal')">📒 دفتر روزنامه</button>
+          <button data-acc-tab="chart" class="btn ${accTab==='chart'?'':'ghost'}" onclick="switchAccTab('chart')">📊 حساب‌های مالی</button>
           <div style="display:flex;gap:6px;align-items:center;border-right:1px solid var(--border);padding-right:8px;margin-right:2px">
             <input id="accFrom" data-jdate placeholder="از تاریخ" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;width:120px;font-size:12px" value="${accDateFrom}" onchange="accDateFrom=this.value">
             <input id="accTo" data-jdate placeholder="تا تاریخ" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;width:120px;font-size:12px" value="${accDateTo}" onchange="accDateTo=this.value">
@@ -2095,7 +2127,7 @@ async function loadAccTab(tab){
       {label:'فروش ناخالص (مجموع فاکتورهای رسمی)',val:g.subtotal||0,color:'var(--green)'},
       {label:'تخفیفات اعمال شده',val:-(g.discAmt||0),color:'var(--red)'},
       {label:'درآمد خالص فروش',val:g.revenue||0,color:'var(--purple)',bold:true},
-      {label:'کمیسیون کارشناسان (هزینه)',val:-(g.commExpense||0),color:'var(--red)'},
+      {label:'انگیزه فروش کارشناسان (هزینه)',val:-(g.commExpense||0),color:'var(--red)'},
       {label:'سود عملیاتی',val:g.netProfit||0,color:(g.netProfit||0)>=0?'var(--green)':'var(--red)',bold:true,border:true},
     ];
     body.innerHTML=`
@@ -2170,7 +2202,7 @@ async function loadAccTab(tab){
           <td class="mono">${fmt(r.total_invoiced)}</td>
           <td class="mono" style="color:var(--green)">${fmt(r.total_settled)}</td>
           <td class="mono" style="color:${oc};font-weight:700">${fmt(r.outstanding)}</td>
-          <td><button class="btn sm green" onclick="settlementModal(${r.id})">💵 ثبت تسویه</button></td>
+          <td style="white-space:nowrap"><button class="btn sm green" onclick="settlementModal(${r.id})">💵 ثبت تسویه</button> <button class="btn sm ghost" onclick="showCustLedger(${r.id},'${esc(r.biz)}')">📋 معین</button></td>
         </tr>`;
       }).join('')||emptyRow(7)}</tbody></table></div>`;
   } else if(tab==='settlements'){
@@ -2271,16 +2303,84 @@ async function loadAccTab(tab){
         </tr></thead><tbody>${pendingRows}</tbody></table></div>
       </div>` : `<div class="muted" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;margin-bottom:16px">✅ همه فاکتورهای رسمی تأیید شده‌اند</div>`}
       <div class="panel">
-        <div class="panel-head"><h4>📊 گزارش کمیسیون کارشناسان فروش</h4></div>
+        <div class="panel-head"><h4>📊 گزارش انگیزه فروش کارشناسان</h4></div>
         <div class="panel-body tbl-wrap"><table class="tbl"><thead><tr>
-          <th>کارشناس</th><th>نرخ نقد</th><th>نرخ چک</th><th>فروش نقد تأیید شده</th><th>فروش چک تأیید شده</th><th>کمیسیون نقد</th><th>کمیسیون چک</th><th>جمع کمیسیون</th>
+          <th>کارشناس</th><th>نرخ نقد</th><th>نرخ چک</th><th>فروش نقد تأیید شده</th><th>فروش چک تأیید شده</th><th>انگیزه نقد</th><th>انگیزه چک</th><th>جمع انگیزه</th>
         </tr></thead><tbody>${commRows||emptyRow(8)}</tbody></table></div>
       </div>`;
+  } else if(tab==='journal'){
+    const dq2=(accDateFrom||accDateTo)?'?'+(accDateFrom?'from='+encodeURIComponent(accDateFrom):'')+(accDateFrom&&accDateTo?'&':'')+(accDateTo?'to='+encodeURIComponent(accDateTo):''):'';
+    const d=await api('GET','/accounting/journal'+dq2)||{entries:[]};
+    const typeLabel={invoice:'🧾 فاکتور',invoice_reversal:'↩ ابطال فاکتور',settlement:'💵 تسویه',settlement_reversal:'↩ ابطال تسویه'};
+    body.innerHTML=`
+      <div class="panel">
+        <div class="panel-head"><h4>📒 دفتر روزنامه</h4><span class="muted" style="font-size:12px">${d.total||0} سند</span></div>
+        <div class="panel-body">
+        ${(d.entries||[]).map(e=>`
+          <div style="border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden">
+            <div style="background:var(--purple-light);padding:8px 12px;display:flex;justify-content:space-between;align-items:center;font-size:12px">
+              <span style="font-weight:700">${typeLabel[e.ref_type]||e.ref_type||'سند'} &nbsp; <span class="mono">${esc(e.entry_date||'-')}</span></span>
+              <span class="muted">${esc(e.description||'-')}</span>
+              <span class="muted">${esc(e.created_by_name||'-')}</span>
+            </div>
+            <table class="tbl" style="font-size:12px;margin:0"><thead><tr>
+              <th>کد حساب</th><th>نام حساب</th><th>بدهکار (ت)</th><th>بستانکار (ت)</th>
+            </tr></thead><tbody>
+            ${(e.lines||[]).map(l=>`<tr>
+              <td class="mono">${esc(l.account_code)}</td><td>${esc(l.account_name)}</td>
+              <td class="mono" style="color:var(--orange)">${l.debit>0?fmt(l.debit):'-'}</td>
+              <td class="mono" style="color:var(--green)">${l.credit>0?fmt(l.credit):'-'}</td>
+            </tr>`).join('')}
+            </tbody></table>
+          </div>`).join('')||'<div class="empty">سندی یافت نشد</div>'}
+        </div>
+      </div>`;
+  } else if(tab==='chart'){
+    const accounts=await api('GET','/accounting/chart-of-accounts')||[];
+    const typeLabel={asset:'دارایی',liability:'بدهی',equity:'حقوق صاحبان سرمایه',revenue:'درآمد',cogs:'بهای تمام‌شده',expense:'هزینه'};
+    const typeColor={asset:'var(--blue)',liability:'var(--orange)',equity:'var(--purple)',revenue:'var(--green)',cogs:'var(--red)',expense:'var(--red)'};
+    body.innerHTML=`
+      <div class="tbl-wrap"><table class="tbl"><thead><tr>
+        <th>کد</th><th>نام حساب</th><th>نوع</th><th>حساب والد</th>
+      </tr></thead><tbody>
+      ${accounts.map(a=>`<tr style="${!a.parent_code?'font-weight:700;background:var(--purple-light)':''}">
+        <td class="mono">${esc(a.code)}</td>
+        <td style="padding-right:${a.parent_code?24:8}px">${!a.parent_code?'':'↳ '}${esc(a.name)}</td>
+        <td><span style="color:${typeColor[a.type]||'var(--muted)'};font-weight:600">${typeLabel[a.type]||a.type}</span></td>
+        <td class="mono muted">${a.parent_code||'-'}</td>
+      </tr>`).join('')||emptyRow(4)}
+      </tbody></table></div>`;
   }
 }
 
+async function showCustLedger(custId, custName){
+  const d = await api('GET','/accounting/ledger/'+custId)||{entries:[]};
+  const entries = d.entries||[];
+  openModal(`
+    <div class="modal-head"><h3>📋 دفتر معین: ${esc(custName)}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body" style="padding:0">
+      <div class="tbl-wrap" style="max-height:70vh">
+        <table class="tbl" style="font-size:12px"><thead><tr>
+          <th>تاریخ</th><th>شرح</th><th>بدهکار (ت)</th><th>بستانکار (ت)</th><th>مانده (ت)</th>
+        </tr></thead><tbody>
+        ${entries.map(e=>`<tr>
+          <td class="mono">${esc(e.date||'-')}</td>
+          <td>${esc(e.description||'-')}</td>
+          <td class="mono" style="color:var(--orange)">${e.debit>0?fmt(e.debit):'-'}</td>
+          <td class="mono" style="color:var(--green)">${e.credit>0?fmt(e.credit):'-'}</td>
+          <td class="mono" style="font-weight:700;color:${(e.running_balance||0)>0?'var(--red)':'var(--green)'}">${fmt(Math.abs(e.running_balance||0))} ${(e.running_balance||0)>0?'بد':'بس'}</td>
+        </tr>`).join('')||'<tr><td colspan="5" class="empty">سابقه‌ای ثبت نشده</td></tr>'}
+        </tbody></table>
+      </div>
+      <div style="padding:12px 16px;border-top:1px solid var(--border);font-weight:700">
+        مانده نهایی: <span style="color:${(d.balance||0)>0?'var(--red)':'var(--green)'}"> ${fmt(Math.abs(d.balance||0))} تومان ${(d.balance||0)>0?'(بدهکار)':'(بستانکار)'}</span>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn ghost" onclick="closeModal()">بستن</button></div>`);
+}
+
 async function approveInvoice(id){
-  if(!confirm('این فاکتور تأیید و در محاسبه کمیسیون لحاظ شود؟')) return;
+  if(!confirm('این فاکتور تأیید و در محاسبه انگیزه فروش لحاظ شود؟')) return;
   try{
     await api('POST','/accounting/invoices/'+id+'/approve',{});
     showToast('فاکتور با موفقیت تأیید شد');
@@ -3017,7 +3117,7 @@ function renderAdminGuide(){
         <li><b>کارشناس میدانی (حضوری)</b>: ویزیت حضوری مشتریان</li>
         <li><b>کارشناس داخلی (تلفنی)</b>: فروش و پیگیری تلفنی</li>
       </ul>
-      <h5>کمیسیون</h5><p>درصد کمیسیون نقد و چک هر کارشناس را جداگانه تنظیم کنید.</p>
+      <h5>انگیزه فروش</h5><p>درصد انگیزه فروش نقد و چک هر کارشناس را جداگانه تنظیم کنید. پس از ذخیره اولیه، نرخ قفل می‌شود و تغییر آن نیاز به تأیید مدیر دارد.</p>
       <div class="warn">شماره موبایل کارشناس را حتماً وارد کنید تا یادآور پیامکی دریافت کند.</div>`),
     helpSec('⚙️','تنظیمات',`
       <h5>اطلاعات شرکت</h5><p>نام، تلفن و آدرس شرکت که روی فاکتورها چاپ می‌شود.</p>

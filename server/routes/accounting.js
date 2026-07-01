@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { getDB, audit } = require('../db');
+const { getDB, audit, createLedgerEntry, createJournalEntry } = require('../db');
 const { auth, adminOnly } = require('../middleware/auth');
 
 // Overview stats for accounting dashboard
@@ -80,13 +80,56 @@ router.post('/settlements', auth, adminOnly, (req, res) => {
         cheque_bank || '', cheque_sayadi || '', cheque_number || '', cheque_account || '',
         parseFloat(cheque_amount || 0), cheque_owner || '', cheque_due || '',
         cheque_status || 'pending');
-  audit(req.user.id, 'create', 'settlement', result.lastInsertRowid, `تسویه ${amount} تومان - مشتری ${cust_id}`);
-  res.json({ id: result.lastInsertRowid, ok: true });
+  const settlementId = result.lastInsertRowid;
+  audit(req.user.id, 'create', 'settlement', settlementId, `تسویه ${amount} تومان - مشتری ${cust_id}`);
+
+  // Customer ledger entry
+  const payLabel = (pay_type || 'cash') === 'cheque' ? 'چک' : 'نقد';
+  createLedgerEntry(db, {
+    customer_id: cust_id, date: date || '', entry_type: 'settlement',
+    ref_type: 'settlement', ref_id: settlementId,
+    description: `تسویه ${payLabel} - ${parseFloat(amount).toLocaleString('fa-IR')} تومان`,
+    debit: 0, credit: parseFloat(amount), user_id: req.user.id
+  });
+  // Journal entry: Dr Cash/Bank / Cr Receivables
+  const cashCode = (pay_type || 'cash') === 'cheque' ? '1102' : '1101';
+  const cashName = (pay_type || 'cash') === 'cheque' ? 'موجودی بانک' : 'موجودی صندوق';
+  createJournalEntry(db, {
+    date: date || '', description: `تسویه ${payLabel} مشتری`,
+    ref_type: 'settlement', ref_id: settlementId, created_by: req.user.id,
+    lines: [
+      { code: cashCode, name: cashName, debit: parseFloat(amount), credit: 0 },
+      { code: '1103', name: 'حساب‌های دریافتنی از مشتریان', debit: 0, credit: parseFloat(amount) }
+    ]
+  });
+
+  res.json({ id: settlementId, ok: true });
 });
 
 // Delete settlement
 router.delete('/settlements/:id', auth, adminOnly, (req, res) => {
   const db = getDB();
+  const settlement = db.prepare('SELECT * FROM settlements WHERE id=?').get(req.params.id);
+  if (!settlement) return res.status(404).json({ error: 'تسویه یافت نشد' });
+
+  // Reversal ledger + journal entries
+  const cashCode = settlement.pay_type === 'cheque' ? '1102' : '1101';
+  const cashName = settlement.pay_type === 'cheque' ? 'موجودی بانک' : 'موجودی صندوق';
+  createLedgerEntry(db, {
+    customer_id: settlement.cust_id, date: settlement.date || '', entry_type: 'reversal',
+    ref_type: 'settlement', ref_id: settlement.id,
+    description: `ابطال تسویه شماره ${settlement.id}`,
+    debit: settlement.amount, credit: 0, user_id: req.user.id
+  });
+  createJournalEntry(db, {
+    date: settlement.date || '', description: `ابطال تسویه شماره ${settlement.id}`,
+    ref_type: 'settlement_reversal', ref_id: settlement.id, created_by: req.user.id,
+    lines: [
+      { code: '1103', name: 'حساب‌های دریافتنی از مشتریان', debit: settlement.amount, credit: 0 },
+      { code: cashCode, name: cashName, debit: 0, credit: settlement.amount }
+    ]
+  });
+
   db.prepare('DELETE FROM settlements WHERE id=?').run(req.params.id);
   audit(req.user.id, 'delete', 'settlement', req.params.id, 'حذف تسویه');
   res.json({ ok: true });
@@ -127,11 +170,11 @@ router.patch('/cheques/:id/status', auth, adminOnly, (req, res) => {
   res.json({ ok: true });
 });
 
-// Commission report per salesperson (only approved invoices)
+// Incentive (commission) report per salesperson (only approved invoices)
 router.get('/commissions', auth, adminOnly, (req, res) => {
   const db = getDB();
   const users = db.prepare(
-    "SELECT id,name,commission_cash,commission_cheque FROM users WHERE active=1 AND role='salesperson'"
+    "SELECT id,name,commission_cash,commission_cheque FROM users WHERE active=1 AND role='field_sales'"
   ).all();
   const result = users.map(u => {
     const cashSales = db.prepare(
@@ -190,7 +233,7 @@ router.post('/invoices/:id/approve', auth, adminOnly, (req, res) => {
   if (inv.type !== 'final') return res.status(400).json({ error: 'فقط فاکتور رسمی قابل تأیید است' });
   db.prepare('UPDATE invoices SET approved=1, approved_at=?, approved_by=? WHERE id=?')
     .run(Math.floor(Date.now() / 1000), req.user.id, inv.id);
-  audit(req.user.id, 'approve', 'invoice', inv.id, `تأیید فاکتور ${inv.num} برای کمیسیون`);
+  audit(req.user.id, 'approve', 'invoice', inv.id, `تأیید فاکتور ${inv.num} برای انگیزه فروش`);
   res.json({ ok: true });
 });
 
@@ -241,6 +284,53 @@ router.get('/general', auth, adminOnly, (req, res) => {
     netProfit: revenue - commExpense,
     monthlyInv, monthlySett, journal
   });
+});
+
+// Customer ledger (transaction history)
+router.get('/ledger/:customerId', auth, adminOnly, (req, res) => {
+  const db = getDB();
+  const customer = db.prepare('SELECT id,biz,owner,phone FROM customers WHERE id=?').get(req.params.customerId);
+  if (!customer) return res.status(404).json({ error: 'مشتری یافت نشد' });
+  const entries = db.prepare(`
+    SELECT cl.*, u.name as user_name
+    FROM customer_ledger cl LEFT JOIN users u ON cl.user_id=u.id
+    WHERE cl.customer_id=?
+    ORDER BY cl.created_at ASC, cl.id ASC
+  `).all(req.params.customerId);
+  let balance = 0;
+  entries.forEach(e => { balance += (e.debit || 0) - (e.credit || 0); e.running_balance = balance; });
+  res.json({ customer, entries, balance });
+});
+
+// Chart of accounts
+router.get('/chart-of-accounts', auth, adminOnly, (req, res) => {
+  const db = getDB();
+  const accounts = db.prepare('SELECT * FROM chart_of_accounts WHERE is_active=1 ORDER BY code').all();
+  res.json(accounts);
+});
+
+// Journal entries with lines (paginated, date-filtered)
+router.get('/journal', auth, adminOnly, (req, res) => {
+  const db = getDB();
+  const { from, to, page = '1' } = req.query;
+  const pageNum = Math.max(1, parseInt(page));
+  const limit = 50, offset = (pageNum - 1) * limit;
+  const where = [], params = [];
+  if (from) { where.push('je.entry_date >= ?'); params.push(from); }
+  if (to)   { where.push('je.entry_date <= ?'); params.push(to); }
+  const whereSql = where.length ? 'WHERE ' + where.join(' AND ') : '';
+  const total = db.prepare(`SELECT COUNT(*) c FROM journal_entries je ${whereSql}`).get(...params).c;
+  const entries = db.prepare(`
+    SELECT je.*, u.name as created_by_name FROM journal_entries je
+    LEFT JOIN users u ON je.created_by=u.id
+    ${whereSql} ORDER BY je.entry_date DESC, je.id DESC LIMIT ? OFFSET ?
+  `).all(...params, limit, offset);
+  const ids = entries.map(e => e.id);
+  const lines = ids.length
+    ? db.prepare(`SELECT * FROM journal_lines WHERE entry_id IN (${ids.join(',')}) ORDER BY entry_id,id`).all()
+    : [];
+  entries.forEach(e => { e.lines = lines.filter(l => l.entry_id === e.id); });
+  res.json({ entries, total, page: pageNum, limit });
 });
 
 module.exports = router;

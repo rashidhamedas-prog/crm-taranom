@@ -247,6 +247,54 @@ function initDB() {
       created_at INTEGER DEFAULT (strftime('%s','now')),
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS customer_ledger (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_id INTEGER NOT NULL,
+      date TEXT NOT NULL,
+      entry_type TEXT NOT NULL,
+      ref_type TEXT,
+      ref_id INTEGER,
+      description TEXT,
+      debit REAL DEFAULT 0,
+      credit REAL DEFAULT 0,
+      user_id INTEGER,
+      created_at INTEGER DEFAULT (strftime('%s','now')),
+      FOREIGN KEY(customer_id) REFERENCES customers(id),
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS chart_of_accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      parent_code TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at INTEGER DEFAULT (strftime('%s','now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS journal_entries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entry_date TEXT NOT NULL,
+      description TEXT,
+      ref_type TEXT,
+      ref_id INTEGER,
+      created_by INTEGER,
+      created_at INTEGER DEFAULT (strftime('%s','now')),
+      FOREIGN KEY(created_by) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS journal_lines (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entry_id INTEGER NOT NULL,
+      account_code TEXT NOT NULL,
+      account_name TEXT NOT NULL,
+      debit REAL DEFAULT 0,
+      credit REAL DEFAULT 0,
+      description TEXT,
+      FOREIGN KEY(entry_id) REFERENCES journal_entries(id)
+    );
   `);
 
   // ---- Safe migrations for databases created by v2 ----
@@ -302,6 +350,42 @@ function initDB() {
   ensureColumn(db, 'customers', 'assigned_to', 'INTEGER');
   ensureColumn(db, 'products', 'colors', 'INTEGER DEFAULT 1');
   ensureColumn(db, 'products', 'pack_size', 'INTEGER DEFAULT 1');
+  // Accounting module: sales incentive lock
+  ensureColumn(db, 'users', 'incentive_locked', 'INTEGER DEFAULT 0');
+
+  // ---- Seed chart of accounts (only if empty) ----
+  const coaCount = db.prepare('SELECT COUNT(*) c FROM chart_of_accounts').get().c;
+  if (coaCount === 0) {
+    const insCoA = db.prepare('INSERT OR IGNORE INTO chart_of_accounts (code,name,type,parent_code) VALUES (?,?,?,?)');
+    const seedCoA = db.transaction(() => {
+      const accounts = [
+        ['1000','دارایی‌ها','asset',null],
+        ['1100','دارایی‌های جاری','asset','1000'],
+        ['1101','موجودی صندوق','asset','1100'],
+        ['1102','موجودی بانک','asset','1100'],
+        ['1103','حساب‌های دریافتنی از مشتریان','asset','1100'],
+        ['1104','موجودی کالا','asset','1100'],
+        ['1105','پیش‌پرداخت‌ها','asset','1100'],
+        ['2000','بدهی‌ها','liability',null],
+        ['2100','بدهی‌های جاری','liability','2000'],
+        ['2101','حساب‌های پرداختنی','liability','2100'],
+        ['2102','پیش‌دریافت از مشتریان','liability','2100'],
+        ['3000','حقوق صاحبان سرمایه','equity',null],
+        ['3101','سرمایه','equity','3000'],
+        ['4000','درآمدها','revenue',null],
+        ['4101','درآمد فروش کالا','revenue','4000'],
+        ['4102','برگشت از فروش','revenue','4000'],
+        ['4103','تخفیفات فروش','revenue','4000'],
+        ['5000','بهای تمام‌شده کالای فروش رفته','cogs',null],
+        ['6000','هزینه‌ها','expense',null],
+        ['6101','هزینه انگیزه فروش','expense','6000'],
+        ['6102','هزینه‌های عمومی و اداری','expense','6000'],
+        ['6103','هزینه‌های توزیع و فروش','expense','6000'],
+      ];
+      for (const [code,name,type,parent] of accounts) insCoA.run(code,name,type,parent);
+    });
+    seedCoA();
+  }
 
   // ---- Indexes ----
   db.exec(`
@@ -360,4 +444,26 @@ function audit(userId, action, entity, entityId, detail) {
   } catch (e) { /* never let audit failures break a request */ }
 }
 
-module.exports = { getDB, initDB, audit };
+// Create a customer ledger entry (debit = customer owes us, credit = customer paid)
+function createLedgerEntry(db, { customer_id, date, entry_type, ref_type, ref_id, description, debit, credit, user_id }) {
+  try {
+    db.prepare('INSERT INTO customer_ledger (customer_id,date,entry_type,ref_type,ref_id,description,debit,credit,user_id) VALUES (?,?,?,?,?,?,?,?,?)')
+      .run(customer_id, date || '', entry_type, ref_type || '', ref_id || null, description || '', debit || 0, credit || 0, user_id || null);
+  } catch (e) { console.error('ledger entry error:', e.message); }
+}
+
+// Create a double-entry journal entry with lines [{code, name, debit, credit, description}]
+function createJournalEntry(db, { date, description, ref_type, ref_id, created_by, lines }) {
+  try {
+    const entry = db.prepare('INSERT INTO journal_entries (entry_date,description,ref_type,ref_id,created_by) VALUES (?,?,?,?,?)')
+      .run(date || '', description || '', ref_type || '', ref_id || null, created_by || null);
+    const entryId = entry.lastInsertRowid;
+    const lineStmt = db.prepare('INSERT INTO journal_lines (entry_id,account_code,account_name,debit,credit,description) VALUES (?,?,?,?,?,?)');
+    for (const line of (lines || [])) {
+      lineStmt.run(entryId, line.code, line.name, line.debit || 0, line.credit || 0, line.description || '');
+    }
+    return entryId;
+  } catch (e) { console.error('journal entry error:', e.message); }
+}
+
+module.exports = { getDB, initDB, audit, createLedgerEntry, createJournalEntry };

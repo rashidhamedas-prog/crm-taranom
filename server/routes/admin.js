@@ -3,14 +3,14 @@ const bcrypt = require('bcryptjs');
 const { getDB, audit } = require('../db');
 const { auth, adminOnly } = require('../middleware/auth');
 
-// Get all users (include commission fields)
+// Get all users (include incentive fields)
 router.get('/users', auth, adminOnly, (req, res) => {
   const db = getDB();
-  const users = db.prepare('SELECT id,name,username,role,phone,active,last_login,commission_cash,commission_cheque,created_at FROM users ORDER BY created_at DESC').all();
+  const users = db.prepare('SELECT id,name,username,role,phone,active,last_login,commission_cash,commission_cheque,incentive_locked,created_at FROM users ORDER BY created_at DESC').all();
   res.json(users);
 });
 
-// Create user (salesperson or admin)
+// Create user (salesperson or admin) — incentive is locked immediately after creation
 router.post('/users', auth, adminOnly, (req, res) => {
   const { name, username, password, phone, role = 'salesperson', commission_cash = 0, commission_cheque = 0 } = req.body;
   if (!name || !username || !password) return res.status(400).json({ error: 'اطلاعات ناقص' });
@@ -18,24 +18,40 @@ router.post('/users', auth, adminOnly, (req, res) => {
   const exists = db.prepare('SELECT id FROM users WHERE username=?').get(username);
   if (exists) return res.status(400).json({ error: 'این نام کاربری قبلاً ثبت شده' });
   const hash = bcrypt.hashSync(password, 10);
-  const result = db.prepare('INSERT INTO users (name,username,password,phone,role,commission_cash,commission_cheque) VALUES (?,?,?,?,?,?,?)')
+  const result = db.prepare('INSERT INTO users (name,username,password,phone,role,commission_cash,commission_cheque,incentive_locked) VALUES (?,?,?,?,?,?,?,1)')
     .run(name, username, hash, phone || '', role, parseFloat(commission_cash) || 0, parseFloat(commission_cheque) || 0);
-  audit(req.user.id, 'create', 'user', result.lastInsertRowid, `ساخت کاربر ${name}`);
-  res.json({ id: result.lastInsertRowid, name, username, phone: phone || '', role, commission_cash: parseFloat(commission_cash) || 0, commission_cheque: parseFloat(commission_cheque) || 0 });
+  audit(req.user.id, 'create', 'user', result.lastInsertRowid, `ساخت کاربر ${name} با انگیزه فروش نقد ${commission_cash}٪ چک ${commission_cheque}٪`);
+  res.json({ id: result.lastInsertRowid, name, username, phone: phone || '', role, commission_cash: parseFloat(commission_cash) || 0, commission_cheque: parseFloat(commission_cheque) || 0, incentive_locked: 1 });
 });
 
-// Update user
+// Update user — if incentive rate changed on a locked user, require force:true
 router.put('/users/:id', auth, adminOnly, (req, res) => {
-  const { name, password, active, role, phone, commission_cash = 0, commission_cheque = 0 } = req.body;
+  const { name, password, active, role, phone, commission_cash = 0, commission_cheque = 0, force } = req.body;
   const db = getDB();
-  if (password) {
-    db.prepare('UPDATE users SET name=?,active=?,role=?,phone=?,password=?,commission_cash=?,commission_cheque=? WHERE id=?')
-      .run(name, active, role, phone || '', bcrypt.hashSync(password, 10), parseFloat(commission_cash) || 0, parseFloat(commission_cheque) || 0, req.params.id);
-  } else {
-    db.prepare('UPDATE users SET name=?,active=?,role=?,phone=?,commission_cash=?,commission_cheque=? WHERE id=?')
-      .run(name, active, role, phone || '', parseFloat(commission_cash) || 0, parseFloat(commission_cheque) || 0, req.params.id);
+  const existing = db.prepare('SELECT * FROM users WHERE id=?').get(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'کاربر یافت نشد' });
+
+  const newCash = parseFloat(commission_cash) || 0;
+  const newCheque = parseFloat(commission_cheque) || 0;
+  const rateChanged = Math.abs(newCash - (existing.commission_cash || 0)) > 0.001 ||
+                      Math.abs(newCheque - (existing.commission_cheque || 0)) > 0.001;
+
+  if (existing.incentive_locked && rateChanged && !force) {
+    return res.status(409).json({ locked: true, message: 'نرخ انگیزه فروش این کارشناس قفل شده است. لطفاً تأیید کنید.' });
   }
-  audit(req.user.id, 'update', 'user', req.params.id, `ویرایش کاربر ${name}`);
+
+  if (password) {
+    db.prepare('UPDATE users SET name=?,active=?,role=?,phone=?,password=?,commission_cash=?,commission_cheque=?,incentive_locked=1 WHERE id=?')
+      .run(name, active, role, phone || '', bcrypt.hashSync(password, 10), newCash, newCheque, req.params.id);
+  } else {
+    db.prepare('UPDATE users SET name=?,active=?,role=?,phone=?,commission_cash=?,commission_cheque=?,incentive_locked=1 WHERE id=?')
+      .run(name, active, role, phone || '', newCash, newCheque, req.params.id);
+  }
+  if (rateChanged) {
+    audit(req.user.id, 'update', 'user', req.params.id, `تغییر نرخ انگیزه فروش ${name}: نقد ${existing.commission_cash}%→${newCash}% چک ${existing.commission_cheque}%→${newCheque}%`);
+  } else {
+    audit(req.user.id, 'update', 'user', req.params.id, `ویرایش کاربر ${name}`);
+  }
   res.json({ ok: true });
 });
 

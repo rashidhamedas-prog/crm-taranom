@@ -85,7 +85,7 @@ router.post('/reset-password', auth, adminOnly, (req, res) => {
 // Admin: list all users with last_login
 router.get('/users', auth, adminOnly, (req, res) => {
   const db = getDB();
-  const users = db.prepare('SELECT id,name,username,role,phone,active,last_login,created_at FROM users ORDER BY created_at DESC').all();
+  const users = db.prepare('SELECT id,name,username,role,phone,active,last_login,commission_cash,commission_cheque,incentive_locked,created_at FROM users ORDER BY created_at DESC').all();
   res.json(users);
 });
 
