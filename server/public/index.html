@@ -1014,11 +1014,12 @@ async function renderDashContent(){
         </div>
         <div class="panel-body tbl-wrap">
           <table class="tbl">
-            <thead><tr><th>فروشگاه</th><th>نام کامل</th><th>شهر</th><th>کارشناس</th><th>موجودی (تومان)</th></tr></thead>
+            <thead><tr><th>فروشگاه</th><th>نام کامل</th><th>موجودی حساب</th><th>آدرس</th><th>کارشناس</th></tr></thead>
             <tbody id="dashBalTbody">${balRows.map(c=>`<tr>
-              <td>${esc(c.biz)}</td><td>${esc(c.owner||'-')}</td><td>${esc(c.city||'-')}</td>
-              <td class="muted">${esc(c.salesperson||'-')}</td>
+              <td>${esc(c.biz)}</td><td>${esc(c.owner||'-')}</td>
               <td class="mono" style="font-weight:600;color:${c.balance>0?'var(--green)':'#dc2626'}">${fmt(c.balance)} تومان</td>
+              <td>${esc(c.address||c.city||'-')}</td>
+              <td class="muted">${esc(c.salesperson||'-')}</td>
             </tr>`).join('')}</tbody>
           </table>
         </div>
@@ -1052,10 +1053,11 @@ async function renderDashContent(){
         <div class="panel-head"><h4>💰 موجودی حساب مشتریان من</h4></div>
         <div class="panel-body tbl-wrap">
           <table class="tbl">
-            <thead><tr><th>فروشگاه</th><th>نام کامل</th><th>شهر</th><th>موجودی (تومان)</th></tr></thead>
+            <thead><tr><th>فروشگاه</th><th>نام کامل</th><th>موجودی حساب</th><th>آدرس</th></tr></thead>
             <tbody>${balRows.map(c=>`<tr>
-              <td>${esc(c.biz)}</td><td>${esc(c.owner||'-')}</td><td>${esc(c.city||'-')}</td>
+              <td>${esc(c.biz)}</td><td>${esc(c.owner||'-')}</td>
               <td class="mono" style="font-weight:600;color:${c.balance>0?'var(--green)':'#dc2626'}">${fmt(c.balance)} تومان</td>
+              <td>${esc(c.address||c.city||'-')}</td>
             </tr>`).join('')}</tbody>
           </table>
         </div>
@@ -1077,9 +1079,10 @@ function filterDashBalances(name){
   const filtered = name ? rows.filter(c=>(c.salesperson||'')=== name) : rows;
   const tb = el('dashBalTbody'); if(!tb) return;
   tb.innerHTML = filtered.map(c=>`<tr>
-    <td>${esc(c.biz)}</td><td>${esc(c.owner||'-')}</td><td>${esc(c.city||'-')}</td>
-    <td class="muted">${esc(c.salesperson||'-')}</td>
+    <td>${esc(c.biz)}</td><td>${esc(c.owner||'-')}</td>
     <td class="mono" style="font-weight:600;color:${c.balance>0?'var(--green)':'#dc2626'}">${fmt(c.balance)} تومان</td>
+    <td>${esc(c.address||c.city||'-')}</td>
+    <td class="muted">${esc(c.salesperson||'-')}</td>
   </tr>`).join('') || '<tr><td colspan="5" class="empty">موردی یافت نشد</td></tr>';
 }
 function statCard(c,ic,v,l){ return `<div class="stat"><div class="ic ${c}">${ic}</div><div><div class="v mono">${v}</div><div class="l">${l}</div></div></div>`; }

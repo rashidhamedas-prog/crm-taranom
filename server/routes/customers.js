@@ -108,9 +108,9 @@ router.get('/balances', auth, (req, res) => {
   const scope = getScope(req);
   let rows;
   if (scope === null) {
-    rows = db.prepare('SELECT id,biz,owner,city,balance FROM customers WHERE balance<>0 ORDER BY ABS(balance) DESC').all();
+    rows = db.prepare('SELECT c.id,c.biz,c.owner,c.city,c.address,c.balance,u.name as salesperson FROM customers c LEFT JOIN users u ON c.user_id=u.id WHERE c.balance<>0 ORDER BY ABS(c.balance) DESC').all();
   } else {
-    rows = db.prepare('SELECT id,biz,owner,city,balance FROM customers WHERE user_id=? AND balance<>0 ORDER BY ABS(balance) DESC').all(scope);
+    rows = db.prepare('SELECT id,biz,owner,city,address,balance FROM customers WHERE user_id=? AND balance<>0 ORDER BY ABS(balance) DESC').all(scope);
   }
   res.json(rows);
 });
