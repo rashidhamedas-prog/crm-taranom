@@ -1009,7 +1009,7 @@ async function renderDashContent(){
         <div class="panel-head"><h4>💰 موجودی حساب مشتریان</h4>
           <select onchange="filterDashBalances(this.value)" style="padding:5px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px">
             <option value="">همه کارشناسان</option>
-            ${(board||[]).map(u=>`<option value="${esc(u.name)}">${esc(u.name)}</option>`).join('')}
+            ${[...new Set(balRows.map(c=>c.salesperson||'').filter(Boolean))].map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')}
           </select>
         </div>
         <div class="panel-body tbl-wrap">
@@ -1088,8 +1088,8 @@ function fitStatNums(){
     document.querySelectorAll('.stat .v').forEach(el=>{
       el.style.fontSize='';
       let fs=parseInt(getComputedStyle(el).fontSize)||20;
-      const max=el.parentElement?el.parentElement.clientWidth-4:200;
-      while(el.scrollWidth>max+2&&fs>10){fs--;el.style.fontSize=fs+'px';}
+      // shrink until text fits inside its own box (scrollWidth = real text width; clientWidth = visible box width)
+      while(el.scrollWidth>el.clientWidth+1&&fs>11){fs--;el.style.fontSize=fs+'px';}
     });
   });
 }
@@ -1615,7 +1615,8 @@ function openInvBuilder(id){
       </div>
       <div class="inv-layout">
         <div>
-          <input class="search" id="invProdSearch" placeholder="جستجوی محصول..." style="margin-bottom:10px;width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px" oninput="renderInvPicker()">
+          <input class="search" id="invProdSearch" placeholder="جستجوی محصول..." style="margin-bottom:6px;width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px" oninput="renderInvPicker()">
+          <div id="mobPickHint" style="display:none;font-size:11px;color:var(--muted);margin-bottom:8px;text-align:center">👆 برای افزودن، دو بار روی محصول بزنید</div>
           <div class="inv-products"><div class="inv-pick" id="invPicker"></div></div>
         </div>
         <div class="inv-cart">
@@ -1629,6 +1630,7 @@ function openInvBuilder(id){
     </div>`, true);
   renderInvPicker();
   renderCart();
+  const hint=el('mobPickHint'); if(hint) hint.style.display=window.matchMedia('(hover:none)').matches?'block':'none';
 }
 function renderInvPicker(){
   const words=(el('invProdSearch')?.value||'').trim().toLowerCase().split(/\s+/).filter(Boolean);
