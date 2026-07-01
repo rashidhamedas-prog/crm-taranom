@@ -1014,7 +1014,7 @@ async function renderDashContent(){
         </div>
         <div class="panel-body tbl-wrap">
           <table class="tbl">
-            <thead><tr><th>فروشگاه</th><th>نام کامل</th><th>موجودی حساب</th><th>آدرس</th><th>کارشناس</th></tr></thead>
+            <thead><tr><th>فروشگاه</th><th>نام کامل</th><th>مانده حساب</th><th>آدرس</th><th>کارشناس</th></tr></thead>
             <tbody id="dashBalTbody">${balRows.map(c=>`<tr>
               <td>${esc(c.biz)}</td><td>${esc(c.owner||'-')}</td>
               <td class="mono" style="font-weight:600;color:${c.balance>0?'var(--green)':'#dc2626'}">${fmt(c.balance)} تومان</td>
@@ -1053,7 +1053,7 @@ async function renderDashContent(){
         <div class="panel-head"><h4>💰 موجودی حساب مشتریان من</h4></div>
         <div class="panel-body tbl-wrap">
           <table class="tbl">
-            <thead><tr><th>فروشگاه</th><th>نام کامل</th><th>موجودی حساب</th><th>آدرس</th></tr></thead>
+            <thead><tr><th>فروشگاه</th><th>نام کامل</th><th>مانده حساب</th><th>آدرس</th></tr></thead>
             <tbody>${balRows.map(c=>`<tr>
               <td>${esc(c.biz)}</td><td>${esc(c.owner||'-')}</td>
               <td class="mono" style="font-weight:600;color:${c.balance>0?'var(--green)':'#dc2626'}">${fmt(c.balance)} تومان</td>
