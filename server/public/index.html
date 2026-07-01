@@ -83,7 +83,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
 .stat{background:var(--card);border-radius:14px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.05);
   border:1px solid var(--border);display:flex;align-items:center;gap:14px;min-width:0;overflow:hidden}
 .stat .ic{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
-.stat .v{font-size:20px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat .v{font-size:20px;font-weight:800;white-space:nowrap;overflow:hidden}
 .stat .l{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stat > div:last-child{min-width:0;overflow:hidden}
 .ic.p{background:var(--purple-light);color:var(--purple)}
@@ -981,7 +981,8 @@ async function renderDashContent(){
       api('GET','/admin/customer-balances')
     ]);
     if(!ov) return;
-    const balRows = (balances||[]);
+    window._adminBalRows = (balances||[]);
+    const balRows = window._adminBalRows;
     body.innerHTML = `
       <div class="cards">
         ${statCard('p','👥', fmt(ov.totalCustomers),'کل مشتریان')}
@@ -1005,11 +1006,16 @@ async function renderDashContent(){
         </div>
       </div>
       ${balRows.length?`<div class="panel">
-        <div class="panel-head"><h4>💰 موجودی حساب مشتریان</h4></div>
+        <div class="panel-head"><h4>💰 موجودی حساب مشتریان</h4>
+          <select onchange="filterDashBalances(this.value)" style="padding:5px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px">
+            <option value="">همه کارشناسان</option>
+            ${(board||[]).map(u=>`<option value="${esc(u.name)}">${esc(u.name)}</option>`).join('')}
+          </select>
+        </div>
         <div class="panel-body tbl-wrap">
           <table class="tbl">
             <thead><tr><th>فروشگاه</th><th>نام کامل</th><th>شهر</th><th>کارشناس</th><th>موجودی (تومان)</th></tr></thead>
-            <tbody>${balRows.map(c=>`<tr>
+            <tbody id="dashBalTbody">${balRows.map(c=>`<tr>
               <td>${esc(c.biz)}</td><td>${esc(c.owner||'-')}</td><td>${esc(c.city||'-')}</td>
               <td class="muted">${esc(c.salesperson||'-')}</td>
               <td class="mono" style="font-weight:600;color:${c.balance>0?'var(--green)':'#dc2626'}">${fmt(c.balance)} تومان</td>
@@ -1017,6 +1023,7 @@ async function renderDashContent(){
           </table>
         </div>
       </div>`:''}`;
+    fitStatNums();
   } else {
     const [followups, invoices, balances] = await Promise.all([
       api('GET','/followups'), api('GET','/invoices'),
@@ -1062,15 +1069,36 @@ async function renderDashContent(){
           </tr>`).join('')||emptyRow(4)}</tbody></table>
         </div>
       </div>`;
+    fitStatNums();
   }
 };
+function filterDashBalances(name){
+  const rows = window._adminBalRows||[];
+  const filtered = name ? rows.filter(c=>(c.salesperson||'')=== name) : rows;
+  const tb = el('dashBalTbody'); if(!tb) return;
+  tb.innerHTML = filtered.map(c=>`<tr>
+    <td>${esc(c.biz)}</td><td>${esc(c.owner||'-')}</td><td>${esc(c.city||'-')}</td>
+    <td class="muted">${esc(c.salesperson||'-')}</td>
+    <td class="mono" style="font-weight:600;color:${c.balance>0?'var(--green)':'#dc2626'}">${fmt(c.balance)} تومان</td>
+  </tr>`).join('') || '<tr><td colspan="5" class="empty">موردی یافت نشد</td></tr>';
+}
 function statCard(c,ic,v,l){ return `<div class="stat"><div class="ic ${c}">${ic}</div><div><div class="v mono">${v}</div><div class="l">${l}</div></div></div>`; }
+function fitStatNums(){
+  requestAnimationFrame(()=>{
+    document.querySelectorAll('.stat .v').forEach(el=>{
+      el.style.fontSize='';
+      let fs=parseInt(getComputedStyle(el).fontSize)||20;
+      const max=el.parentElement?el.parentElement.clientWidth-4:200;
+      while(el.scrollWidth>max+2&&fs>10){fs--;el.style.fontSize=fs+'px';}
+    });
+  });
+}
 function emptyRow(cols){ return `<tr><td colspan="${cols}" class="empty">موردی یافت نشد</td></tr>`; }
 
 /* ============================================================
    CUSTOMERS
 ============================================================ */
-let custFilter = {q:'', status:''};
+let custFilter = {q:'', status:'', user_id:''};
 let custSelected = new Set();
 ROUTES.customers = function(){
   custSelected.clear();
@@ -1082,6 +1110,10 @@ ROUTES.customers = function(){
         <option value="">همه وضعیت‌ها</option>
         ${['vip','active','followup','silent','new'].map(s=>`<option value="${s}" ${custFilter.status===s?'selected':''}>${STATUS_LABEL[s]}</option>`).join('')}
       </select>
+      ${ME.role==='admin'?`<select id="cUser">
+        <option value="">همه کارشناسان</option>
+        ${(CACHE.users||[]).filter(u=>u.active).map(u=>`<option value="${u.id}" ${String(custFilter.user_id)===String(u.id)?'selected':''}>${esc(u.name)}</option>`).join('')}
+      </select>`:''}
       <button class="btn" onclick="custModal()">➕ مشتری جدید</button>
       ${ME.role==='admin'?`<button class="btn ghost" onclick="importCustomers()">📤 ورود اکسل</button>
       <button class="btn ghost" onclick="downloadCustTemplate()">📄 قالب</button>`:''}
@@ -1100,12 +1132,14 @@ ROUTES.customers = function(){
     <div class="panel"><div class="panel-body tbl-wrap"><div id="custTable"></div></div></div>`;
   el('cSearch').addEventListener('input', e=>{ custFilter.q=e.target.value; renderCustTable(); });
   el('cStatus').addEventListener('change', e=>{ custFilter.status=e.target.value; renderCustTable(); });
+  const cUser=el('cUser'); if(cUser) cUser.addEventListener('change',e=>{ custFilter.user_id=e.target.value; renderCustTable(); });
   renderCustTable();
 };
 function renderCustTable(){
   let rows = CACHE.customers.slice();
   if(custFilter.q){ const q=custFilter.q.toLowerCase(); rows=rows.filter(c=>(c.biz+' '+(c.owner||'')+' '+(c.city||'')+' '+(c.phone||'')).toLowerCase().includes(q)); }
   if(custFilter.status) rows=rows.filter(c=>c.status===custFilter.status);
+  if(custFilter.user_id) rows=rows.filter(c=>String(c.user_id)===String(custFilter.user_id)||String(c.assigned_to)===String(custFilter.user_id));
   const isAdmin = ME.role==='admin';
   const bar = el('cBulkBar');
   const cnt = el('cSelCount');
@@ -1604,7 +1638,7 @@ function renderInvPicker(){
     return words.every(w=>hay.includes(w));
   });
   el('invPicker').innerHTML = prods.map(p=>`
-    <div class="pick-card" onclick="addToCart(${p.id})">
+    <div class="pick-card" id="pc-${p.id}" onclick="pickCardTap(event,${p.id})">
       <div class="pimg">${p.image?`<img src="/uploads/products/${esc(p.image)}" loading="lazy" decoding="async">`:'🧥'}</div>
       <div class="pn">${esc(p.name)}</div>
       <div class="pp">${fmt(p.price)} ت</div>
@@ -1616,6 +1650,23 @@ function addToCart(pid){
   const defaultQty = p.pack_size > 1 ? p.pack_size : 1;
   if(ex) ex.qty += defaultQty; else invCart.push({product_id:pid,name:p.name,qty:defaultQty,price:p.price});
   renderCart();
+}
+let _pickTap={};
+function pickCardTap(e,pid){
+  const isMobile = window.matchMedia('(hover:none)').matches;
+  if(!isMobile){ addToCart(pid); return; }
+  const now=Date.now();
+  if(_pickTap.id===pid && now-_pickTap.t<400){
+    // double-tap confirmed
+    addToCart(pid);
+    _pickTap={};
+    const card=el('pc-'+pid); if(card){card.style.outline='2px solid var(--green)';setTimeout(()=>{card.style.outline='';},500);}
+  } else {
+    // first tap: highlight, wait for second
+    document.querySelectorAll('.pick-card').forEach(c=>c.style.outline='');
+    const card=el('pc-'+pid); if(card) card.style.outline='2px solid var(--purple)';
+    _pickTap={id:pid,t:now};
+  }
 }
 function renderCart(){
   el('cartRows').innerHTML = invCart.map((r,i)=>`
@@ -1965,6 +2016,7 @@ async function loadReports(){
         <th>مشتری</th><th>شهر</th><th>تعداد سفارش</th><th>مجموع خرید</th><th>بدهی</th></tr></thead>
         <tbody>${top.map(t=>`<tr><td>${esc(t.biz)}</td><td>${esc(t.city||'-')}</td><td>${fmt(t.orders)}</td>
           <td class="mono">${fmt(t.total)}</td><td class="mono" style="color:var(--red)">${fmt(t.debt)}</td></tr>`).join('')||emptyRow(5)}</tbody></table></div></div>`;
+  fitStatNums();
   drawChart(monthly);
 }
 function drawChart(monthly){
@@ -2015,6 +2067,7 @@ ROUTES.accounting = async function(){
       <div class="panel-body" id="accBody"><div class="muted">در حال بارگذاری...</div></div>
     </div>`;
   attachDatepickers(el('view'));
+  fitStatNums();
   loadAccTab(accTab);
 };
 
@@ -2090,6 +2143,7 @@ async function loadAccTab(tab){
           </tbody></table>
         </div>
       </div>`;
+    fitStatNums();
   } else if(tab==='receivables'){
     const allRows=await api('GET','/accounting/receivables'+dq)||[];
     const rows=accHideZero ? allRows.filter(r=>r.outstanding>0) : allRows;
@@ -3126,6 +3180,7 @@ setInterval(()=>{
   if(c) c.textContent=_serverNow().toLocaleTimeString('fa-IR',{timeZone:'Asia/Tehran',hour:'2-digit',minute:'2-digit'});
 }, 1000);
 
+window.addEventListener('resize', ()=>{ clearTimeout(window._rsz); window._rsz=setTimeout(fitStatNums,120); });
 window.addEventListener('DOMContentLoaded', async ()=>{
   if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('/sw.js'); }catch(e){} }
   // Sync server time first (no auth needed) so all date defaults are accurate
