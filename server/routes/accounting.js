@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { getDB, audit, createLedgerEntry, createJournalEntry } = require('../db');
+const { getDB, audit, createLedgerEntry, createJournalEntry, backfillAccounting } = require('../db');
 const { auth, adminOnly } = require('../middleware/auth');
 
 const ENTRY_LABEL = {
@@ -520,6 +520,16 @@ thead th{background:#1A5C38;color:#fff}tbody tr:nth-child(even){background:#f4f7
   res.setHeader('Content-Disposition', `attachment; filename=statement-${data.customer.id}.xlsx`);
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.send(buf);
+});
+
+// Manually re-sync accounting entries for all prior operations (idempotent).
+router.post('/backfill', auth, adminOnly, (req, res) => {
+  const db = getDB();
+  // clear the one-time flag so the routine re-scans; existence checks prevent duplicates
+  db.prepare("INSERT INTO settings (key,value) VALUES ('accounting_backfill_v1','0') ON CONFLICT(key) DO UPDATE SET value='0'").run();
+  backfillAccounting(db);
+  audit(req.user.id, 'backfill', 'accounting', null, 'همگام‌سازی حسابداری عملیات گذشته');
+  res.json({ ok: true });
 });
 
 module.exports = router;

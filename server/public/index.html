@@ -2113,6 +2113,7 @@ ROUTES.accounting = async function(){
             <input id="accTo" data-jdate placeholder="تا تاریخ" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;width:120px;font-size:12px" value="${accDateTo}" onchange="accDateTo=this.value">
             <button class="btn sm ghost" onclick="loadAccTab(accTab)">🔍 اعمال</button>
             <button class="btn sm ghost" onclick="accDateFrom='';accDateTo='';el('accFrom').value='';el('accTo').value='';loadAccTab(accTab)">✕</button>
+            <button class="btn sm ghost" title="بازسازی اسناد حسابداری برای همه عملیات گذشته" onclick="resyncAccounting()">🔄 همگام‌سازی</button>
           </div>
         </div>
       </div>
@@ -2122,6 +2123,15 @@ ROUTES.accounting = async function(){
   fitStatNums();
   loadAccTab(accTab);
 };
+
+async function resyncAccounting(){
+  if(!confirm('اسناد حسابداری برای تمام فاکتورها، تسویه‌ها و مانده‌های اولیه گذشته بازسازی شود؟\n(این عملیات ایمن است و اسناد تکراری ایجاد نمی‌کند)')) return;
+  try{
+    await api('POST','/accounting/backfill',{});
+    showToast('حسابداری عملیات گذشته همگام‌سازی شد');
+    loadAccTab(accTab);
+  }catch(e){}
+}
 
 function switchAccTab(tab){
   accTab=tab;

@@ -447,7 +447,100 @@ function initDB() {
   const insSetting = db.prepare('INSERT OR IGNORE INTO settings (key,value) VALUES (?,?)');
   for (const [k, v] of Object.entries(defaults)) insSetting.run(k, v);
 
+  // ---- Backfill accounting entries for operations recorded before the engine existed ----
+  backfillAccounting(db);
+
   console.log('✅ دیتابیس آماده شد');
+}
+
+// Retroactively generate customer-ledger + journal entries for every invoice, settlement,
+// and opening balance that predates the accounting engine. Idempotent: each entry is only
+// created if a matching (ref_type, ref_id) record does not already exist, so it never
+// duplicates entries the live engine already produced. Runs once, then sets a flag.
+function backfillAccounting(db) {
+  try {
+    const flag = db.prepare("SELECT value FROM settings WHERE key='accounting_backfill_v1'").get();
+    if (flag && flag.value === '1') return;
+
+    const invHasLedger  = db.prepare("SELECT 1 FROM customer_ledger  WHERE ref_type='invoice'    AND ref_id=? LIMIT 1");
+    const invHasJournal = db.prepare("SELECT 1 FROM journal_entries  WHERE ref_type='invoice'    AND ref_id=? LIMIT 1");
+    const settHasLedger = db.prepare("SELECT 1 FROM customer_ledger  WHERE ref_type='settlement' AND ref_id=? LIMIT 1");
+    const settHasJournal= db.prepare("SELECT 1 FROM journal_entries  WHERE ref_type='settlement' AND ref_id=? LIMIT 1");
+    const custHasOpening= db.prepare("SELECT 1 FROM customer_ledger  WHERE ref_type='opening'    AND ref_id=? LIMIT 1");
+    let created = 0;
+
+    const tx = db.transaction(() => {
+      // 1) Opening balances — the admin-set customers.balance becomes the ledger's opening line
+      const custs = db.prepare('SELECT id,balance,created_at FROM customers WHERE balance IS NOT NULL AND balance<>0').all();
+      const insOpening = db.prepare(
+        'INSERT INTO customer_ledger (customer_id,date,entry_type,ref_type,ref_id,description,debit,credit,user_id,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)'
+      );
+      for (const c of custs) {
+        if (custHasOpening.get(c.id)) continue;
+        const debit = c.balance > 0 ? c.balance : 0;
+        const credit = c.balance < 0 ? -c.balance : 0;
+        // use the customer's own created_at so the opening line always sorts first in the statement
+        insOpening.run(c.id, '', 'opening', 'opening', c.id, 'مانده اولیه حساب', debit, credit, null, (c.created_at || 1));
+        created++;
+      }
+
+      // 2) Final invoices + settlements, inserted in chronological (date) order for a readable statement
+      const events = [];
+      for (const inv of db.prepare("SELECT * FROM invoices WHERE type='final'").all()) events.push({ date: inv.date || '', kind: 'invoice', row: inv });
+      for (const s of db.prepare('SELECT * FROM settlements').all()) events.push({ date: s.date || '', kind: 'settlement', row: s });
+      events.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+
+      for (const ev of events) {
+        if (ev.kind === 'invoice') {
+          const inv = ev.row;
+          if (!invHasLedger.get(inv.id)) {
+            createLedgerEntry(db, {
+              customer_id: inv.cust_id, date: inv.date || '', entry_type: 'invoice',
+              ref_type: 'invoice', ref_id: inv.id, description: `فاکتور رسمی ${inv.num}`,
+              debit: inv.final, credit: 0, user_id: inv.user_id
+            });
+            created++;
+          }
+          if (!invHasJournal.get(inv.id)) {
+            const lines = [{ code: '1103', name: 'حساب‌های دریافتنی از مشتریان', debit: inv.final, credit: 0 }];
+            if ((inv.disc_amt || 0) > 0) lines.push({ code: '4103', name: 'تخفیفات فروش', debit: inv.disc_amt, credit: 0, description: 'تخفیف فاکتور' });
+            lines.push({ code: '4101', name: 'درآمد فروش کالا', debit: 0, credit: inv.subtotal });
+            createJournalEntry(db, { date: inv.date || '', description: `فاکتور رسمی ${inv.num}`, ref_type: 'invoice', ref_id: inv.id, created_by: inv.user_id, lines });
+          }
+        } else {
+          const s = ev.row;
+          const payLabel = s.pay_type === 'cheque' ? 'چک' : 'نقد';
+          if (!settHasLedger.get(s.id)) {
+            createLedgerEntry(db, {
+              customer_id: s.cust_id, date: s.date || '', entry_type: 'settlement',
+              ref_type: 'settlement', ref_id: s.id,
+              description: `تسویه ${payLabel} - ${Number(s.amount || 0).toLocaleString('fa-IR')} تومان`,
+              debit: 0, credit: s.amount, user_id: s.user_id
+            });
+            created++;
+          }
+          if (!settHasJournal.get(s.id)) {
+            const cashCode = s.pay_type === 'cheque' ? '1102' : '1101';
+            const cashName = s.pay_type === 'cheque' ? 'موجودی بانک' : 'موجودی صندوق';
+            createJournalEntry(db, {
+              date: s.date || '', description: `تسویه ${payLabel} مشتری`,
+              ref_type: 'settlement', ref_id: s.id, created_by: s.user_id,
+              lines: [
+                { code: cashCode, name: cashName, debit: s.amount, credit: 0 },
+                { code: '1103', name: 'حساب‌های دریافتنی از مشتریان', debit: 0, credit: s.amount }
+              ]
+            });
+          }
+        }
+      }
+    });
+    tx();
+
+    db.prepare("INSERT INTO settings (key,value) VALUES ('accounting_backfill_v1','1') ON CONFLICT(key) DO UPDATE SET value='1'").run();
+    console.log(`✅ حسابداری عملیات گذشته بازسازی شد (${created} ردیف جدید)`);
+  } catch (e) {
+    console.error('backfill accounting error:', e.message);
+  }
 }
 
 // Helper used across routes to record audit entries
@@ -480,4 +573,4 @@ function createJournalEntry(db, { date, description, ref_type, ref_id, created_b
   } catch (e) { console.error('journal entry error:', e.message); }
 }
 
-module.exports = { getDB, initDB, audit, createLedgerEntry, createJournalEntry };
+module.exports = { getDB, initDB, audit, createLedgerEntry, createJournalEntry, backfillAccounting };
