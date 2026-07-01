@@ -1021,6 +1021,11 @@ async function renderDashContent(){
               <td>${esc(c.address||c.city||'-')}</td>
               <td class="muted">${esc(c.salesperson||'-')}</td>
             </tr>`).join('')}</tbody>
+            <tfoot><tr style="border-top:2px solid var(--border);background:var(--purple-light)">
+              <td colspan="2" style="font-weight:700">جمع کل مانده حساب مشتریان</td>
+              <td class="mono" style="font-weight:800;color:${balRows.reduce((a,c)=>a+(c.balance||0),0)>0?'var(--green)':'#dc2626'}">${fmt(balRows.reduce((a,c)=>a+(c.balance||0),0))} تومان</td>
+              <td colspan="2"></td>
+            </tr></tfoot>
           </table>
         </div>
       </div>`:''}`;
@@ -1059,6 +1064,11 @@ async function renderDashContent(){
               <td class="mono" style="font-weight:600;color:${c.balance>0?'var(--green)':'#dc2626'}">${fmt(c.balance)} تومان</td>
               <td>${esc(c.address||c.city||'-')}</td>
             </tr>`).join('')}</tbody>
+            <tfoot><tr style="border-top:2px solid var(--border);background:var(--purple-light)">
+              <td colspan="2" style="font-weight:700">جمع کل مانده حساب</td>
+              <td class="mono" style="font-weight:800;color:${balRows.reduce((a,c)=>a+(c.balance||0),0)>0?'var(--green)':'#dc2626'}">${fmt(balRows.reduce((a,c)=>a+(c.balance||0),0))} تومان</td>
+              <td></td>
+            </tr></tfoot>
           </table>
         </div>
       </div>`:''}
@@ -1212,6 +1222,10 @@ function custModal(id){
     <div class="modal-head"><h3>${id?'ویرایش مشتری':'مشتری جدید'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="modal-body"><div class="form-grid">
       <div class="fg full"><label>نام فروشگاه * ${hlp('نام تجاری فروشگاه یا برند مشتری.')}</label><input id="c-biz" value="${esc(c.biz||'')}"></div>
+      <div class="fg full"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500">
+        <input type="checkbox" id="c-autofollow" ${(id ? (c.auto_followup==null||c.auto_followup) : true) ? 'checked' : ''} style="width:auto">
+        ایجاد خودکار پیگیری هنگام صدور فاکتور فروش
+      </label></div>
       <div class="fg"><label>نام کامل</label><input id="c-owner" value="${esc(c.owner||'')}"></div>
       <div class="fg"><label>موبایل</label><input id="c-phone" value="${esc(c.phone||'')}"></div>
       <div class="fg"><label>استان</label><select id="c-province" onchange="updateCityDropdown(this.value)">
@@ -1263,7 +1277,8 @@ async function saveCust(id){
     address:el('c-address')?.value||'',
     phone:el('c-phone').value, insta:el('c-insta').value, type:el('c-type').value,
     status:el('c-status').value, note:el('c-note').value,
-    source:el('c-source')?.value||''
+    source:el('c-source')?.value||'',
+    auto_followup: el('c-autofollow') ? (el('c-autofollow').checked ? 1 : 0) : 1
   };
   if(ME.role==='admin'){
     if(el('c-balance')) data.balance = parseFloat(el('c-balance').value)||0;
@@ -1310,7 +1325,7 @@ const INTEREST_LEVELS = [
   {id:'high',      label:'زیاد',        cls:'int-high'},
   {id:'very_high', label:'خیلی زیاد',   cls:'int-very_high'}
 ];
-const CONTACT_TYPES = ['📱 تلفن','💬 واتساپ','📸 اینستاگرام','📲 تلگرام','🏪 حضوری','✉️ پیامک'];
+const CONTACT_TYPES = ['📱 تلفن','💬 واتساپ','📸 اینستاگرام','📲 تلگرام','🏪 حضوری','✉️ پیامک','💰 مانده حساب'];
 
 let fupFilter={q:'',status:'',stage:'',view:'list'};
 
@@ -2070,6 +2085,7 @@ function drawChart(monthly){
 let accTab = 'general';
 let accDateFrom = '', accDateTo = '';
 let accHideZero = true;
+let stmtCustId = '', stmtType = '';
 
 ROUTES.accounting = async function(){
   el('view').innerHTML='<div class="muted">در حال بارگذاری...</div>';
@@ -2091,8 +2107,7 @@ ROUTES.accounting = async function(){
           <button data-acc-tab="settlements" class="btn ${accTab==='settlements'?'':'ghost'}" onclick="switchAccTab('settlements')">تسویه‌ها</button>
           <button data-acc-tab="cheques" class="btn ${accTab==='cheques'?'':'ghost'}" onclick="switchAccTab('cheques')">🧾 چک‌ها</button>
           <button data-acc-tab="commissions" class="btn ${accTab==='commissions'?'':'ghost'}" onclick="switchAccTab('commissions')">تأیید و انگیزه فروش</button>
-          <button data-acc-tab="journal" class="btn ${accTab==='journal'?'':'ghost'}" onclick="switchAccTab('journal')">📒 دفتر روزنامه</button>
-          <button data-acc-tab="chart" class="btn ${accTab==='chart'?'':'ghost'}" onclick="switchAccTab('chart')">📊 حساب‌های مالی</button>
+          <button data-acc-tab="statement" class="btn ${accTab==='statement'?'':'ghost'}" onclick="switchAccTab('statement')">📄 صورت‌حساب مشتری</button>
           <div style="display:flex;gap:6px;align-items:center;border-right:1px solid var(--border);padding-right:8px;margin-right:2px">
             <input id="accFrom" data-jdate placeholder="از تاریخ" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;width:120px;font-size:12px" value="${accDateFrom}" onchange="accDateFrom=this.value">
             <input id="accTo" data-jdate placeholder="تا تاریخ" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;width:120px;font-size:12px" value="${accDateTo}" onchange="accDateTo=this.value">
@@ -2286,13 +2301,16 @@ async function loadAccTab(tab){
     </tr>`).join('');
     const commRows=(comms||[]).map(c=>`<tr>
       <td>${esc(c.name)}</td>
-      <td class="mono">${fmt(c.commission_cash)}٪</td>
-      <td class="mono">${fmt(c.commission_cheque)}٪</td>
+      <td class="mono">${fmt(c.commission_cash)}٪ / ${fmt(c.commission_cheque)}٪</td>
       <td class="mono">${fmt(c.cashSales)}</td>
       <td class="mono">${fmt(c.chequeSales)}</td>
-      <td class="mono" style="color:var(--green)">${fmt(Math.round(c.cashComm))}</td>
-      <td class="mono" style="color:var(--green)">${fmt(Math.round(c.chequeComm))}</td>
       <td class="mono" style="font-weight:800;color:var(--purple)">${fmt(Math.round(c.totalComm))}</td>
+      <td class="mono" style="color:var(--green)">${fmt(Math.round(c.paid||0))}</td>
+      <td class="mono" style="font-weight:700;color:${(c.payable||0)>0?'var(--red)':'var(--green)'}">${fmt(Math.round(c.payable||0))}</td>
+      <td style="white-space:nowrap">
+        <button class="btn sm green" onclick="incentivePayModal(${c.id},'${esc(c.name)}',${Math.round(c.payable||0)})">💵 پرداخت</button>
+        <button class="btn sm ghost" onclick="showIncentiveHistory(${c.id},'${esc(c.name)}')">📜</button>
+      </td>
     </tr>`).join('');
     body.innerHTML=`
       ${(pending||[]).length ? `
@@ -2303,54 +2321,106 @@ async function loadAccTab(tab){
         </tr></thead><tbody>${pendingRows}</tbody></table></div>
       </div>` : `<div class="muted" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;margin-bottom:16px">✅ همه فاکتورهای رسمی تأیید شده‌اند</div>`}
       <div class="panel">
-        <div class="panel-head"><h4>📊 گزارش انگیزه فروش کارشناسان</h4></div>
+        <div class="panel-head"><h4>📊 گزارش و پرداخت انگیزه فروش کارشناسان</h4></div>
         <div class="panel-body tbl-wrap"><table class="tbl"><thead><tr>
-          <th>کارشناس</th><th>نرخ نقد</th><th>نرخ چک</th><th>فروش نقد تأیید شده</th><th>فروش چک تأیید شده</th><th>انگیزه نقد</th><th>انگیزه چک</th><th>جمع انگیزه</th>
+          <th>کارشناس</th><th>نرخ نقد/چک</th><th>فروش نقد تأیید</th><th>فروش چک تأیید</th><th>جمع انگیزه</th><th>پرداخت شده</th><th>مانده پرداخت</th><th>عملیات</th>
         </tr></thead><tbody>${commRows||emptyRow(8)}</tbody></table></div>
       </div>`;
-  } else if(tab==='journal'){
-    const dq2=(accDateFrom||accDateTo)?'?'+(accDateFrom?'from='+encodeURIComponent(accDateFrom):'')+(accDateFrom&&accDateTo?'&':'')+(accDateTo?'to='+encodeURIComponent(accDateTo):''):'';
-    const d=await api('GET','/accounting/journal'+dq2)||{entries:[]};
-    const typeLabel={invoice:'🧾 فاکتور',invoice_reversal:'↩ ابطال فاکتور',settlement:'💵 تسویه',settlement_reversal:'↩ ابطال تسویه'};
+  } else if(tab==='statement'){
+    if(!CACHE.customers||!CACHE.customers.length){ CACHE.customers=await api('GET','/customers')||[]; }
     body.innerHTML=`
-      <div class="panel">
-        <div class="panel-head"><h4>📒 دفتر روزنامه</h4><span class="muted" style="font-size:12px">${d.total||0} سند</span></div>
-        <div class="panel-body">
-        ${(d.entries||[]).map(e=>`
-          <div style="border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden">
-            <div style="background:var(--purple-light);padding:8px 12px;display:flex;justify-content:space-between;align-items:center;font-size:12px">
-              <span style="font-weight:700">${typeLabel[e.ref_type]||e.ref_type||'سند'} &nbsp; <span class="mono">${esc(e.entry_date||'-')}</span></span>
-              <span class="muted">${esc(e.description||'-')}</span>
-              <span class="muted">${esc(e.created_by_name||'-')}</span>
-            </div>
-            <table class="tbl" style="font-size:12px;margin:0"><thead><tr>
-              <th>کد حساب</th><th>نام حساب</th><th>بدهکار (ت)</th><th>بستانکار (ت)</th>
-            </tr></thead><tbody>
-            ${(e.lines||[]).map(l=>`<tr>
-              <td class="mono">${esc(l.account_code)}</td><td>${esc(l.account_name)}</td>
-              <td class="mono" style="color:var(--orange)">${l.debit>0?fmt(l.debit):'-'}</td>
-              <td class="mono" style="color:var(--green)">${l.credit>0?fmt(l.credit):'-'}</td>
-            </tr>`).join('')}
-            </tbody></table>
-          </div>`).join('')||'<div class="empty">سندی یافت نشد</div>'}
-        </div>
-      </div>`;
-  } else if(tab==='chart'){
-    const accounts=await api('GET','/accounting/chart-of-accounts')||[];
-    const typeLabel={asset:'دارایی',liability:'بدهی',equity:'حقوق صاحبان سرمایه',revenue:'درآمد',cogs:'بهای تمام‌شده',expense:'هزینه'};
-    const typeColor={asset:'var(--blue)',liability:'var(--orange)',equity:'var(--purple)',revenue:'var(--green)',cogs:'var(--red)',expense:'var(--red)'};
-    body.innerHTML=`
-      <div class="tbl-wrap"><table class="tbl"><thead><tr>
-        <th>کد</th><th>نام حساب</th><th>نوع</th><th>حساب والد</th>
-      </tr></thead><tbody>
-      ${accounts.map(a=>`<tr style="${!a.parent_code?'font-weight:700;background:var(--purple-light)':''}">
-        <td class="mono">${esc(a.code)}</td>
-        <td style="padding-right:${a.parent_code?24:8}px">${!a.parent_code?'':'↳ '}${esc(a.name)}</td>
-        <td><span style="color:${typeColor[a.type]||'var(--muted)'};font-weight:600">${typeLabel[a.type]||a.type}</span></td>
-        <td class="mono muted">${a.parent_code||'-'}</td>
-      </tr>`).join('')||emptyRow(4)}
-      </tbody></table></div>`;
+      <div class="toolbar" style="margin-bottom:12px;flex-wrap:wrap;gap:8px;align-items:center">
+        <select id="stmtCust" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;min-width:220px" onchange="stmtCustId=this.value;loadStatement()">
+          <option value="">— انتخاب مشتری —</option>
+          ${(CACHE.customers||[]).map(c=>`<option value="${c.id}" ${String(stmtCustId)===String(c.id)?'selected':''}>${esc(c.biz)}${c.owner?' — '+esc(c.owner):''}</option>`).join('')}
+        </select>
+        <select id="stmtType" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit" onchange="stmtType=this.value;loadStatement()">
+          <option value="">همه تراکنش‌ها</option>
+          <option value="invoice" ${stmtType==='invoice'?'selected':''}>فاکتور فروش</option>
+          <option value="settlement" ${stmtType==='settlement'?'selected':''}>دریافت وجه</option>
+          <option value="reversal" ${stmtType==='reversal'?'selected':''}>ابطال/اصلاح</option>
+        </select>
+        <span class="muted" style="font-size:12px">فیلتر تاریخ از نوار بالا اعمال می‌شود</span>
+        <div style="flex:1"></div>
+        <button class="btn sm ghost" onclick="exportStatement('excel')" ${stmtCustId?'':'disabled'}>📥 اکسل</button>
+        <button class="btn sm ghost" onclick="exportStatement('csv')" ${stmtCustId?'':'disabled'}>📄 CSV</button>
+        <button class="btn sm ghost" onclick="exportStatement('pdf')" ${stmtCustId?'':'disabled'}>🖨️ PDF</button>
+      </div>
+      <div id="stmtBody">${stmtCustId?'<div class="muted">در حال بارگذاری...</div>':'<div class="empty" style="padding:30px">یک مشتری را برای مشاهده صورت‌حساب انتخاب کنید</div>'}</div>`;
+    if(stmtCustId) loadStatement();
   }
+}
+
+function stmtQuery(){
+  const p=[];
+  if(accDateFrom) p.push('from='+encodeURIComponent(accDateFrom));
+  if(accDateTo) p.push('to='+encodeURIComponent(accDateTo));
+  if(stmtType) p.push('type='+encodeURIComponent(stmtType));
+  return p.length?'?'+p.join('&'):'';
+}
+
+async function loadStatement(){
+  const box=el('stmtBody'); if(!box||!stmtCustId) return;
+  box.innerHTML='<div class="muted">در حال بارگذاری...</div>';
+  const d=await api('GET','/accounting/statement/'+stmtCustId+stmtQuery());
+  if(!d){ box.innerHTML='<div class="empty">خطا در دریافت صورت‌حساب</div>'; return; }
+  const bal=v=>`${fmt(Math.abs(v||0))} ${(v||0)>0?'بد':'بس'}`;
+  box.innerHTML=`
+    <div class="panel">
+      <div class="panel-head">
+        <h4>📄 ${esc(d.customer.biz)} ${d.customer.owner?'— '+esc(d.customer.owner):''}</h4>
+        <span class="muted" style="font-size:12px">کارشناس: ${esc(d.customer.salesperson||'-')}</span>
+      </div>
+      <div class="panel-body tbl-wrap">
+        <table class="tbl" style="font-size:12px"><thead><tr>
+          <th>تاریخ</th><th>نوع تراکنش</th><th>شرح</th><th>بدهکار (ت)</th><th>بستانکار (ت)</th><th>مانده (ت)</th><th>مرجع</th>
+        </tr></thead><tbody>
+        <tr style="background:var(--purple-light);font-weight:600">
+          <td>-</td><td>مانده اول دوره</td><td>-</td><td>-</td><td>-</td>
+          <td class="mono" style="color:${(d.opening||0)>0?'var(--red)':'var(--green)'}">${bal(d.opening)}</td><td>-</td>
+        </tr>
+        ${(d.entries||[]).map(e=>`<tr>
+          <td class="mono">${esc(e.date||'-')}</td>
+          <td>${esc(e.type_label||'-')}</td>
+          <td>${esc(e.description||'-')}</td>
+          <td class="mono" style="color:var(--orange)">${e.debit>0?fmt(e.debit):'-'}</td>
+          <td class="mono" style="color:var(--green)">${e.credit>0?fmt(e.credit):'-'}</td>
+          <td class="mono" style="font-weight:700;color:${(e.running_balance||0)>0?'var(--red)':'var(--green)'}">${bal(e.running_balance)}</td>
+          <td class="mono muted">${esc(e.reference||'-')}</td>
+        </tr>`).join('')||'<tr><td colspan="7" class="empty">تراکنشی در این دوره ثبت نشده</td></tr>'}
+        </tbody>
+        <tfoot><tr style="border-top:2px solid var(--border);background:var(--purple-light);font-weight:700">
+          <td colspan="3">جمع دوره</td>
+          <td class="mono" style="color:var(--orange)">${fmt(d.totalDebit||0)}</td>
+          <td class="mono" style="color:var(--green)">${fmt(d.totalCredit||0)}</td>
+          <td class="mono" style="color:${(d.closing||0)>0?'var(--red)':'var(--green)'}">${bal(d.closing)}</td>
+          <td></td>
+        </tr></tfoot>
+        </table>
+      </div>
+      <div style="padding:12px 16px;border-top:1px solid var(--border);font-weight:700">
+        مانده نهایی: <span style="color:${(d.closing||0)>0?'var(--red)':'var(--green)'}">${fmt(Math.abs(d.closing||0))} تومان ${(d.closing||0)>0?'(بدهکار)':'(بستانکار)'}</span>
+      </div>
+    </div>`;
+}
+
+function exportStatement(format){
+  if(!stmtCustId){ showToast('ابتدا یک مشتری انتخاب کنید','error'); return; }
+  const q=stmtQuery();
+  const path='/accounting/statement/'+stmtCustId+'/export'+(q?q+'&':'?')+'format='+format;
+  if(format==='pdf'){ openHtmlAuth('/api'+path); return; }
+  downloadAuth(path, 'statement-'+stmtCustId+'.'+(format==='csv'?'csv':'xlsx'));
+}
+
+// Open an authenticated HTML page (e.g. printable PDF) in a new tab
+async function openHtmlAuth(url){
+  const token=localStorage.getItem('crm_token');
+  try{
+    const r=await fetch(url,{headers:{'Authorization':'Bearer '+token}});
+    if(!r.ok){ showToast('خطا در دریافت','error'); return; }
+    const html=await r.text();
+    const w=window.open('','_blank'); w.document.write(html); w.document.close();
+  }catch(e){ showToast('خطا','error'); }
 }
 
 async function showCustLedger(custId, custName){
@@ -2464,6 +2534,76 @@ async function deleteSettlement(id){
     await api('DELETE','/accounting/settlements/'+id);
     showToast('حذف شد');
     loadAccTab('settlements');
+  }catch(e){}
+}
+
+function incentivePayModal(repId, repName, payable){
+  openModal(`
+    <div class="modal-head"><h3>💵 پرداخت انگیزه فروش</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="fg full"><label>کارشناس</label><input value="${esc(repName)}" disabled style="background:#f9fafb"></div>
+      <div class="fg full"><label>مانده قابل پرداخت</label><input value="${fmt(payable)} تومان" disabled style="background:#f9fafb;color:var(--red);font-weight:700"></div>
+      <div class="fg"><label>مبلغ پرداخت (تومان) *</label><input id="ip-amount" type="number" min="1" value="${payable>0?payable:''}" placeholder="0"></div>
+      <div class="fg"><label>نوع پرداخت</label><select id="ip-paytype"><option value="cash">نقد</option><option value="cheque">چک</option><option value="bank">کارت به کارت / بانکی</option></select></div>
+      <div class="fg"><label>تاریخ</label><input id="ip-date" data-jdate value="${todayJalali()}"></div>
+      <div class="fg full"><label>یادداشت</label><textarea id="ip-note" placeholder="توضیحات اختیاری..."></textarea></div>
+    </div></div>
+    <div class="modal-foot">
+      <button class="btn green" onclick="saveIncentivePayment(${repId})">💾 ثبت پرداخت</button>
+      <button class="btn ghost" onclick="closeModal()">انصراف</button>
+    </div>`);
+  attachDatepickers(el('modalRoot'));
+}
+
+async function saveIncentivePayment(repId){
+  const amount=+el('ip-amount').value;
+  if(!amount||amount<=0){ showToast('مبلغ معتبر وارد کنید','error'); return; }
+  try{
+    await api('POST','/accounting/incentive-payments',{
+      rep_id:repId, amount,
+      pay_type:el('ip-paytype').value,
+      date:el('ip-date').value,
+      note:el('ip-note').value
+    });
+    closeModal(); showToast('پرداخت انگیزه ثبت شد');
+    loadAccTab('commissions');
+  }catch(e){}
+}
+
+async function showIncentiveHistory(repId, repName){
+  const rows=await api('GET','/accounting/incentive-payments?rep_id='+repId)||[];
+  const payLabel={cash:'نقد',cheque:'چک',bank:'بانکی'};
+  openModal(`
+    <div class="modal-head"><h3>📜 تاریخچه پرداخت انگیزه: ${esc(repName)}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body" style="padding:0">
+      <div class="tbl-wrap" style="max-height:65vh">
+        <table class="tbl" style="font-size:12px"><thead><tr>
+          <th>تاریخ</th><th>مبلغ (ت)</th><th>نوع</th><th>یادداشت</th><th>ثبت‌کننده</th><th></th>
+        </tr></thead><tbody>
+        ${rows.map(r=>`<tr>
+          <td class="mono">${esc(r.date||'-')}</td>
+          <td class="mono" style="font-weight:700;color:var(--green)">${fmt(r.amount)}</td>
+          <td>${payLabel[r.pay_type]||r.pay_type||'-'}</td>
+          <td>${esc(r.note||'-')}</td>
+          <td class="muted">${esc(r.recorder||'-')}</td>
+          <td><button class="btn sm ghost" onclick="deleteIncentivePayment(${r.id},${repId},'${esc(repName)}')">🗑️</button></td>
+        </tr>`).join('')||'<tr><td colspan="6" class="empty">پرداختی ثبت نشده</td></tr>'}
+        </tbody></table>
+      </div>
+      <div style="padding:12px 16px;border-top:1px solid var(--border);font-weight:700">
+        جمع پرداخت‌ها: <span style="color:var(--green)">${fmt(rows.reduce((a,r)=>a+(r.amount||0),0))} تومان</span>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn ghost" onclick="closeModal()">بستن</button></div>`);
+}
+
+async function deleteIncentivePayment(id, repId, repName){
+  if(!confirm('این پرداخت حذف شود؟')) return;
+  try{
+    await api('DELETE','/accounting/incentive-payments/'+id);
+    showToast('حذف شد');
+    showIncentiveHistory(repId, repName);
+    if(accTab==='commissions') loadAccTab('commissions');
   }catch(e){}
 }
 

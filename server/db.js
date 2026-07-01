@@ -295,6 +295,18 @@ function initDB() {
       description TEXT,
       FOREIGN KEY(entry_id) REFERENCES journal_entries(id)
     );
+
+    CREATE TABLE IF NOT EXISTS incentive_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      rep_id INTEGER NOT NULL,
+      amount REAL DEFAULT 0,
+      pay_type TEXT DEFAULT 'cash',
+      date TEXT,
+      note TEXT,
+      created_by INTEGER,
+      created_at INTEGER DEFAULT (strftime('%s','now')),
+      FOREIGN KEY(rep_id) REFERENCES users(id)
+    );
   `);
 
   // ---- Safe migrations for databases created by v2 ----
@@ -352,6 +364,8 @@ function initDB() {
   ensureColumn(db, 'products', 'pack_size', 'INTEGER DEFAULT 1');
   // Accounting module: sales incentive lock
   ensureColumn(db, 'users', 'incentive_locked', 'INTEGER DEFAULT 0');
+  // Per-customer automatic follow-up on invoice (default on)
+  ensureColumn(db, 'customers', 'auto_followup', 'INTEGER DEFAULT 1');
 
   // ---- Seed chart of accounts (only if empty) ----
   const coaCount = db.prepare('SELECT COUNT(*) c FROM chart_of_accounts').get().c;

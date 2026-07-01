@@ -181,20 +181,23 @@ router.post('/', auth, (req, res) => {
     });
   }
 
-  // Auto-create a 7-day quality follow-up for every new invoice
+  // Auto-create a 7-day quality follow-up — only if the customer has auto-followup enabled
   try {
-    const invoiceDate = date || todayJalali();
-    const followupDate = addDaysToJalali(invoiceDate, 7);
-    const productList = built.rows.map(r => r.name).join('، ') || '-';
-    db.prepare(
-      'INSERT INTO followups (user_id,cust_id,date,type,subject,note,next_date,status,priority) VALUES (?,?,?,?,?,?,?,?,?)'
-    ).run(
-      req.user.id, cust_id, invoiceDate,
-      '🧾 پیگیری فاکتور',
-      'بررسی رضایت از کیفیت کالا',
-      `پیگیری پس از فاکتور ${num}\nمحصولات: ${productList}`,
-      followupDate, 'open', 'mid'
-    );
+    const cust = db.prepare('SELECT auto_followup FROM customers WHERE id=?').get(cust_id);
+    if (!cust || cust.auto_followup == null || cust.auto_followup) {
+      const invoiceDate = date || todayJalali();
+      const followupDate = addDaysToJalali(invoiceDate, 7);
+      const productList = built.rows.map(r => r.name).join('، ') || '-';
+      db.prepare(
+        'INSERT INTO followups (user_id,cust_id,date,type,subject,note,next_date,status,priority) VALUES (?,?,?,?,?,?,?,?,?)'
+      ).run(
+        req.user.id, cust_id, invoiceDate,
+        '🧾 پیگیری فاکتور',
+        'بررسی رضایت از کیفیت کالا',
+        `پیگیری پس از فاکتور ${num}\nمحصولات: ${productList}`,
+        followupDate, 'open', 'mid'
+      );
+    }
   } catch (e) {
     console.error('auto-followup error:', e.message);
   }
