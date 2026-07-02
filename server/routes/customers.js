@@ -46,8 +46,10 @@ async function sendWelcomeSMSToCust(db, phone) {
 }
 
 function getScope(req) {
+  // Accounting staff see all customers (read scope) — needed for statements & settlements
+  const seesAll = req.user.role === 'admin' || req.user.role === 'accounting';
   if (req.user.role === 'admin' && req.query.user_id) return parseInt(req.query.user_id);
-  if (req.user.role === 'admin') return null; // all
+  if (seesAll) return null; // all
   return req.user.id;
 }
 

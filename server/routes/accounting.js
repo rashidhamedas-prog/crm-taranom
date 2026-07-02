@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const { getDB, audit, createLedgerEntry, createJournalEntry, backfillAccounting } = require('../db');
-const { auth, adminOnly } = require('../middleware/auth');
+const { auth, adminOnly, adminOrAccounting } = require('../middleware/auth');
 
 const ENTRY_LABEL = {
   invoice: 'فاکتور فروش',
@@ -44,7 +44,7 @@ function buildStatement(db, customerId, { from, to, type } = {}) {
 }
 
 // Overview stats for accounting dashboard
-router.get('/overview', auth, adminOnly, (req, res) => {
+router.get('/overview', auth, adminOrAccounting, (req, res) => {
   const db = getDB();
   const totalInvoiced = db.prepare("SELECT COALESCE(SUM(final),0) s FROM invoices WHERE type='final'").get().s;
   const totalSettled = db.prepare("SELECT COALESCE(SUM(amount),0) s FROM settlements").get().s;
@@ -54,7 +54,7 @@ router.get('/overview', auth, adminOnly, (req, res) => {
 });
 
 // Receivables per customer (only customers with at least one final invoice)
-router.get('/receivables', auth, adminOnly, (req, res) => {
+router.get('/receivables', auth, adminOrAccounting, (req, res) => {
   const db = getDB();
   const { from, to } = req.query;
   // Validate date strings to only allow digits and slashes (Jalali dates like 1403/04/01)
@@ -83,7 +83,7 @@ router.get('/receivables', auth, adminOnly, (req, res) => {
 });
 
 // Settlements list
-router.get('/settlements', auth, adminOnly, (req, res) => {
+router.get('/settlements', auth, adminOrAccounting, (req, res) => {
   const db = getDB();
   const { from, to } = req.query;
   const where = [];
@@ -104,7 +104,7 @@ router.get('/settlements', auth, adminOnly, (req, res) => {
 });
 
 // Add settlement
-router.post('/settlements', auth, adminOnly, (req, res) => {
+router.post('/settlements', auth, adminOrAccounting, (req, res) => {
   const { cust_id, invoice_id, amount, pay_type, date, note,
           cheque_bank, cheque_sayadi, cheque_number, cheque_account,
           cheque_amount, cheque_owner, cheque_due, cheque_status } = req.body;
@@ -148,7 +148,7 @@ router.post('/settlements', auth, adminOnly, (req, res) => {
 });
 
 // Delete settlement
-router.delete('/settlements/:id', auth, adminOnly, (req, res) => {
+router.delete('/settlements/:id', auth, adminOrAccounting, (req, res) => {
   const db = getDB();
   const settlement = db.prepare('SELECT * FROM settlements WHERE id=?').get(req.params.id);
   if (!settlement) return res.status(404).json({ error: 'تسویه یافت نشد' });
@@ -177,7 +177,7 @@ router.delete('/settlements/:id', auth, adminOnly, (req, res) => {
 });
 
 // Cheque management list
-router.get('/cheques', auth, adminOnly, (req, res) => {
+router.get('/cheques', auth, adminOrAccounting, (req, res) => {
   const db = getDB();
   const { from, to, status, bank } = req.query;
   const where = ["s.pay_type='cheque'"];
@@ -199,7 +199,7 @@ router.get('/cheques', auth, adminOnly, (req, res) => {
 });
 
 // Update cheque status (pending → received/bounced/cancelled)
-router.patch('/cheques/:id/status', auth, adminOnly, (req, res) => {
+router.patch('/cheques/:id/status', auth, adminOrAccounting, (req, res) => {
   const { status } = req.body;
   const allowed = ['pending', 'received', 'bounced', 'cancelled'];
   if (!allowed.includes(status)) return res.status(400).json({ error: 'وضعیت نامعتبر' });
@@ -212,7 +212,7 @@ router.patch('/cheques/:id/status', auth, adminOnly, (req, res) => {
 });
 
 // Incentive (commission) report per salesperson (only approved invoices)
-router.get('/commissions', auth, adminOnly, (req, res) => {
+router.get('/commissions', auth, adminOrAccounting, (req, res) => {
   const db = getDB();
   const users = db.prepare(
     "SELECT id,name,commission_cash,commission_cheque FROM users WHERE active=1 AND role='field_sales'"
@@ -234,7 +234,7 @@ router.get('/commissions', auth, adminOnly, (req, res) => {
 });
 
 // List incentive payments (optionally for a single rep)
-router.get('/incentive-payments', auth, adminOnly, (req, res) => {
+router.get('/incentive-payments', auth, adminOrAccounting, (req, res) => {
   const db = getDB();
   const { rep_id } = req.query;
   const rows = rep_id
@@ -244,7 +244,7 @@ router.get('/incentive-payments', auth, adminOnly, (req, res) => {
 });
 
 // Record an incentive payment to a sales representative
-router.post('/incentive-payments', auth, adminOnly, (req, res) => {
+router.post('/incentive-payments', auth, adminOrAccounting, (req, res) => {
   const { rep_id, amount, pay_type, date, note } = req.body;
   if (!rep_id || !amount) return res.status(400).json({ error: 'کارشناس و مبلغ الزامی است' });
   const db = getDB();
@@ -269,7 +269,7 @@ router.post('/incentive-payments', auth, adminOnly, (req, res) => {
 });
 
 // Delete an incentive payment
-router.delete('/incentive-payments/:id', auth, adminOnly, (req, res) => {
+router.delete('/incentive-payments/:id', auth, adminOrAccounting, (req, res) => {
   const db = getDB();
   const row = db.prepare('SELECT * FROM incentive_payments WHERE id=?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'یافت نشد' });
@@ -299,7 +299,7 @@ router.get('/my-commission', auth, (req, res) => {
 });
 
 // Invoices pending approval
-router.get('/pending-approvals', auth, adminOnly, (req, res) => {
+router.get('/pending-approvals', auth, adminOrAccounting, (req, res) => {
   const db = getDB();
   const rows = db.prepare(`
     SELECT i.id, i.num, i.date, i.final, i.pay_type,
@@ -314,7 +314,7 @@ router.get('/pending-approvals', auth, adminOnly, (req, res) => {
 });
 
 // Approve invoice for commission
-router.post('/invoices/:id/approve', auth, adminOnly, (req, res) => {
+router.post('/invoices/:id/approve', auth, adminOrAccounting, (req, res) => {
   const db = getDB();
   const inv = db.prepare('SELECT * FROM invoices WHERE id=?').get(req.params.id);
   if (!inv) return res.status(404).json({ error: 'یافت نشد' });
@@ -326,7 +326,7 @@ router.post('/invoices/:id/approve', auth, adminOnly, (req, res) => {
 });
 
 // General Accounting — P&L, cash flow, ledger summary
-router.get('/general', auth, adminOnly, (req, res) => {
+router.get('/general', auth, adminOrAccounting, (req, res) => {
   const db = getDB();
   const { from, to } = req.query;
   const safeDate = v => (v && /^[\d/]+$/.test(v)) ? v : null;
@@ -389,7 +389,7 @@ router.get('/general', auth, adminOnly, (req, res) => {
 });
 
 // Customer ledger (transaction history)
-router.get('/ledger/:customerId', auth, adminOnly, (req, res) => {
+router.get('/ledger/:customerId', auth, adminOrAccounting, (req, res) => {
   const db = getDB();
   const customer = db.prepare('SELECT id,biz,owner,phone FROM customers WHERE id=?').get(req.params.customerId);
   if (!customer) return res.status(404).json({ error: 'مشتری یافت نشد' });
@@ -405,14 +405,14 @@ router.get('/ledger/:customerId', auth, adminOnly, (req, res) => {
 });
 
 // Chart of accounts
-router.get('/chart-of-accounts', auth, adminOnly, (req, res) => {
+router.get('/chart-of-accounts', auth, adminOrAccounting, (req, res) => {
   const db = getDB();
   const accounts = db.prepare('SELECT * FROM chart_of_accounts WHERE is_active=1 ORDER BY code').all();
   res.json(accounts);
 });
 
 // Journal entries with lines (paginated, date-filtered)
-router.get('/journal', auth, adminOnly, (req, res) => {
+router.get('/journal', auth, adminOrAccounting, (req, res) => {
   const db = getDB();
   const { from, to, page = '1' } = req.query;
   const pageNum = Math.max(1, parseInt(page));
@@ -436,7 +436,7 @@ router.get('/journal', auth, adminOnly, (req, res) => {
 });
 
 // Customer account statement (JSON) — filters: from, to, type
-router.get('/statement/:customerId', auth, adminOnly, (req, res) => {
+router.get('/statement/:customerId', auth, adminOrAccounting, (req, res) => {
   const db = getDB();
   const { from, to, type } = req.query;
   const safeDate = v => (v && /^[\d/]+$/.test(v)) ? v : undefined;
@@ -446,7 +446,7 @@ router.get('/statement/:customerId', auth, adminOnly, (req, res) => {
 });
 
 // Customer account statement export — format: excel | csv | pdf
-router.get('/statement/:customerId/export', auth, adminOnly, (req, res) => {
+router.get('/statement/:customerId/export', auth, adminOrAccounting, (req, res) => {
   const db = getDB();
   const { from, to, type, format = 'excel' } = req.query;
   const safeDate = v => (v && /^[\d/]+$/.test(v)) ? v : undefined;

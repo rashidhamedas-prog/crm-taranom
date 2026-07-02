@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ MANDATORY RULE: Keep the in-app Help updated
+
+After **every** change (minor or major) to features or behavior, you MUST update the in-app Help/Guide section (`ROUTES.help` → `renderAdminGuide()` / `renderSalesGuide()` in `server/public/index.html`) in the same commit. A feature change without a matching Help update is an incomplete change.
+
 ## Project Overview
 
 CRM ترنم (CRM Taranom) is a wholesale customer management system for a women's clothing manufacturer ("پوشاک ترنم", based in Mashhad). The entire application lives in a **single file**: `index.html`. There is no build process, package manager, or test suite — edit the file and open it in a browser.

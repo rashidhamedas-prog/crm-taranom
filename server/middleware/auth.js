@@ -22,4 +22,12 @@ function adminOnly(req, res, next) {
   next();
 }
 
-module.exports = { auth, adminOnly, SECRET };
+// Accounting staff have full access to the accounting module (admin included)
+function adminOrAccounting(req, res, next) {
+  if (req.user?.role !== 'admin' && req.user?.role !== 'accounting') {
+    return res.status(403).json({ error: 'دسترسی ندارید' });
+  }
+  next();
+}
+
+module.exports = { auth, adminOnly, adminOrAccounting, SECRET };

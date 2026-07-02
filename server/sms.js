@@ -35,8 +35,12 @@ async function sendSMS(settings, to, text) {
 
   if (!apiKey || !to) return { ok: false, reason: 'missing api_key or phone' };
 
-  // Normalize Iranian phone: ensure starts with 09
-  const phone = String(to).replace(/\s+/g, '').replace(/^(\+98|98)/, '0');
+  // Normalize Iranian phone: Persian/Arabic digits → ASCII, strip separators, ensure starts with 09
+  const phone = String(to)
+    .replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - 0x06F0))
+    .replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\s\-()]+/g, '')
+    .replace(/^(\+98|0098|98)/, '0');
   if (!/^09\d{9}$/.test(phone)) return { ok: false, reason: 'invalid phone: ' + phone };
 
   try {

@@ -257,7 +257,12 @@ table.tbl tr:hover td{background:#faf8ff}
 .hlp::before{content:attr(data-tip);position:absolute;bottom:calc(100% + 8px);right:-8px;background:#1e293b;color:#f1f5f9;padding:9px 13px;border-radius:11px;font-size:12px;width:240px;white-space:normal;line-height:1.65;z-index:10000;display:none;text-align:right;direction:rtl;font-weight:400;box-shadow:0 8px 24px rgba(0,0,0,.25);pointer-events:none}
 .hlp::after{content:'';position:absolute;bottom:calc(100% + 3px);right:4px;border:5px solid transparent;border-top-color:#1e293b;display:none;pointer-events:none}
 .hlp:hover::before,.hlp:hover::after{display:block}
-@media(max-width:600px){.hlp::before{width:200px;right:auto;left:-8px}}
+/* Mobile: pin the tooltip to the bottom of the viewport so it can never overflow the screen */
+@media(max-width:600px){
+  .hlp::before{position:fixed;left:12px;right:12px;bottom:14px;top:auto;width:auto;max-width:none;box-shadow:0 -4px 24px rgba(0,0,0,.35)}
+  .hlp::after{display:none!important}
+  .hlp:hover::after,.hlp:active::after{display:none!important}
+}
 
 /* ===== Help Page ===== */
 .help-tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
@@ -637,6 +642,34 @@ async function syncServerTime(){
     if(j.ts) _srvOffset=(j.ts+rtt/2)-Date.now();
   }catch(e){}
 }
+const _jfmt=(y,m,d)=>y+'/'+String(m).padStart(2,'0')+'/'+String(d).padStart(2,'0');
+// Preset Jalali date ranges: week (Saturday-start), month, lastMonth → [from, to]
+function jPresetRange(preset){
+  const today=todayJalali();
+  const [jy,jm]=today.split('/').map(Number);
+  if(preset==='week'){
+    const ds=_serverNow().toLocaleDateString('en-CA',{timeZone:'Asia/Tehran'});
+    const [gy,gm,gd]=ds.split('-').map(Number);
+    const dow=new Date(gy,gm-1,gd).getDay();     // Sun=0 … Sat=6
+    const sinceSat=(dow+1)%7;                    // days since Saturday (Iranian week start)
+    const st=new Date(gy,gm-1,gd); st.setDate(st.getDate()-sinceSat);
+    const [sy,sm,sd]=_g2j(st.getFullYear(),st.getMonth()+1,st.getDate());
+    return [_jfmt(sy,sm,sd), today];
+  }
+  if(preset==='month') return [_jfmt(jy,jm,1), today];
+  if(preset==='lastMonth'){
+    const py=jm===1?jy-1:jy, pm=jm===1?12:jm-1;
+    return [_jfmt(py,pm,1), _jfmt(py,pm,_jDIM(pm,py))];
+  }
+  return ['',''];
+}
+// Shared preset <select> for date toolbars; onPick(from,to,preset) fires on change
+function presetSelect(id,current,handler){
+  const opts=[['month','ماه جاری'],['week','هفته جاری'],['lastMonth','ماه قبل'],['all','همه'],['custom','بازه دلخواه']];
+  return `<select id="${id}" onchange="${handler}(this.value)" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px">
+    ${opts.map(([v,l])=>`<option value="${v}" ${current===v?'selected':''}>${l}</option>`).join('')}
+  </select>`;
+}
 
 /* ---- Searchable Customer Select ---- */
 function custSelect(id, selectedId, optional=false){
@@ -854,10 +887,21 @@ const NAV_SALES = [
   {id:'messages', icon:'💬', label:'پیام‌ها'},
   {id:'help', icon:'📖', label:'راهنما'},
 ];
+const NAV_ACCOUNTING = [
+  {id:'accounting', icon:'💰', label:'حسابداری'},
+  {id:'customers', icon:'👥', label:'مشتریان'},
+  {id:'messages', icon:'💬', label:'پیام‌ها'},
+  {id:'help', icon:'📖', label:'راهنما'},
+];
 let CURRENT_PAGE = 'dash';
 
+function navItems(){
+  if(ME.role==='admin') return NAV_ADMIN;
+  if(ME.role==='accounting') return NAV_ACCOUNTING;
+  return NAV_SALES;
+}
 function buildNav(){
-  const items = ME.role==='admin' ? NAV_ADMIN : NAV_SALES;
+  const items = navItems();
   el('nav').innerHTML = items.map(it=>`
     <a href="#" data-page="${it.id}" onclick="go('${it.id}');return false;">
       <span class="ico">${it.icon}</span><span>${it.label}</span>
@@ -869,8 +913,7 @@ function buildNav(){
 function go(page){
   CURRENT_PAGE = page;
   document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active', a.dataset.page===page));
-  const items = ME.role==='admin'?NAV_ADMIN:NAV_SALES;
-  const it = items.find(x=>x.id===page);
+  const it = navItems().find(x=>x.id===page);
   el('pageTitle').textContent = it?it.label:'';
   if(window.innerWidth<=900) closeSidebar();
   ROUTES[page] ? ROUTES[page]() : (el('view').innerHTML='');
@@ -889,6 +932,7 @@ function closeSidebar(){
 ============================================================ */
 function roleLabel(r){
   if(r==='admin') return 'مدیر سیستم';
+  if(r==='accounting') return 'حسابدار';
   if(r==='inside_sales') return 'کارشناس داخلی';
   if(r==='field_sales') return 'کارشناس میدانی';
   return 'کارشناس فروش';
@@ -904,12 +948,12 @@ async function boot(){
   syncServerTime(); // refresh offset after login (non-blocking)
   el('userName').textContent = ME.name;
   el('userRole').textContent = roleLabel(ME.role);
-  el('brandRole').textContent = isAdmin()?'پنل مدیریت':'پنل فروش';
+  el('brandRole').textContent = isAdmin()?'پنل مدیریت':ME.role==='accounting'?'پنل حسابداری':'پنل فروش';
   el('avatar').textContent = (ME.name||'؟').trim().charAt(0);
   el('footUser').textContent = ME.name + ' · @' + ME.username;
   buildNav();
   await loadInitial();
-  go('dash');
+  go(ME.role==='accounting'?'accounting':'dash');
   refreshMsgBadge();
   refreshRemBadge();
   setInterval(refreshMsgBadge, 30000);
@@ -954,14 +998,25 @@ function closeModal(){ el('modalRoot').innerHTML=''; }
 ============================================================ */
 const ROUTES = {};
 
-let dashDateFrom='', dashDateTo='';
+let dashDateFrom='', dashDateTo='', dashPreset='month';
+function applyDashPreset(p){
+  dashPreset=p;
+  if(p==='custom'){ ROUTES.dash(); return; } // just show the custom date inputs
+  [dashDateFrom,dashDateTo]=jPresetRange(p);
+  ROUTES.dash();
+}
 ROUTES.dash = async function(){
+  // First visit: apply the default "current month" preset
+  if(dashPreset!=='custom'&&dashPreset!=='all'&&!dashDateFrom) [dashDateFrom,dashDateTo]=jPresetRange(dashPreset);
   const v = el('view');
+  const custom = dashPreset==='custom';
   const dateBar = `<div class="toolbar" style="margin-bottom:12px">
+    ${presetSelect('dashPreset',dashPreset,'applyDashPreset')}
+    ${custom?`
     <input id="dashFrom" data-jdate placeholder="از تاریخ" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;width:120px;font-size:12px" value="${dashDateFrom}">
     <input id="dashTo" data-jdate placeholder="تا تاریخ" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;width:120px;font-size:12px" value="${dashDateTo}">
     <button class="btn sm" onclick="dashDateFrom=el('dashFrom').value;dashDateTo=el('dashTo').value;renderDashContent()">🔍 اعمال فیلتر</button>
-    <button class="btn sm ghost" onclick="dashDateFrom='';dashDateTo='';el('dashFrom').value='';el('dashTo').value='';renderDashContent()">✕ حذف فیلتر</button>
+    <button class="btn sm ghost" onclick="dashDateFrom='';dashDateTo='';el('dashFrom').value='';el('dashTo').value='';renderDashContent()">✕ حذف فیلتر</button>`:''}
     ${(dashDateFrom||dashDateTo)?`<span class="tag" style="background:var(--purple-light);color:var(--purple)">${dashDateFrom||'ابتدا'} تا ${dashDateTo||'انتها'}</span>`:''}
   </div>
   <div id="dashContent"><div class="muted">در حال بارگذاری...</div></div>`;
@@ -1024,7 +1079,7 @@ async function renderDashContent(){
             </tr>`).join('')}</tbody>
             <tfoot><tr style="border-top:2px solid var(--border);background:var(--purple-light)">
               <td colspan="2" style="font-weight:700">جمع کل مانده حساب مشتریان</td>
-              <td class="mono" style="font-weight:800;color:${balRows.reduce((a,c)=>a+(c.balance||0),0)>0?'var(--green)':'#dc2626'}">${fmt(balRows.reduce((a,c)=>a+(c.balance||0),0))} تومان</td>
+              <td class="mono" id="dashBalTotal" style="font-weight:800;color:${balRows.reduce((a,c)=>a+(c.balance||0),0)>0?'var(--green)':'#dc2626'}">${fmt(balRows.reduce((a,c)=>a+(c.balance||0),0))} تومان</td>
               <td colspan="2"></td>
             </tr></tfoot>
           </table>
@@ -1095,6 +1150,13 @@ function filterDashBalances(name){
     <td>${esc(c.address||c.city||'-')}</td>
     <td class="muted">${esc(c.salesperson||'-')}</td>
   </tr>`).join('') || '<tr><td colspan="5" class="empty">موردی یافت نشد</td></tr>';
+  // Live total — recalculates from the filtered rows
+  const totCell = el('dashBalTotal');
+  if(totCell){
+    const tot = filtered.reduce((a,c)=>a+(c.balance||0),0);
+    totCell.textContent = fmt(tot)+' تومان';
+    totCell.style.color = tot>0 ? 'var(--green)' : '#dc2626';
+  }
 }
 function statCard(c,ic,v,l){ return `<div class="stat"><div class="ic ${c}">${ic}</div><div><div class="v mono">${v}</div><div class="l">${l}</div></div></div>`; }
 function fitStatNums(){
@@ -1175,7 +1237,13 @@ function renderCustTable(){
       <button class="btn sm blue icon" onclick="custActivityModal(${c.id})" title="تاریخچه پیگیری">📋</button>
       ${c.phone?`<button class="btn sm ghost" onclick="sendWelcomeSMS(${c.id})" title="ارسال پیامک خوش‌آمدگویی">📤</button>`:''}
       <button class="btn sm red" onclick="confirmDelete('customers',${c.id},'${esc(c.biz)}')">🗑️</button></td>
-  </tr>`).join('')||emptyRow(isAdmin?10:8)}</tbody></table>`;
+  </tr>`).join('')||emptyRow(isAdmin?10:8)}</tbody>
+  ${isAdmin?`<tfoot><tr style="border-top:2px solid var(--border);background:var(--purple-light);font-weight:700">
+    <td colspan="7">جمع (${fmt(rows.length)} مشتری)</td>
+    <td></td>
+    <td class="mono" style="font-weight:800;color:${rows.reduce((a,c)=>a+(c.balance||0),0)>=0?'var(--green)':'#dc2626'}">${fmt(rows.reduce((a,c)=>a+(c.balance||0),0))} ت</td>
+    <td></td>
+  </tr></tfoot>`:''}</table>`;
 }
 function toggleCust(id, checked){ if(checked) custSelected.add(id); else custSelected.delete(id); renderCustTable(); }
 function toggleAllCust(cb, ids){ ids.forEach(id=>cb.checked?custSelected.add(id):custSelected.delete(id)); renderCustTable(); }
@@ -1225,35 +1293,35 @@ function custModal(id){
       <div class="fg full"><label>نام فروشگاه * ${hlp('نام تجاری فروشگاه یا برند مشتری.')}</label><input id="c-biz" value="${esc(c.biz||'')}"></div>
       <div class="fg full"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500">
         <input type="checkbox" id="c-autofollow" ${(id ? (c.auto_followup==null||c.auto_followup) : true) ? 'checked' : ''} style="width:auto">
-        ایجاد خودکار پیگیری هنگام صدور فاکتور فروش
+        ایجاد خودکار پیگیری هنگام صدور فاکتور فروش ${hlp('اگر فعال باشد، با صدور هر فاکتور برای این مشتری، یک پیگیری کیفیت ۷ روزه به‌صورت خودکار ساخته می‌شود.')}
       </label></div>
-      <div class="fg"><label>نام کامل</label><input id="c-owner" value="${esc(c.owner||'')}"></div>
-      <div class="fg"><label>موبایل</label><input id="c-phone" value="${esc(c.phone||'')}"></div>
-      <div class="fg"><label>استان</label><select id="c-province" onchange="updateCityDropdown(this.value)">
+      <div class="fg"><label>نام کامل ${hlp('نام و نام خانوادگی صاحب فروشگاه یا رابط اصلی.')}</label><input id="c-owner" value="${esc(c.owner||'')}"></div>
+      <div class="fg"><label>موبایل ${hlp('شماره موبایل مشتری. با ثبت مشتری جدید، پیامک خوش‌آمدگویی به این شماره ارسال می‌شود.')}</label><input id="c-phone" value="${esc(c.phone||'')}"></div>
+      <div class="fg"><label>استان ${hlp('استان محل فعالیت مشتری. با انتخاب استان، لیست شهرها به‌روز می‌شود.')}</label><select id="c-province" onchange="updateCityDropdown(this.value)">
         <option value="">-- انتخاب استان --</option>${provOptions}
       </select></div>
-      <div class="fg"><label>شهر</label><select id="c-city">
+      <div class="fg"><label>شهر ${hlp('شهر محل فروشگاه مشتری.')}</label><select id="c-city">
         <option value="${esc(c.city||'')}">${esc(c.city||'-- ابتدا استان انتخاب کنید --')}</option>${cityOptions}
       </select></div>
-      <div class="fg full"><label>آدرس کامل</label><textarea id="c-address" rows="2">${esc(c.address||'')}</textarea></div>
-      <div class="fg"><label>اینستاگرام</label><input id="c-insta" value="${esc(c.insta||'')}"></div>
-      <div class="fg"><label>نوع</label><select id="c-type">
+      <div class="fg full"><label>آدرس کامل ${hlp('آدرس دقیق فروشگاه — در جدول مانده حساب داشبورد و ارسال مرسولات استفاده می‌شود.')}</label><textarea id="c-address" rows="2">${esc(c.address||'')}</textarea></div>
+      <div class="fg"><label>اینستاگرام ${hlp('نام کاربری صفحه اینستاگرام مشتری بدون @.')}</label><input id="c-insta" value="${esc(c.insta||'')}"></div>
+      <div class="fg"><label>نوع ${hlp('دسته کسب‌وکار مشتری: بوتیک، عمده‌فروش، تولیدی، فروشگاه یا آنلاین.')}</label><select id="c-type">
         ${['بوتیک','عمده‌فروش','تولیدی','فروشگاه','آنلاین'].map(t=>`<option ${c.type===t?'selected':''}>${t}</option>`).join('')}
       </select></div>
-      <div class="fg"><label>وضعیت</label><select id="c-status">
+      <div class="fg"><label>وضعیت ${hlp('وضعیت رابطه با مشتری: جدید، فعال، VIP، نیازمند پیگیری یا خاموش. با صدور فاکتور رسمی خودکار «فعال» می‌شود.')}</label><select id="c-status">
         ${['new','active','vip','followup','silent'].map(s=>`<option value="${s}" ${c.status===s?'selected':''}>${STATUS_LABEL[s]}</option>`).join('')}
       </select></div>
-      <div class="fg"><label>منبع آشنایی</label><select id="c-source">
+      <div class="fg"><label>منبع آشنایی ${hlp('مشتری از چه راهی با شما آشنا شده — برای تحلیل اثربخشی کانال‌های بازاریابی.')}</label><select id="c-source">
         <option value="">-- انتخاب --</option>
         ${[['instagram','اینستاگرام'],['referral','معرفی آشنا'],['exhibition','نمایشگاه'],['store_front','مراجعه حضوری'],['online','آنلاین'],['other','سایر']].map(([v,l])=>`<option value="${v}" ${c.source===v?'selected':''}>${l}</option>`).join('')}
       </select></div>
-      <div class="fg full"><label>یادداشت</label><textarea id="c-note">${esc(c.note||'')}</textarea></div>
+      <div class="fg full"><label>یادداشت ${hlp('هر توضیح آزاد درباره مشتری: سلیقه، شرایط پرداخت، نکات مهم مذاکره.')}</label><textarea id="c-note">${esc(c.note||'')}</textarea></div>
       ${ME.role==='admin'?`<div class="fg full" style="border-top:1px dashed var(--border);margin-top:8px;padding-top:12px">
         <div class="form-grid">
-          <div class="fg"><label style="color:var(--purple);font-weight:600">💰 موجودی حساب (ت) <span style="font-size:11px;font-weight:400;color:var(--muted)">— فقط مدیر</span></label>
+          <div class="fg"><label style="color:var(--purple);font-weight:600">💰 موجودی حساب (ت) ${hlp('مانده اولیه حساب مشتری به تومان. مثبت = بستانکاری شما از مشتری. در دفتر معین به‌عنوان «مانده اولیه» ثبت می‌شود.')} <span style="font-size:11px;font-weight:400;color:var(--muted)">— فقط مدیر</span></label>
             <input id="c-balance" type="number" value="${c.balance||0}" style="font-family:monospace;direction:ltr">
           </div>
-          <div class="fg"><label style="color:var(--purple);font-weight:600">👤 کارشناس <span style="font-size:11px;font-weight:400;color:var(--muted)">— فقط مدیر</span></label>
+          <div class="fg"><label style="color:var(--purple);font-weight:600">👤 کارشناس ${hlp('کارشناس فروش مسئول این مشتری. فروش و انگیزه فروش این مشتری به نام او ثبت می‌شود.')} <span style="font-size:11px;font-weight:400;color:var(--muted)">— فقط مدیر</span></label>
             <select id="c-assigned_to">
               ${(CACHE.users||[]).filter(u=>u.active).map(u=>`<option value="${u.id}" ${(c.assigned_to||c.user_id)===u.id?'selected':''}>${esc(u.name)}</option>`).join('')}
             </select>
@@ -1603,7 +1671,12 @@ function renderInvTable(){
       <button class="btn sm ghost" onclick="openInvBuilder(${i.id})">✏️</button>
       <button class="btn sm red" onclick="confirmDelete('invoices',${i.id},'${esc(i.num||'')}')">🗑️</button>
     </td>
-  </tr>`).join('')||emptyRow(7)}</tbody></table>`;
+  </tr>`).join('')||emptyRow(7)}</tbody>
+  <tfoot><tr style="border-top:2px solid var(--border);background:var(--purple-light);font-weight:700">
+    <td colspan="4">جمع (${fmt(rows.length)} فاکتور)</td>
+    <td class="mono" style="font-weight:800">${fmt(rows.reduce((a,i)=>a+(i.final||0),0))}</td>
+    <td colspan="2"></td>
+  </tr></tfoot></table>`;
 }
 function openInvBuilder(id){
   const inv = id ? CACHE.invoices.find(x=>x.id===id) : null;
@@ -1620,16 +1693,16 @@ function openInvBuilder(id){
         <div class="fg"><label>تاریخ ${hlp('تاریخ صدور فاکتور. در گزارش‌های دوره‌ای بر اساس این تاریخ فیلتر می‌شود.')}</label><input id="inv-date" data-jdate value="${esc(inv?inv.date:todayJalali())}"></div>
         <div class="fg"><label>تخفیف (٪) ${hlp('درصد تخفیف از مجموع کل فاکتور. علاوه بر تخفیف‌های احتمالی هر ردیف محاسبه می‌شود.')}</label><input id="inv-disc" type="number" value="${inv?inv.disc:0}" oninput="renderCart()"></div>
         <div class="fg full"><label>توضیحات ${hlp('یادداشتی که روی فاکتور چاپ می‌شود. مثال: شرایط تحویل، زمان پرداخت، نکات خاص.')}</label><input id="inv-note" value="${esc(inv?inv.note:'')}"></div>
-        <div class="fg"><label>نوع پرداخت</label><select id="inv-pay-type" onchange="toggleChequeFields()">
+        <div class="fg"><label>نوع پرداخت ${hlp('نقد یا چک — نرخ انگیزه فروش کارشناس برای این دو متفاوت محاسبه می‌شود.')}</label><select id="inv-pay-type" onchange="toggleChequeFields()">
           <option value="cash" ${inv&&inv.pay_type==='cheque'?'':'selected'}>نقد</option>
           <option value="cheque" ${inv&&inv.pay_type==='cheque'?'selected':''}>چک</option>
         </select></div>
       </div>
       <div id="chequeFields" style="${inv&&inv.pay_type==='cheque'?'':'display:none'}">
         <div class="form-grid" style="margin-bottom:14px">
-          <div class="fg"><label>مدت چک (روز)</label><input id="inv-cheque-dur" type="number" value="${esc(inv&&inv.cheque_duration?inv.cheque_duration:'')}"></div>
-          <div class="fg"><label>تاریخ سررسید</label><input id="inv-cheque-due" data-jdate value="${esc(inv&&inv.cheque_due_date?inv.cheque_due_date:'')}"></div>
-          <div class="fg full"><label>اطلاعات چک</label><input id="inv-cheque-info" value="${esc(inv&&inv.cheque_info?inv.cheque_info:'')}"></div>
+          <div class="fg"><label>مدت چک (روز) ${hlp('فاصله روزهای سررسید چک از تاریخ فاکتور.')}</label><input id="inv-cheque-dur" type="number" value="${esc(inv&&inv.cheque_duration?inv.cheque_duration:'')}"></div>
+          <div class="fg"><label>تاریخ سررسید ${hlp('تاریخ وصول چک — در بخش مدیریت چک‌های حسابداری پیگیری می‌شود.')}</label><input id="inv-cheque-due" data-jdate value="${esc(inv&&inv.cheque_due_date?inv.cheque_due_date:'')}"></div>
+          <div class="fg full"><label>اطلاعات چک ${hlp('بانک، شماره صیادی یا هر جزئیات دیگر چک — روی فاکتور چاپ می‌شود.')}</label><input id="inv-cheque-info" value="${esc(inv&&inv.cheque_info?inv.cheque_info:'')}"></div>
         </div>
       </div>
       <div class="inv-layout">
@@ -1863,18 +1936,18 @@ function prodModal(id){
   openModal(`
     <div class="modal-head"><h3>${id?'ویرایش محصول':'محصول جدید'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="modal-body"><div class="form-grid">
-      <div class="fg full"><label>نام محصول *</label><input id="p-name" value="${esc(p.name||'')}"></div>
-      <div class="fg"><label>دسته‌بندی</label><input id="p-cat" value="${esc(p.category||'')}"></div>
-      <div class="fg"><label>کد محصول</label><input id="p-code" value="${esc(p.code||'')}"></div>
-      <div class="fg"><label>قیمت فروش (تومان)</label><input id="p-price" type="number" value="${p.price||0}"></div>
+      <div class="fg full"><label>نام محصول * ${hlp('نام کامل محصول همان‌طور که روی فاکتور چاپ می‌شود.')}</label><input id="p-name" value="${esc(p.name||'')}"></div>
+      <div class="fg"><label>دسته‌بندی ${hlp('گروه محصول (مثلاً مانتو، شلوار، بلوز) — برای فیلتر سریع کاتالوگ.')}</label><input id="p-cat" value="${esc(p.category||'')}"></div>
+      <div class="fg"><label>کد محصول ${hlp('کد یکتای محصول — برای جستجوی سریع در فاکتورساز.')}</label><input id="p-code" value="${esc(p.code||'')}"></div>
+      <div class="fg"><label>قیمت فروش (تومان) ${hlp('قیمت فروش عمده هر واحد. هنگام صدور فاکتور قابل ویرایش است.')}</label><input id="p-price" type="number" value="${p.price||0}"></div>
       <div class="fg"><label>بهای تمام‌شده (تومان) ${hlp('قیمت تمام‌شده تولید/خرید هر واحد. مبنای محاسبه بهای تمام‌شده کالای فروش‌رفته و سود ناخالص در گزارش سود و زیان است.')}</label><input id="p-cost" type="number" value="${p.cost||0}"></div>
-      <div class="fg"><label>موجودی</label><input id="p-stock" type="number" value="${p.stock!=null?p.stock:0}"></div>
-      <div class="fg"><label>هشدار موجودی</label><input id="p-alert" type="number" value="${p.stock_alert!=null?p.stock_alert:5}"></div>
-      <div class="fg"><label>واحد</label><input id="p-unit" value="${esc(p.unit||'عدد')}"></div>
+      <div class="fg"><label>موجودی ${hlp('تعداد موجودی فعلی انبار. با صدور فاکتور رسمی خودکار کم می‌شود.')}</label><input id="p-stock" type="number" value="${p.stock!=null?p.stock:0}"></div>
+      <div class="fg"><label>هشدار موجودی ${hlp('وقتی موجودی به این عدد یا کمتر برسد، هشدار قرمز نمایش داده می‌شود.')}</label><input id="p-alert" type="number" value="${p.stock_alert!=null?p.stock_alert:5}"></div>
+      <div class="fg"><label>واحد ${hlp('واحد شمارش محصول: عدد، دست، بسته و…')}</label><input id="p-unit" value="${esc(p.unit||'عدد')}"></div>
       <div class="fg"><label>تعداد رنگ ${hlp('تعداد رنگ‌بندی‌های موجود برای این محصول')}</label><input id="p-colors" type="number" min="1" value="${p.colors!=null?p.colors:1}"></div>
       <div class="fg"><label>تعداد در پک ${hlp('تعداد پیش‌فرض هر بسته. در فاکتور به صورت خودکار اعمال می‌شود.')}</label><input id="p-pack_size" type="number" min="1" value="${p.pack_size!=null?p.pack_size:1}"></div>
-      <div class="fg full"><label>تصویر محصول</label><input id="p-image" type="file" accept="image/*"></div>
-      <div class="fg full"><label>یادداشت</label><textarea id="p-note">${esc(p.note||'')}</textarea></div>
+      <div class="fg full"><label>تصویر محصول ${hlp('عکس محصول — در کاتالوگ و کارت انتخاب محصولِ فاکتورساز نمایش داده می‌شود.')}</label><input id="p-image" type="file" accept="image/*"></div>
+      <div class="fg full"><label>یادداشت ${hlp('توضیح آزاد درباره محصول: جنس پارچه، سایزبندی، رنگ‌بندی و…')}</label><textarea id="p-note">${esc(p.note||'')}</textarea></div>
       ${p.image?`<div class="fg full"><img src="/uploads/products/${esc(p.image)}" style="height:90px;border-radius:8px"></div>`:''}
     </div></div>
     <div class="modal-foot"><button class="btn" onclick="saveProduct(${id||0})">💾 ذخیره</button>
@@ -1937,7 +2010,7 @@ ROUTES.users = async function(){
       <table class="tbl"><thead><tr><th>نام</th><th>نام کاربری</th><th>نقش</th><th>تلفن</th><th>آخرین ورود</th><th>وضعیت</th><th>عملیات</th></tr></thead>
       <tbody>${CACHE.users.map(u=>`<tr>
         <td>${esc(u.name)}</td><td class="mono">@${esc(u.username)}</td>
-        <td>${u.role==='admin'?'<span class="tag t-vip">مدیر</span>':u.role==='inside_sales'?'<span class="tag t-inside">داخلی</span>':'<span class="tag t-field">میدانی</span>'}</td>
+        <td>${u.role==='admin'?'<span class="tag t-vip">مدیر</span>':u.role==='accounting'?'<span class="tag t-proposal">حسابدار</span>':u.role==='inside_sales'?'<span class="tag t-inside">داخلی</span>':'<span class="tag t-field">میدانی</span>'}</td>
         <td class="mono">${esc(u.phone||'-')}</td>
         <td class="muted">${u.last_login?new Date(u.last_login*1000).toLocaleDateString('fa-IR'):'هرگز'}</td>
         <td>${u.active?'<span class="tag t-done">فعال</span>':'<span class="tag t-cancel">غیرفعال</span>'}</td>
@@ -1952,19 +2025,20 @@ function userModal(id){
   openModal(`
     <div class="modal-head"><h3>${id?'ویرایش کاربر':'کاربر جدید'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="modal-body"><div class="form-grid">
-      <div class="fg"><label>نام *</label><input id="u-name" value="${esc(u.name||'')}"></div>
-      <div class="fg"><label>نام کاربری *</label><input id="u-username" value="${esc(u.username||'')}" ${id?'readonly':''}></div>
-      <div class="fg"><label>تلفن</label><input id="u-phone" value="${esc(u.phone||'')}"></div>
-      <div class="fg"><label>نقش</label><select id="u-role">
+      <div class="fg"><label>نام * ${hlp('نام کامل کاربر — در فاکتورها و گزارش‌ها با همین نام نمایش داده می‌شود.')}</label><input id="u-name" value="${esc(u.name||'')}"></div>
+      <div class="fg"><label>نام کاربری * ${hlp('شناسه ورود به سیستم — بعد از ساخت قابل تغییر نیست.')}</label><input id="u-username" value="${esc(u.username||'')}" ${id?'readonly':''}></div>
+      <div class="fg"><label>تلفن ${hlp('شماره موبایل کاربر — یادآورهای پیامکی پیگیری به این شماره ارسال می‌شود.')}</label><input id="u-phone" value="${esc(u.phone||'')}"></div>
+      <div class="fg"><label>نقش ${hlp('میدانی/داخلی: کارشناس فروش با دسترسی به مشتریان خود. حسابدار: دسترسی کامل به بخش حسابداری و مشاهده همه مشتریان. مدیر: دسترسی کامل به همه بخش‌ها.')}</label><select id="u-role">
         <option value="field_sales" ${(u.role==='field_sales'||u.role==='salesperson')?'selected':''}>کارشناس میدانی (حضوری)</option>
         <option value="inside_sales" ${u.role==='inside_sales'?'selected':''}>کارشناس داخلی (تلفنی)</option>
+        <option value="accounting" ${u.role==='accounting'?'selected':''}>حسابدار (بخش حسابداری)</option>
         <option value="admin" ${u.role==='admin'?'selected':''}>مدیر سیستم</option></select></div>
-      <div class="fg"><label>${id?'رمز جدید (خالی = بدون تغییر)':'رمز عبور *'}</label><input id="u-pass" type="password"></div>
-      <div class="fg"><label>وضعیت</label><select id="u-active">
+      <div class="fg"><label>${id?'رمز جدید (خالی = بدون تغییر)':'رمز عبور *'} ${hlp('رمز ورود کاربر — به‌صورت رمزنگاری‌شده (bcrypt) ذخیره می‌شود.')}</label><input id="u-pass" type="password"></div>
+      <div class="fg"><label>وضعیت ${hlp('کاربر غیرفعال بلافاصله از سیستم خارج می‌شود و امکان ورود ندارد؛ داده‌هایش حفظ می‌شود.')}</label><select id="u-active">
         <option value="1" ${u.active?'selected':''}>فعال</option>
         <option value="0" ${!u.active?'selected':''}>غیرفعال</option></select></div>
-      <div class="fg"><label>انگیزه فروش نقد (٪) ${u.incentive_locked?'<span style="font-size:11px;color:var(--orange)">🔒 قفل</span>':''}</label><input id="u-comm-cash" type="number" step="0.1" value="${u.commission_cash||0}" data-orig="${u.commission_cash||0}" data-locked="${u.incentive_locked||0}"></div>
-      <div class="fg"><label>انگیزه فروش چک (٪)</label><input id="u-comm-cheque" type="number" step="0.1" value="${u.commission_cheque||0}" data-orig="${u.commission_cheque||0}"></div>
+      <div class="fg"><label>انگیزه فروش نقد (٪) ${hlp('درصد انگیزه فروش برای فاکتورهای نقدی تأییدشده. بعد از اولین ذخیره قفل می‌شود.')} ${u.incentive_locked?'<span style="font-size:11px;color:var(--orange)">🔒 قفل</span>':''}</label><input id="u-comm-cash" type="number" step="0.1" value="${u.commission_cash||0}" data-orig="${u.commission_cash||0}" data-locked="${u.incentive_locked||0}"></div>
+      <div class="fg"><label>انگیزه فروش چک (٪) ${hlp('درصد انگیزه فروش برای فاکتورهای چکی تأییدشده.')}</label><input id="u-comm-cheque" type="number" step="0.1" value="${u.commission_cheque||0}" data-orig="${u.commission_cheque||0}"></div>
     </div></div>
     <div class="modal-foot"><button class="btn" onclick="saveUser(${id||0})">💾 ذخیره</button>
       <button class="btn ghost" onclick="closeModal()">انصراف</button></div>`);
@@ -2086,11 +2160,18 @@ function drawChart(monthly){
    ACCOUNTING (admin)
 ============================================================ */
 let accTab = 'general';
-let accDateFrom = '', accDateTo = '';
+let accDateFrom = '', accDateTo = '', accPreset = 'month';
 let accHideZero = true;
 let stmtCustId = '', stmtType = '';
+function applyAccPreset(p){
+  accPreset=p;
+  if(p!=='custom') [accDateFrom,accDateTo]=jPresetRange(p);
+  ROUTES.accounting();
+}
 
 ROUTES.accounting = async function(){
+  // First visit: apply the default "current month" preset
+  if(accPreset!=='custom'&&accPreset!=='all'&&!accDateFrom) [accDateFrom,accDateTo]=jPresetRange(accPreset);
   el('view').innerHTML='<div class="muted">در حال بارگذاری...</div>';
   const ov = await api('GET','/accounting/overview');
   if(!ov) return;
@@ -2111,12 +2192,15 @@ ROUTES.accounting = async function(){
           <button data-acc-tab="cheques" class="btn ${accTab==='cheques'?'':'ghost'}" onclick="switchAccTab('cheques')">🧾 چک‌ها</button>
           <button data-acc-tab="commissions" class="btn ${accTab==='commissions'?'':'ghost'}" onclick="switchAccTab('commissions')">تأیید و انگیزه فروش</button>
           <button data-acc-tab="statement" class="btn ${accTab==='statement'?'':'ghost'}" onclick="switchAccTab('statement')">📄 صورت‌حساب مشتری</button>
-          <div style="display:flex;gap:6px;align-items:center;border-right:1px solid var(--border);padding-right:8px;margin-right:2px">
+          <div style="display:flex;gap:6px;align-items:center;border-right:1px solid var(--border);padding-right:8px;margin-right:2px;flex-wrap:wrap">
+            ${presetSelect('accPresetSel',accPreset,'applyAccPreset')}
+            ${accPreset==='custom'?`
             <input id="accFrom" data-jdate placeholder="از تاریخ" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;width:120px;font-size:12px" value="${accDateFrom}" onchange="accDateFrom=this.value">
             <input id="accTo" data-jdate placeholder="تا تاریخ" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;width:120px;font-size:12px" value="${accDateTo}" onchange="accDateTo=this.value">
             <button class="btn sm ghost" onclick="loadAccTab(accTab)">🔍 اعمال</button>
-            <button class="btn sm ghost" onclick="accDateFrom='';accDateTo='';el('accFrom').value='';el('accTo').value='';loadAccTab(accTab)">✕</button>
-            <button class="btn sm ghost" title="بازسازی اسناد حسابداری برای همه عملیات گذشته" onclick="resyncAccounting()">🔄 همگام‌سازی</button>
+            <button class="btn sm ghost" onclick="accDateFrom='';accDateTo='';el('accFrom').value='';el('accTo').value='';loadAccTab(accTab)">✕</button>`:
+            `<span class="tag" style="background:var(--purple-light);color:var(--purple)">${accDateFrom||'ابتدا'} تا ${accDateTo||'انتها'}</span>`}
+            ${isAdmin()?`<button class="btn sm ghost" title="بازسازی اسناد حسابداری برای همه عملیات گذشته" onclick="resyncAccounting()">🔄 همگام‌سازی</button>`:''}
           </div>
         </div>
       </div>
@@ -2234,7 +2318,14 @@ async function loadAccTab(tab){
           <td class="mono" style="color:${oc};font-weight:700">${fmt(r.outstanding)}</td>
           <td style="white-space:nowrap"><button class="btn sm green" onclick="settlementModal(${r.id})">💵 ثبت تسویه</button> <button class="btn sm ghost" onclick="showCustLedger(${r.id},'${esc(r.biz)}')">📋 معین</button></td>
         </tr>`;
-      }).join('')||emptyRow(7)}</tbody></table></div>`;
+      }).join('')||emptyRow(7)}</tbody>
+      <tfoot><tr style="border-top:2px solid var(--border);background:var(--purple-light);font-weight:700">
+        <td colspan="3">جمع (${fmt(rows.length)} مشتری)</td>
+        <td class="mono">${fmt(rows.reduce((a,r)=>a+(r.total_invoiced||0),0))}</td>
+        <td class="mono" style="color:var(--green)">${fmt(rows.reduce((a,r)=>a+(r.total_settled||0),0))}</td>
+        <td class="mono" style="color:var(--red);font-weight:800">${fmt(rows.reduce((a,r)=>a+(r.outstanding||0),0))}</td>
+        <td></td>
+      </tr></tfoot></table></div>`;
   } else if(tab==='settlements'){
     const rows=await api('GET','/accounting/settlements'+dq)||[];
     body.innerHTML=`
@@ -2250,7 +2341,12 @@ async function loadAccTab(tab){
         <td class="muted">${esc(r.note||'-')}</td>
         <td class="muted">${esc(r.recorder_name||'-')}</td>
         <td><button class="btn sm red" onclick="deleteSettlement(${r.id})">🗑️</button></td>
-      </tr>`).join('')||emptyRow(8)}</tbody></table></div>`;
+      </tr>`).join('')||emptyRow(8)}</tbody>
+      <tfoot><tr style="border-top:2px solid var(--border);background:var(--purple-light);font-weight:700">
+        <td colspan="2">جمع (${fmt(rows.length)} تسویه)</td>
+        <td class="mono" style="color:var(--green);font-weight:800">${fmt(rows.reduce((a,r)=>a+(r.amount||0),0))}</td>
+        <td colspan="5"></td>
+      </tr></tfoot></table></div>`;
   } else if(tab==='cheques'){
     const statusFilter=el('chqStatus')?.value||'';
     const bankFilter=el('chqBank')?.value||'';
@@ -2299,7 +2395,12 @@ async function loadAccTab(tab){
             </select>
           </td>
         </tr>`;
-      }).join('')||emptyRow(10)}</tbody></table></div>`;
+      }).join('')||emptyRow(10)}</tbody>
+      <tfoot><tr style="border-top:2px solid var(--border);background:var(--purple-light);font-weight:700">
+        <td colspan="2">جمع (${fmt(rows.length)} چک)</td>
+        <td class="mono" style="font-weight:800">${fmt(rows.reduce((a,r)=>a+(r.cheque_amount||r.amount||0),0))}</td>
+        <td colspan="7"></td>
+      </tr></tfoot></table></div>`;
   } else if(tab==='commissions'){
     const [pending,comms]=await Promise.all([
       api('GET','/accounting/pending-approvals'),
@@ -2339,7 +2440,16 @@ async function loadAccTab(tab){
         <div class="panel-head"><h4>📊 گزارش و پرداخت انگیزه فروش کارشناسان</h4></div>
         <div class="panel-body tbl-wrap"><table class="tbl"><thead><tr>
           <th>کارشناس</th><th>نرخ نقد/چک</th><th>فروش نقد تأیید</th><th>فروش چک تأیید</th><th>جمع انگیزه</th><th>پرداخت شده</th><th>مانده پرداخت</th><th>عملیات</th>
-        </tr></thead><tbody>${commRows||emptyRow(8)}</tbody></table></div>
+        </tr></thead><tbody>${commRows||emptyRow(8)}</tbody>
+        <tfoot><tr style="border-top:2px solid var(--border);background:var(--purple-light);font-weight:700">
+          <td>جمع کل</td><td></td>
+          <td class="mono">${fmt((comms||[]).reduce((a,c)=>a+(c.cashSales||0),0))}</td>
+          <td class="mono">${fmt((comms||[]).reduce((a,c)=>a+(c.chequeSales||0),0))}</td>
+          <td class="mono" style="color:var(--purple);font-weight:800">${fmt(Math.round((comms||[]).reduce((a,c)=>a+(c.totalComm||0),0)))}</td>
+          <td class="mono" style="color:var(--green)">${fmt(Math.round((comms||[]).reduce((a,c)=>a+(c.paid||0),0)))}</td>
+          <td class="mono" style="color:var(--red);font-weight:800">${fmt(Math.round((comms||[]).reduce((a,c)=>a+(c.payable||0),0)))}</td>
+          <td></td>
+        </tr></tfoot></table></div>
       </div>`;
   } else if(tab==='statement'){
     if(!CACHE.customers||!CACHE.customers.length){ CACHE.customers=await api('GET','/customers')||[]; }
@@ -2528,21 +2638,21 @@ function settlementModal(custId){
   openModal(`
     <div class="modal-head"><h3>ثبت تسویه حساب</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="modal-body"><div class="form-grid">
-      <div class="fg full"><label>مشتری *</label>${custSelect('st-cust', custId)}</div>
-      <div class="fg"><label>مبلغ تسویه (تومان) *</label><input id="st-amount" type="number" min="1" placeholder="0"></div>
-      <div class="fg"><label>نوع پرداخت</label><select id="st-paytype" onchange="toggleStlCheque()">
+      <div class="fg full"><label>مشتری * ${hlp('مشتری‌ای که این پرداخت را انجام داده است.')}</label>${custSelect('st-cust', custId)}</div>
+      <div class="fg"><label>مبلغ تسویه (تومان) * ${hlp('مبلغ دریافتی به تومان — از بدهی مشتری کم و در دفتر معین بستانکار می‌شود.')}</label><input id="st-amount" type="number" min="1" placeholder="0"></div>
+      <div class="fg"><label>نوع پرداخت ${hlp('نقد: واریز نقدی/کارتی. چک: پرداخت با چک — اطلاعات چک را در فرم پایین وارد کنید.')}</label><select id="st-paytype" onchange="toggleStlCheque()">
         <option value="cash">نقد</option><option value="cheque">چک</option></select></div>
-      <div class="fg"><label>تاریخ</label><input id="st-date" data-jdate value="${todayJalali()}"></div>
-      <div class="fg full"><label>یادداشت</label><textarea id="st-note" placeholder="توضیحات اختیاری..."></textarea></div>
+      <div class="fg"><label>تاریخ ${hlp('تاریخ دریافت وجه — گزارش‌های دوره‌ای بر اساس این تاریخ فیلتر می‌شوند.')}</label><input id="st-date" data-jdate value="${todayJalali()}"></div>
+      <div class="fg full"><label>یادداشت ${hlp('توضیح اختیاری: شماره پیگیری واریز، توافق پرداخت و…')}</label><textarea id="st-note" placeholder="توضیحات اختیاری..."></textarea></div>
       <div id="chequeFields" class="fg full" style="display:none">
         <div class="form-grid">
-          <div class="fg"><label>نام بانک *</label><input id="st-cbank" placeholder="مثال: ملی، صادرات"></div>
-          <div class="fg"><label>شماره صیادی *</label><input id="st-csayadi" placeholder="شماره صیادی چک"></div>
-          <div class="fg"><label>شماره چک</label><input id="st-cnum" placeholder="شماره چک (اختیاری)"></div>
-          <div class="fg"><label>شماره حساب</label><input id="st-caccnum" placeholder="شماره حساب (اختیاری)"></div>
-          <div class="fg"><label>مبلغ چک (تومان)</label><input id="st-camount" type="number" min="0" placeholder="در صورت تفاوت با مبلغ تسویه"></div>
-          <div class="fg"><label>نام صادرکننده</label><input id="st-cowner" placeholder="نام صاحب چک"></div>
-          <div class="fg full"><label>تاریخ سررسید *</label><input id="st-cdue" data-jdate></div>
+          <div class="fg"><label>نام بانک * ${hlp('بانک صادرکننده چک — در فیلتر مدیریت چک‌ها استفاده می‌شود.')}</label><input id="st-cbank" placeholder="مثال: ملی، صادرات"></div>
+          <div class="fg"><label>شماره صیادی * ${hlp('شماره ۱۶ رقمی صیاد چک — شناسه یکتای پیگیری چک.')}</label><input id="st-csayadi" placeholder="شماره صیادی چک"></div>
+          <div class="fg"><label>شماره چک ${hlp('شماره سری چک (اختیاری).')}</label><input id="st-cnum" placeholder="شماره چک (اختیاری)"></div>
+          <div class="fg"><label>شماره حساب ${hlp('شماره حساب صادرکننده چک (اختیاری).')}</label><input id="st-caccnum" placeholder="شماره حساب (اختیاری)"></div>
+          <div class="fg"><label>مبلغ چک (تومان) ${hlp('فقط اگر مبلغ چک با مبلغ تسویه فرق دارد پر کنید؛ خالی = برابر مبلغ تسویه.')}</label><input id="st-camount" type="number" min="0" placeholder="در صورت تفاوت با مبلغ تسویه"></div>
+          <div class="fg"><label>نام صادرکننده ${hlp('نام صاحب حساب چک.')}</label><input id="st-cowner" placeholder="نام صاحب چک"></div>
+          <div class="fg full"><label>تاریخ سررسید * ${hlp('تاریخ وصول چک — چک‌های سررسید گذشته در جدول چک‌ها قرمز نمایش داده می‌شوند.')}</label><input id="st-cdue" data-jdate></div>
         </div>
       </div>
     </div></div>
@@ -2600,10 +2710,10 @@ function incentivePayModal(repId, repName, payable){
     <div class="modal-body"><div class="form-grid">
       <div class="fg full"><label>کارشناس</label><input value="${esc(repName)}" disabled style="background:#f9fafb"></div>
       <div class="fg full"><label>مانده قابل پرداخت</label><input value="${fmt(payable)} تومان" disabled style="background:#f9fafb;color:var(--red);font-weight:700"></div>
-      <div class="fg"><label>مبلغ پرداخت (تومان) *</label><input id="ip-amount" type="number" min="1" value="${payable>0?payable:''}" placeholder="0"></div>
-      <div class="fg"><label>نوع پرداخت</label><select id="ip-paytype"><option value="cash">نقد</option><option value="cheque">چک</option><option value="bank">کارت به کارت / بانکی</option></select></div>
-      <div class="fg"><label>تاریخ</label><input id="ip-date" data-jdate value="${todayJalali()}"></div>
-      <div class="fg full"><label>یادداشت</label><textarea id="ip-note" placeholder="توضیحات اختیاری..."></textarea></div>
+      <div class="fg"><label>مبلغ پرداخت (تومان) * ${hlp('مبلغی که به کارشناس پرداخت می‌کنید — از مانده انگیزه فروش او کم می‌شود.')}</label><input id="ip-amount" type="number" min="1" value="${payable>0?payable:''}" placeholder="0"></div>
+      <div class="fg"><label>نوع پرداخت ${hlp('روش پرداخت انگیزه: نقد، چک یا واریز بانکی — در سند حسابداری خودکار ثبت می‌شود.')}</label><select id="ip-paytype"><option value="cash">نقد</option><option value="cheque">چک</option><option value="bank">کارت به کارت / بانکی</option></select></div>
+      <div class="fg"><label>تاریخ ${hlp('تاریخ پرداخت انگیزه فروش.')}</label><input id="ip-date" data-jdate value="${todayJalali()}"></div>
+      <div class="fg full"><label>یادداشت ${hlp('توضیح اختیاری: بابت کدام دوره، شماره پیگیری واریز و…')}</label><textarea id="ip-note" placeholder="توضیحات اختیاری..."></textarea></div>
     </div></div>
     <div class="modal-foot">
       <button class="btn green" onclick="saveIncentivePayment(${repId})">💾 ثبت پرداخت</button>
@@ -3228,9 +3338,14 @@ function renderAdminGuide(){
         <li>آمار تعداد مشتریان، فاکتورها و پیگیری‌های باز</li>
         <li>نمودار فروش ماهانه (بر اساس فاکتورهای رسمی)</li>
         <li>جدول عملکرد هر کارشناس: تعداد مشتری، فروش کل، پیگیری‌های باز</li>
-        <li>فیلتر تاریخ برای گزارش بازه دلخواه</li>
+        <li>جدول مانده حساب مشتریان با فیلتر کارشناس و <b>جمع کل زنده</b> در پایین جدول</li>
       </ul>
-      <div class="tip">برای تحلیل دوره‌ای، تاریخ شروع و پایان را وارد کنید و روی «اعمال» کلیک کنید.</div>`),
+      <h5>فیلتر زمانی</h5><ul>
+        <li>پیش‌فرض داشبورد <b>ماه جاری</b> است</li>
+        <li>گزینه‌های آماده: <b>هفته جاری</b> (از شنبه)، <b>ماه جاری</b>، <b>ماه قبل</b>، همه، بازه دلخواه</li>
+        <li>با انتخاب «بازه دلخواه» تاریخ شروع و پایان را دستی وارد کنید</li>
+        <li>همه جمع‌ها و آمارها بلافاصله با تغییر فیلتر به‌روز می‌شوند</li>
+      </ul>`),
     helpSec('👥','مدیریت مشتریان',`
       <p>تمام مشتریان کسب‌وکار اینجا مدیریت می‌شوند.</p>
       <h5>افزودن مشتری جدید</h5><ul>
@@ -3246,13 +3361,15 @@ function renderAdminGuide(){
         <li><b>خاموش</b>: مدت‌هاست سفارشی نداشته</li>
         <li><b>جدید</b>: تازه ثبت شده</li>
       </ul>
+      <h5>پیگیری خودکار فاکتور</h5><p>چک‌باکس «ایجاد خودکار پیگیری هنگام صدور فاکتور» بالای فرم مشتری: اگر فعال باشد، با هر فاکتور، پیگیری کیفیت ۷ روزه خودکار ساخته می‌شود. برای مشتریانی که نمی‌خواهید، آن را خاموش کنید.</p>
+      <h5>پیامک خوش‌آمدگویی</h5><p>با ثبت مشتری جدید دارای موبایل، پیامک خوش‌آمد خودکار ارسال می‌شود. ارسال دستی: دکمه 📤 در ردیف مشتری.</p>
       <h5>ورود از اکسل</h5><p>از دکمه «ورود اکسل» می‌توانید لیست مشتریان را از فایل اکسل وارد کنید. ستون‌های اجباری: نام فروشگاه.</p>
       <div class="warn">حذف مشتری قابل بازگشت نیست. قبل از حذف، از نداشتن فاکتور و پیگیری مطمئن شوید.</div>`),
     helpSec('📞','پیگیری‌ها',`
       <p>پیگیری یعنی ثبت هر تماس یا فعالیتی که با مشتری انجام می‌دهید.</p>
       <h5>ثبت پیگیری جدید</h5><ul>
         <li>مشتری را جستجو و انتخاب کنید</li>
-        <li>نوع تماس (تلفن، حضوری، واتس‌اپ، ...) را مشخص کنید</li>
+        <li>نوع تماس (تلفن، حضوری، واتس‌اپ، ...) را مشخص کنید — نوع <b>«💰 مانده حساب»</b> برای پیگیری بدهی و وصول مطالبات است</li>
         <li>موضوع تماس و نتیجه را بنویسید</li>
         <li>مرحله پایپ‌لاین را به‌روز کنید</li>
         <li>تاریخ پیگیری بعدی را تنظیم کنید</li>
@@ -3277,11 +3394,13 @@ function renderAdminGuide(){
     helpSec('🛍️','محصولات و موجودی',`
       <p>کاتالوگ محصولات و مدیریت انبار.</p>
       <h5>افزودن محصول</h5><ul>
-        <li>کد، نام، دسته‌بندی، قیمت واحد و موجودی را وارد کنید</li>
+        <li>کد، نام، دسته‌بندی، قیمت فروش و موجودی را وارد کنید</li>
+        <li><b>بهای تمام‌شده</b> (قیمت تولید/خرید هر واحد) را وارد کنید — مبنای محاسبه سود ناخالص در گزارش سود و زیان است</li>
         <li>حد هشدار موجودی را تنظیم کنید — وقتی کمتر شد، هشدار قرمز نشان می‌دهد</li>
         <li>عکس محصول را آپلود کنید (نمایش در فاکتور)</li>
       </ul>
-      <div class="tip">کد محصول باید منحصربه‌فرد باشد — از آن برای جستجوی سریع در فاکتورساز استفاده کنید.</div>`),
+      <div class="tip">کد محصول باید منحصربه‌فرد باشد — از آن برای جستجوی سریع در فاکتورساز استفاده کنید.</div>
+      <div class="tip">در موبایل، برای افزودن محصول به فاکتور <b>دو بار</b> روی کارت محصول بزنید (لمس اول انتخاب، لمس دوم افزودن).</div>`),
     helpSec('🧾','فاکتور',`
       <p>صدور پیش‌فاکتور و فاکتور رسمی.</p>
       <h5>صدور فاکتور</h5><ul>
@@ -3294,13 +3413,27 @@ function renderAdminGuide(){
       <h5>چاپ</h5><p>از دکمه «چاپ» روی صفحه نمایش فاکتور استفاده کنید. تنها فاکتور چاپ می‌شود، بقیه رابط کاربری پنهان می‌شود.</p>
       <div class="warn">فاکتورهای رسمی در گزارش درآمد محاسبه می‌شوند. پیش‌فاکتور فقط برای نمایش قیمت است.</div>`),
     helpSec('💰','حسابداری',`
-      <p>مدیریت پرداخت‌ها و مانده‌حساب مشتریان.</p>
-      <h5>ثبت تسویه</h5><ul>
-        <li>مشتری را انتخاب کنید</li>
-        <li>مبلغ و نوع پرداخت (نقد یا چک) را وارد کنید</li>
-        <li>تاریخ چک را اگر مربوط است پر کنید</li>
+      <p>موتور حسابداری به‌صورت خودکار در پس‌زمینه کار می‌کند: با هر فاکتور رسمی، تسویه و پرداخت انگیزه، اسناد حسابداری خودکار ثبت می‌شود — نیازی به هیچ ثبت دستی نیست.</p>
+      <h5>تب‌های حسابداری</h5><ul>
+        <li><b>حسابداری کل</b>: صورت سود و زیان کامل (فروش ← تخفیف ← بهای تمام‌شده ← سود ناخالص ← انگیزه فروش ← سود عملیاتی) و جریان وجوه</li>
+        <li><b>مطالبات</b>: بدهی هر مشتری با جمع زنده پایین جدول و دکمه ثبت تسویه</li>
+        <li><b>تسویه‌ها</b>: تاریخچه همه پرداخت‌های دریافتی با جمع کل</li>
+        <li><b>چک‌ها</b>: مدیریت چک‌های دریافتی، سررسیدها و وضعیت وصول</li>
+        <li><b>تأیید و انگیزه فروش</b>: تأیید فاکتورها، محاسبه انگیزه هر کارشناس، <b>ثبت پرداخت انگیزه</b> (💵) و تاریخچه پرداخت‌ها (📜)</li>
+        <li><b>صورت‌حساب مشتری</b>: گردش کامل حساب هر مشتری با مانده اول دوره و مانده لحظه‌ای</li>
       </ul>
-      <h5>مانده‌حساب</h5><p>تفاوت مجموع فاکتورهای رسمی و مجموع تسویه‌های ثبت‌شده، بدهی مشتری است.</p>`),
+      <h5>فیلتر زمانی</h5><p>پیش‌فرض <b>ماه جاری</b> است؛ هفته جاری / ماه قبل / همه / بازه دلخواه هم انتخاب می‌شود. جمع‌ها بلافاصله به‌روز می‌شوند.</p>
+      <h5>صورت‌حساب مشتری</h5><ul>
+        <li>مشتری را انتخاب کنید تا گردش حساب (فاکتور = بدهکار، تسویه = بستانکار) با مانده لحظه‌ای نمایش داده شود</li>
+        <li>خروجی: <b>اکسل</b>، <b>CSV</b>، <b>PDF</b> (چاپ مرورگر)</li>
+        <li>دکمه <b>«📤 ارسال تصویری به پیام‌رسان»</b> از صورت‌حساب عکس می‌گیرد و برای کاربر دلخواه در پیام‌رسان داخلی می‌فرستد</li>
+      </ul>
+      <h5>ثبت تسویه</h5><ul>
+        <li>مشتری، مبلغ و نوع پرداخت (نقد یا چک) را وارد کنید</li>
+        <li>برای چک: نام بانک، شماره صیادی و سررسید الزامی است</li>
+      </ul>
+      <h5>همگام‌سازی</h5><p>دکمه «🔄 همگام‌سازی» (فقط مدیر) اسناد حسابداری همه عملیات گذشته را بدون ایجاد رکورد تکراری بازسازی می‌کند.</p>
+      <div class="tip">برای محاسبه درست سود ناخالص، «بهای تمام‌شده» هر محصول را در بخش محصولات وارد کنید.</div>`),
     helpSec('📊','گزارشات',`
       <p>تحلیل عملکرد فروش و کارشناسان.</p><ul>
         <li><b>گزارش کارشناسان</b>: مقایسه فروش، مشتریان و پیگیری هر نفر</li>
@@ -3312,6 +3445,7 @@ function renderAdminGuide(){
       <p>ساخت و مدیریت حساب‌های کارشناسان.</p>
       <h5>نقش‌های کاربری</h5><ul>
         <li><b>مدیر سیستم</b>: دسترسی کامل به همه بخش‌ها</li>
+        <li><b>حسابدار</b>: دسترسی کامل به بخش حسابداری (تسویه، چک، تأیید فاکتور، انگیزه فروش، صورت‌حساب) و مشاهده همه مشتریان — بدون دسترسی به تنظیمات و کاربران</li>
         <li><b>کارشناس میدانی (حضوری)</b>: ویزیت حضوری مشتریان</li>
         <li><b>کارشناس داخلی (تلفنی)</b>: فروش و پیگیری تلفنی</li>
       </ul>
@@ -3322,8 +3456,15 @@ function renderAdminGuide(){
       <h5>تلگرام</h5><p>Bot Token و Chat ID برای ارسال اعلان‌های سیستمی.</p>
       <h5>پیامک</h5><ul>
         <li><b>کاوه‌نگار</b>: API Key از پنل کاوه‌نگار</li>
-        <li><b>ملی‌پیامک</b>: username:password در فیلد API Key</li>
-        <li>شماره فرستنده را از پنل سرویس‌دهنده دریافت کنید</li>
+        <li><b>ملی‌پیامک / نیک‌اس‌ام‌اس</b>: username:password در فیلد API Key</li>
+        <li><b>SMS.ir</b>: کلید API از بخش برنامه‌نویسان پنل sms.ir</li>
+        <li>شماره فرستنده را از پنل سرویس‌دهنده دریافت کنید (برای SMS.ir اختیاری است)</li>
+        <li>با دکمه «ارسال پیامک تست»، پیامک خوش‌آمدگویی به شماره دلخواه ارسال و تنظیمات آزمایش می‌شود</li>
+      </ul>
+      <h5>پیامک خوش‌آمدگویی</h5><ul>
+        <li>هنگام ثبت مشتری جدیدِ دارای موبایل، پیامک خوش‌آمد با لینک کانال‌ها (روبیکا، تلگرام، بله) خودکار ارسال می‌شود</li>
+        <li>متن پیام و «آدرس دفتر کیمیا» در تنظیمات قابل ویرایش است — جای‌نگهدار {address} با آدرس جایگزین می‌شود</li>
+        <li>ارسال دستی: دکمه 📤 در لیست مشتریان</li>
       </ul>`),
     helpSec('🔌','API و یکپارچه‌سازی',`
       <p>اتصال نرم‌افزارهای خارجی به CRM ترنم از طریق API.</p>
