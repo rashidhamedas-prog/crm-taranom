@@ -393,7 +393,7 @@ router.get('/:id/print', auth, (req, res) => {
   <div class="sheet">
     <div class="head">
       <div class="logo">
-        <img src="/logo.png" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
+        <img src="/logo-sm.png" onerror="this.src='/logo.png';this.onerror=()=>{this.style.display='none';this.nextElementSibling.style.display='inline'}">
         <span class="emoji" style="display:none">🌸</span>
         <div>
           <h1>${companyName}</h1>

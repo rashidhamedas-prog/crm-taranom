@@ -502,7 +502,7 @@ thead th{background:#1A5C38;color:#fff}tbody tr:nth-child(even){background:#f4f7
 .pbtn{display:block;margin:18px auto 0;background:#1A5C38;color:#fff;border:none;padding:10px 28px;border-radius:8px;font-size:14px;cursor:pointer}
 @media print{body{background:#fff;padding:0}.sheet{box-shadow:none}.pbtn{display:none}@page{size:A4;margin:10mm}}
 </style></head><body><div class="sheet">
-<div class="head"><div><h1>صورت‌حساب مشتری</h1><div class="sub">${company}</div></div>
+<div class="head"><div style="display:flex;align-items:center;gap:14px"><img src="/logo-sm.png" style="height:58px" onerror="this.style.display='none'"><div><h1>صورت‌حساب مشتری</h1><div class="sub">${company}</div></div></div>
 <div style="text-align:left"><div><b>مشتری:</b> ${data.customer.biz}</div><div><b>کارشناس:</b> ${data.customer.salesperson || '-'}</div>${(from || to) ? `<div><b>دوره:</b> ${from || '...'} تا ${to || '...'}</div>` : ''}</div></div>
 <div class="info"><div><b>نام کامل:</b> ${data.customer.owner || '-'}</div><div><b>شهر:</b> ${data.customer.city || '-'}</div><div><b>تلفن:</b> ${data.customer.phone || '-'}</div></div>
 <table><thead><tr><th>ردیف</th><th>تاریخ</th><th>نوع</th><th>شرح</th><th>بدهکار</th><th>بستانکار</th><th>مانده</th></tr></thead>

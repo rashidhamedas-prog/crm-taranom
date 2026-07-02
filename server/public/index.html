@@ -12,10 +12,11 @@
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
 :root{
-  --purple:#1A5C38; --purple2:#236B44; --purple-light:#E8F5EE;
-  --gold:#C9A843; --gold-light:#FBF5E1;
+  --purple:#1A5C38; --purple2:#2E7D4F; --purple-light:#E8F5EE;
+  --gold:#C9A227; --gold-light:#FBF5E1;
   --green:#059669; --red:#DC2626; --orange:#D97706; --blue:#2563EB;
-  --bg:#f4f7f5; --card:#ffffff; --text:#1f2937; --muted:#6b7280; --border:#e5e7eb;
+  --bg:#f5f3ee; --card:#ffffff; --text:#22301f; --muted:#6b7280; --border:#e8e6df;
+  --hero:linear-gradient(120deg,#1A5C38 0%,#2E7D4F 55%,#C9A227 135%);
 }
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Vazirmatn',sans-serif}
 html,body{height:100%;overflow-x:hidden}
@@ -28,7 +29,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
 
 /* ===== Login ===== */
 #login{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(135deg,var(--purple),var(--purple2));padding:20px;z-index:1000}
+  background:var(--hero);padding:20px;z-index:1000}
 .login-card{background:#fff;border-radius:20px;padding:38px 30px;width:100%;max-width:380px;
   box-shadow:0 20px 60px rgba(0,0,0,.25);text-align:center}
 .login-card .logo{font-size:54px;margin-bottom:8px}
@@ -58,7 +59,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
 .nav a .ico{font-size:18px;width:24px;text-align:center}
 .nav a:hover{background:rgba(255,255,255,.1);color:#fff}
 .nav a.active{background:rgba(255,255,255,.18);color:#fff;font-weight:600}
-.nav a.active::before{content:'';position:absolute;right:0;top:0;bottom:0;width:4px;background:#fff}
+.nav a.active::before{content:'';position:absolute;right:0;top:0;bottom:0;width:4px;background:var(--gold)}
 .nav .badge{position:absolute;left:18px;background:var(--red);color:#fff;font-size:10px;
   min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px}
 .sidebar .foot{padding:14px 20px;border-top:1px solid rgba(255,255,255,.15);font-size:12px}
@@ -66,23 +67,29 @@ input,select,textarea{font-family:inherit;font-size:14px}
 .sidebar .foot button:hover{background:rgba(255,255,255,.28)}
 
 .main{flex:1;margin-right:240px;display:flex;flex-direction:column;min-height:100vh;min-width:0}
-.topbar{background:#fff;border-bottom:1px solid var(--border);padding:12px 24px;display:flex;
-  align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
+.topbar{background:var(--hero);border-bottom:none;padding:14px 24px;display:flex;color:#fff;
+  align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40;
+  box-shadow:0 4px 18px rgba(26,92,56,.22)}
 .topbar .left{display:flex;align-items:center;gap:14px}
-.topbar .menu-btn{display:none;background:var(--purple-light);color:var(--purple);border:none;
+.topbar .menu-btn{display:none;background:rgba(255,255,255,.16);color:#fff;border:none;
   width:38px;height:38px;border-radius:10px;font-size:20px}
-.topbar h3{font-size:17px;color:var(--purple)}
+.topbar h3{font-size:17px;color:#fff;font-weight:800}
 .topbar .right{display:flex;align-items:center;gap:16px}
-.topbar .clock{font-size:13px;color:var(--muted);background:var(--purple-light);padding:6px 12px;border-radius:8px;font-weight:600}
+.topbar .clock{font-size:13px;color:#fff;background:rgba(255,255,255,.16);padding:6px 12px;border-radius:99px;font-weight:600}
 .topbar .user{display:flex;align-items:center;gap:8px;font-size:13px}
-.topbar .avatar{width:34px;height:34px;border-radius:50%;background:var(--purple);color:#fff;
-  display:flex;align-items:center;justify-content:center;font-weight:700}
+.topbar .user .muted{color:rgba(255,255,255,.75)!important}
+.topbar .avatar{width:36px;height:36px;border-radius:12px;background:var(--gold);color:#1A3A26;
+  display:flex;align-items:center;justify-content:center;font-weight:800}
 .content{padding:22px;flex:1}
 
 /* ===== Cards / Generic ===== */
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:22px;width:100%}
-.stat{background:var(--card);border-radius:14px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.05);
-  border:1px solid var(--border);display:flex;align-items:center;gap:14px;min-width:0;overflow:hidden}
+.stat{background:var(--card);border-radius:18px;padding:18px;box-shadow:0 8px 24px rgba(26,92,56,.08);
+  border:none;border-bottom:4px solid var(--purple);display:flex;align-items:center;gap:14px;min-width:0;overflow:hidden}
+.stat:has(.ic.g){border-bottom-color:var(--green)}
+.stat:has(.ic.o){border-bottom-color:var(--gold)}
+.stat:has(.ic.r){border-bottom-color:var(--red)}
+.stat:has(.ic.b){border-bottom-color:var(--blue)}
 .stat .ic{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
 .stat .v{font-size:20px;font-weight:800;white-space:nowrap;overflow:hidden}
 .stat .l{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -93,8 +100,8 @@ input,select,textarea{font-family:inherit;font-size:14px}
 .ic.o{background:#fef3c7;color:var(--orange)}
 .ic.b{background:#dbeafe;color:var(--blue)}
 
-.panel{background:var(--card);border-radius:14px;border:1px solid var(--border);
-  box-shadow:0 1px 4px rgba(0,0,0,.05);margin-bottom:20px;overflow:hidden}
+.panel{background:var(--card);border-radius:18px;border:1px solid var(--border);
+  box-shadow:0 2px 10px rgba(34,48,31,.05);margin-bottom:20px;overflow:hidden}
 .panel-head{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;
   align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
 .panel-head h4{font-size:15px;color:var(--purple)}
@@ -116,9 +123,9 @@ input,select,textarea{font-family:inherit;font-size:14px}
 /* ===== Table ===== */
 .tbl-wrap{overflow-x:auto}
 table.tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:600px}
-table.tbl th{background:#f9f7fd;color:var(--purple);text-align:right;padding:11px 12px;font-weight:600;border-bottom:2px solid var(--border);white-space:nowrap}
+table.tbl th{background:#F2F7F3;color:var(--purple);text-align:right;padding:11px 12px;font-weight:700;border-bottom:2px solid var(--border);white-space:nowrap}
 table.tbl td{padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
-table.tbl tr:hover td{background:#faf8ff}
+table.tbl tr:hover td{background:#F7FAF7}
 .empty{text-align:center;color:var(--muted);padding:36px 10px}
 
 .tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
@@ -424,7 +431,7 @@ table.tbl tr:hover td{background:#faf8ff}
 <!-- ===== LOGIN ===== -->
 <div id="login">
   <div class="login-card">
-    <div class="logo"><img src="/logo.png" style="height:72px;margin-bottom:4px" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><span style="display:none;font-size:54px">🌿</span></div>
+    <div class="logo"><img src="/logo-sm.png" alt="ترنم" style="height:110px;margin-bottom:6px" onerror="this.src='/logo.png';this.onerror=()=>{this.style.display='none';this.nextElementSibling.style.display='block'}"><span style="display:none;font-size:54px">🌿</span></div>
     <h1>CRM ترنم</h1>
     <p>سامانه مدیریت مشتریان پوشاک ترنم</p>
     <form id="loginForm">
@@ -448,7 +455,7 @@ table.tbl tr:hover td{background:#faf8ff}
   <div class="layout">
     <aside class="sidebar" id="sidebar">
       <div class="brand">
-        <img src="/logo.png" style="height:38px;border-radius:6px" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"><span class="emoji" style="display:none">🌿</span>
+        <img src="/logo-sm.png" alt="ترنم" style="height:44px;background:#fff;border-radius:12px;padding:3px" onerror="this.src='/logo.png';this.onerror=()=>{this.style.display='none';this.nextElementSibling.style.display='inline'}"><span class="emoji" style="display:none">🌿</span>
         <div><h2>CRM ترنم</h2><small id="brandRole">پنل مدیریت</small></div>
       </div>
       <nav class="nav" id="nav"></nav>
@@ -1829,7 +1836,9 @@ async function printInvoice(id, paper){
   try{
     const r = await fetch('/api/invoices/'+id+'/print?paper='+paper,{headers:{'Authorization':'Bearer '+token}});
     if(!r.ok){ showToast('خطا در دریافت فاکتور','error'); return; }
-    const html = await r.text();
+    let html = await r.text();
+    // about:blank has no base URL — anchor relative paths (logo) to the app origin
+    html = html.replace(/<head>/i,'<head><base href="'+location.origin+'/">');
     const w = window.open('','_blank');
     w.document.write(html); w.document.close();
   }catch(e){ showToast('خطا در چاپ','error'); }
@@ -2494,7 +2503,7 @@ async function loadStatement(){
   box.innerHTML=`
     <div class="panel">
       <div class="panel-head">
-        <h4>📄 ${esc(d.customer.biz)} ${d.customer.owner?'— '+esc(d.customer.owner):''}</h4>
+        <h4 style="display:flex;align-items:center;gap:10px"><img src="/logo-sm.png" style="height:32px" onerror="this.style.display='none'"> صورت‌حساب: ${esc(d.customer.biz)} ${d.customer.owner?'— '+esc(d.customer.owner):''}</h4>
         <span class="muted" style="font-size:12px">کارشناس: ${esc(d.customer.salesperson||'-')}</span>
       </div>
       <div class="panel-body tbl-wrap">
@@ -2585,7 +2594,9 @@ async function openHtmlAuth(url){
   try{
     const r=await fetch(url,{headers:{'Authorization':'Bearer '+token}});
     if(!r.ok){ showToast('خطا در دریافت','error'); return; }
-    const html=await r.text();
+    let html=await r.text();
+    // about:blank has no base URL — anchor relative paths (logo, fonts) to the app origin
+    html=html.replace(/<head>/i,'<head><base href="'+location.origin+'/">');
     const w=window.open('','_blank'); w.document.write(html); w.document.close();
   }catch(e){ showToast('خطا','error'); }
 }
@@ -3333,7 +3344,7 @@ function helpSec(icon,title,body){
 function renderAdminGuide(){
   return [
     helpSec('📊','داشبورد',`
-      <p>داشبورد نمای کلی از وضعیت کسب‌وکار را نشان می‌دهد.</p>
+      <p>داشبورد نمای کلی از وضعیت کسب‌وکار را نشان می‌دهد. پوستهٔ برنامه با هویت رسمی برند ترنم (سبز و طلایی) و لوگوی رسمی در ورود، منو، فاکتور چاپی و صورت‌حساب یکپارچه شده است.</p>
       <h5>امکانات</h5><ul>
         <li>آمار تعداد مشتریان، فاکتورها و پیگیری‌های باز</li>
         <li>نمودار فروش ماهانه (بر اساس فاکتورهای رسمی)</li>

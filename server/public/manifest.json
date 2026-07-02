@@ -12,27 +12,27 @@
   "dir": "rtl",
   "categories": ["business", "productivity"],
   "icons": [
-    { "src": "/logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/logo-sm.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/logo-sm.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ],
   "shortcuts": [
     {
       "name": "مشتریان",
       "short_name": "مشتریان",
       "url": "/?page=customers",
-      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/logo-sm.png", "sizes": "192x192" }]
     },
     {
       "name": "پیگیری‌ها",
       "short_name": "پیگیری",
       "url": "/?page=followups",
-      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/logo-sm.png", "sizes": "192x192" }]
     },
     {
       "name": "فاکتور جدید",
       "short_name": "فاکتور",
       "url": "/?page=invoices",
-      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/logo-sm.png", "sizes": "192x192" }]
     }
   ],
   "prefer_related_applications": false,
