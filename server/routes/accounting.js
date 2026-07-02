@@ -337,6 +337,19 @@ router.get('/general', auth, adminOnly, (req, res) => {
   const revenue     = db.prepare(`SELECT COALESCE(SUM(final),0) s FROM invoices WHERE type='final' ${invDateWhere}`).get().s;
   const subtotal    = db.prepare(`SELECT COALESCE(SUM(subtotal),0) s FROM invoices WHERE type='final' ${invDateWhere}`).get().s;
   const discAmt     = db.prepare(`SELECT COALESCE(SUM(disc_amt),0) s FROM invoices WHERE type='final' ${invDateWhere}`).get().s;
+
+  // Cost of goods sold: sum of (qty × unit cost) across all final invoice rows in range
+  const costMap = {};
+  db.prepare('SELECT id,cost FROM products').all().forEach(p => { costMap[p.id] = p.cost || 0; });
+  let cogs = 0;
+  const finalInvRows = db.prepare(`SELECT rows FROM invoices WHERE type='final' ${invDateWhere}`).all();
+  for (const inv of finalInvRows) {
+    let parsed = [];
+    try { parsed = JSON.parse(inv.rows || '[]'); } catch (e) { parsed = []; }
+    for (const r of parsed) cogs += (r.qty || 0) * (costMap[r.product_id] || 0);
+  }
+  cogs = Math.round(cogs);
+  const grossProfit = revenue - cogs;
   const settled     = db.prepare(`SELECT COALESCE(SUM(amount),0) s FROM settlements WHERE 1=1 ${settDateWhere}`).get().s;
   const cashSettled = db.prepare(`SELECT COALESCE(SUM(amount),0) s FROM settlements WHERE pay_type='cash' ${settDateWhere}`).get().s;
   const cheqSettled = db.prepare(`SELECT COALESCE(SUM(amount),0) s FROM settlements WHERE pay_type='cheque' ${settDateWhere}`).get().s;
@@ -368,8 +381,9 @@ router.get('/general', auth, adminOnly, (req, res) => {
   res.json({
     revenue, subtotal, discAmt, settled, cashSettled, cheqSettled,
     outstanding: revenue - settled,
+    cogs, grossProfit,
     commExpense,
-    netProfit: revenue - commExpense,
+    netProfit: grossProfit - commExpense,
     monthlyInv, monthlySett, journal
   });
 });

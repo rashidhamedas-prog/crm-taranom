@@ -362,6 +362,10 @@ function initDB() {
   ensureColumn(db, 'customers', 'assigned_to', 'INTEGER');
   ensureColumn(db, 'products', 'colors', 'INTEGER DEFAULT 1');
   ensureColumn(db, 'products', 'pack_size', 'INTEGER DEFAULT 1');
+  // Unit cost (production/purchase) — basis for Cost of Goods Sold in the P&L
+  ensureColumn(db, 'products', 'cost', 'REAL DEFAULT 0');
+  // Internal message image attachment (filename under uploads/messages)
+  ensureColumn(db, 'messages', 'image', 'TEXT');
   // Accounting module: sales incentive lock
   ensureColumn(db, 'users', 'incentive_locked', 'INTEGER DEFAULT 0');
   // Per-customer automatic follow-up on invoice (default on)
@@ -416,6 +420,13 @@ function initDB() {
     CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(entity);
     CREATE INDEX IF NOT EXISTS idx_api_usage ON api_usage_log(api_key_id);
     CREATE INDEX IF NOT EXISTS idx_followups_next ON followups(next_date);
+    CREATE INDEX IF NOT EXISTS idx_ledger_customer ON customer_ledger(customer_id);
+    CREATE INDEX IF NOT EXISTS idx_ledger_ref ON customer_ledger(ref_type,ref_id);
+    CREATE INDEX IF NOT EXISTS idx_journal_ref ON journal_entries(ref_type,ref_id);
+    CREATE INDEX IF NOT EXISTS idx_journal_lines_entry ON journal_lines(entry_id);
+    CREATE INDEX IF NOT EXISTS idx_settlements_cust ON settlements(cust_id);
+    CREATE INDEX IF NOT EXISTS idx_invoices_type ON invoices(type);
+    CREATE INDEX IF NOT EXISTS idx_incentive_rep ON incentive_payments(rep_id);
   `);
 
   // ---- Default admin ----

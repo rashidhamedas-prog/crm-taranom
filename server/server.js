@@ -14,6 +14,12 @@ const app = express();
 app.set('trust proxy', 1); // trust Nginx reverse proxy
 const PORT = process.env.PORT || 3000;
 
+// Gzip compression — shrinks JSON/HTML responses for faster load (graceful if not installed)
+try {
+  const compression = require('compression');
+  app.use(compression());
+} catch { /* compression optional — run without it if the module is missing */ }
+
 // Ensure uploads directory exists
 const UPLOADS = path.join(__dirname, 'public', 'uploads', 'products');
 fs.mkdirSync(UPLOADS, { recursive: true });
@@ -62,7 +68,11 @@ app.use(express.static(path.join(__dirname, 'public'), {
     }
   }
 }));
-app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+// Uploaded images are content-addressed by unique filename → safe to cache long-term
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads'), {
+  maxAge: '30d',
+  immutable: true,
+}));
 
 // General API rate limit (generous — protects against runaway loops)
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 1000, standardHeaders: true, legacyHeaders: false });

@@ -1,6 +1,26 @@
 const router = require('express').Router();
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const { getDB } = require('../db');
 const { auth } = require('../middleware/auth');
+
+const MSG_UPLOAD_DIR = path.join(__dirname, '..', 'public', 'uploads', 'messages');
+fs.mkdirSync(MSG_UPLOAD_DIR, { recursive: true });
+const memUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } });
+
+// Save an image buffer (PNG) to uploads/messages, optionally re-encoding via sharp
+async function saveMsgImage(buffer) {
+  const name = 'msg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.png';
+  const dest = path.join(MSG_UPLOAD_DIR, name);
+  try {
+    const sharp = require('sharp');
+    await sharp(buffer).resize({ width: 1200, withoutEnlargement: true }).png({ quality: 80 }).toFile(dest);
+  } catch (e) {
+    fs.writeFileSync(dest, buffer); // fallback: store as-is
+  }
+  return name;
+}
 
 // List messages for current user
 // Admin: all messages (broadcast + direct to any user)
@@ -66,6 +86,30 @@ router.post('/', auth, (req, res) => {
   if (!to_id && req.user.role !== 'admin') return res.status(403).json({ error: 'ارسال همگانی فقط توسط مدیر' });
   const result = db.prepare('INSERT INTO messages (from_id,to_id,body) VALUES (?,?,?)')
     .run(req.user.id, recipient, body.trim());
+  const row = db.prepare(`
+    SELECT m.*, f.name as from_name, t.name as to_name
+    FROM messages m LEFT JOIN users f ON m.from_id=f.id LEFT JOIN users t ON m.to_id=t.id
+    WHERE m.id=?`).get(result.lastInsertRowid);
+  res.json({ ...row, direction: 'sent' });
+});
+
+// Send a message with an image attachment (e.g. a customer account statement)
+router.post('/with-image', auth, memUpload.single('image'), async (req, res) => {
+  const { to_id, body } = req.body;
+  if (!req.file) return res.status(400).json({ error: 'تصویر الزامی است' });
+  const db = getDB();
+  // Non-admins can only send to admins
+  if (req.user.role !== 'admin' && to_id) {
+    const target = db.prepare('SELECT role FROM users WHERE id=?').get(to_id);
+    if (!target || target.role !== 'admin') return res.status(403).json({ error: 'فقط می‌توانید به مدیر پیام بفرستید' });
+  }
+  if (!to_id && req.user.role !== 'admin') return res.status(403).json({ error: 'ارسال همگانی فقط توسط مدیر' });
+  let image;
+  try { image = await saveMsgImage(req.file.buffer); }
+  catch (e) { return res.status(500).json({ error: 'خطا در ذخیره تصویر' }); }
+  const recipient = to_id || null;
+  const result = db.prepare('INSERT INTO messages (from_id,to_id,body,image) VALUES (?,?,?,?)')
+    .run(req.user.id, recipient, (body || '').trim(), image);
   const row = db.prepare(`
     SELECT m.*, f.name as from_name, t.name as to_name
     FROM messages m LEFT JOIN users f ON m.from_id=f.id LEFT JOIN users t ON m.to_id=t.id

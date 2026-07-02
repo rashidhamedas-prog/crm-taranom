@@ -9,6 +9,7 @@
 <link rel="apple-touch-icon" href="/logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
 :root{
   --purple:#1A5C38; --purple2:#236B44; --purple-light:#E8F5EE;
@@ -1865,7 +1866,8 @@ function prodModal(id){
       <div class="fg full"><label>نام محصول *</label><input id="p-name" value="${esc(p.name||'')}"></div>
       <div class="fg"><label>دسته‌بندی</label><input id="p-cat" value="${esc(p.category||'')}"></div>
       <div class="fg"><label>کد محصول</label><input id="p-code" value="${esc(p.code||'')}"></div>
-      <div class="fg"><label>قیمت (تومان)</label><input id="p-price" type="number" value="${p.price||0}"></div>
+      <div class="fg"><label>قیمت فروش (تومان)</label><input id="p-price" type="number" value="${p.price||0}"></div>
+      <div class="fg"><label>بهای تمام‌شده (تومان) ${hlp('قیمت تمام‌شده تولید/خرید هر واحد. مبنای محاسبه بهای تمام‌شده کالای فروش‌رفته و سود ناخالص در گزارش سود و زیان است.')}</label><input id="p-cost" type="number" value="${p.cost||0}"></div>
       <div class="fg"><label>موجودی</label><input id="p-stock" type="number" value="${p.stock!=null?p.stock:0}"></div>
       <div class="fg"><label>هشدار موجودی</label><input id="p-alert" type="number" value="${p.stock_alert!=null?p.stock_alert:5}"></div>
       <div class="fg"><label>واحد</label><input id="p-unit" value="${esc(p.unit||'عدد')}"></div>
@@ -1886,6 +1888,7 @@ async function saveProduct(id){
   fd.append('category',el('p-cat').value.trim());
   fd.append('code',el('p-code').value);
   fd.append('price',el('p-price').value||0);
+  fd.append('cost',el('p-cost')?.value||0);
   fd.append('stock',el('p-stock').value);
   fd.append('stock_alert',el('p-alert').value||5);
   fd.append('unit',el('p-unit').value||'عدد');
@@ -2152,6 +2155,8 @@ async function loadAccTab(tab){
       {label:'فروش ناخالص (مجموع فاکتورهای رسمی)',val:g.subtotal||0,color:'var(--green)'},
       {label:'تخفیفات اعمال شده',val:-(g.discAmt||0),color:'var(--red)'},
       {label:'درآمد خالص فروش',val:g.revenue||0,color:'var(--purple)',bold:true},
+      {label:'بهای تمام‌شده کالای فروش‌رفته',val:-(g.cogs||0),color:'var(--red)'},
+      {label:'سود ناخالص',val:g.grossProfit||0,color:(g.grossProfit||0)>=0?'var(--green)':'var(--red)',bold:true},
       {label:'انگیزه فروش کارشناسان (هزینه)',val:-(g.commExpense||0),color:'var(--red)'},
       {label:'سود عملیاتی',val:g.netProfit||0,color:(g.netProfit||0)>=0?'var(--green)':'var(--red)',bold:true,border:true},
     ];
@@ -2355,6 +2360,7 @@ async function loadAccTab(tab){
         <button class="btn sm ghost" onclick="exportStatement('excel')" ${stmtCustId?'':'disabled'}>📥 اکسل</button>
         <button class="btn sm ghost" onclick="exportStatement('csv')" ${stmtCustId?'':'disabled'}>📄 CSV</button>
         <button class="btn sm ghost" onclick="exportStatement('pdf')" ${stmtCustId?'':'disabled'}>🖨️ PDF</button>
+        <button class="btn sm ghost" onclick="sendStatementImage()" ${stmtCustId?'':'disabled'}>📤 ارسال تصویری به پیام‌رسان</button>
       </div>
       <div id="stmtBody">${stmtCustId?'<div class="muted">در حال بارگذاری...</div>':'<div class="empty" style="padding:30px">یک مشتری را برای مشاهده صورت‌حساب انتخاب کنید</div>'}</div>`;
     if(stmtCustId) loadStatement();
@@ -2420,6 +2426,47 @@ function exportStatement(format){
   const path='/accounting/statement/'+stmtCustId+'/export'+(q?q+'&':'?')+'format='+format;
   if(format==='pdf'){ openHtmlAuth('/api'+path); return; }
   downloadAuth(path, 'statement-'+stmtCustId+'.'+(format==='csv'?'csv':'xlsx'));
+}
+
+async function sendStatementImage(){
+  if(!stmtCustId){ showToast('ابتدا مشتری انتخاب کنید','error'); return; }
+  if(typeof html2canvas==='undefined'){ showToast('کتابخانه تولید تصویر بارگذاری نشده','error'); return; }
+  if(!el('stmtBody')?.querySelector('.panel')){ showToast('ابتدا صورت‌حساب را نمایش دهید','error'); return; }
+  let recipients=[];
+  try{ recipients=await api('GET','/messages/users')||[]; }catch(e){}
+  const opts=recipients.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('');
+  const broadcast=ME.role==='admin'?'<option value="">📢 همه کاربران</option>':'';
+  const custName=(CACHE.customers.find(c=>String(c.id)===String(stmtCustId))||{}).biz||'';
+  openModal(`
+    <div class="modal-head"><h3>📤 ارسال صورت‌حساب به پیام‌رسان</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="fg full"><label>گیرنده</label><select id="si-to">${broadcast}${opts}</select></div>
+      <div class="fg full"><label>توضیح (اختیاری)</label><textarea id="si-body" placeholder="متن همراه تصویر...">صورت‌حساب ${esc(custName)}</textarea></div>
+    </div></div>
+    <div class="modal-foot"><button class="btn green" onclick="doSendStatementImage()">📤 ارسال</button>
+      <button class="btn ghost" onclick="closeModal()">انصراف</button></div>`);
+}
+
+async function doSendStatementImage(){
+  const to=el('si-to')?.value||'', body=el('si-body')?.value||'';
+  const target=el('stmtBody')?.querySelector('.panel');
+  if(!target){ showToast('صورت‌حساب یافت نشد','error'); return; }
+  showToast('در حال تولید تصویر...');
+  try{
+    const canvas=await html2canvas(target,{backgroundColor:'#ffffff',scale:2,useCORS:true});
+    canvas.toBlob(async blob=>{
+      if(!blob){ showToast('خطا در تولید تصویر','error'); return; }
+      const fd=new FormData();
+      fd.append('image',blob,'statement.png');
+      if(to) fd.append('to_id',to);
+      fd.append('body',body);
+      try{
+        await api('POST','/messages/with-image',fd,true);
+        closeModal(); showToast('صورت‌حساب به پیام‌رسان ارسال شد');
+        if(typeof refreshMsgBadge==='function') refreshMsgBadge();
+      }catch(e){ showToast('خطا در ارسال','error'); }
+    },'image/png');
+  }catch(e){ showToast('خطا در تولید تصویر','error'); }
 }
 
 // Open an authenticated HTML page (e.g. printable PDF) in a new tab
@@ -2671,6 +2718,7 @@ function renderMsgs(){
         </span>
       </div>
       <div class="mb" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);white-space:pre-wrap;font-size:13px">${esc(m.body)}</div>
+      ${m.image?`<div style="margin-top:8px"><a href="/uploads/messages/${esc(m.image)}" target="_blank"><img src="/uploads/messages/${esc(m.image)}" style="max-width:100%;border-radius:8px;border:1px solid var(--border);cursor:zoom-in"></a></div>`:''}
     </div>`).join('') || '<div class="empty" style="padding:40px;text-align:center">📭 پیامی یافت نشد</div>';
 }
 async function markVisibleRead(){ setTimeout(async()=>{ await api('POST','/messages/read-all'); refreshMsgBadge(); }, 800); }

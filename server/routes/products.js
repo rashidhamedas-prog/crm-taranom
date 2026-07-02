@@ -70,7 +70,7 @@ router.get('/categories', auth, (req, res) => {
 
 // Create product (admin only) — multipart form-data for optional image
 router.post('/', auth, adminOnly, upload.single('image'), async (req, res) => {
-  const { category, code, name, price, stock, stock_alert, unit, note, colors, pack_size } = req.body;
+  const { category, code, name, price, cost, stock, stock_alert, unit, note, colors, pack_size } = req.body;
   if (!name) return res.status(400).json({ error: 'نام محصول الزامی است' });
   const db = getDB();
   let image = null;
@@ -78,8 +78,8 @@ router.post('/', auth, adminOnly, upload.single('image'), async (req, res) => {
     try { image = await saveImage(req.file.buffer, req.file.originalname); } catch (e) { image = null; }
   }
   const result = db.prepare(
-    'INSERT INTO products (user_id,category,code,name,price,stock,stock_alert,unit,note,image,colors,pack_size) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
-  ).run(req.user.id, category || '', code || '', name, parseFloat(price) || 0, parseInt(stock) || 0,
+    'INSERT INTO products (user_id,category,code,name,price,cost,stock,stock_alert,unit,note,image,colors,pack_size) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)'
+  ).run(req.user.id, category || '', code || '', name, parseFloat(price) || 0, parseFloat(cost) || 0, parseInt(stock) || 0,
         parseInt(stock_alert) || 5, unit || 'عدد', note || '', image,
         parseInt(colors) || 1, parseInt(pack_size) || 1);
   audit(req.user.id, 'create', 'product', result.lastInsertRowid, `ساخت محصول ${name}`);
@@ -91,7 +91,7 @@ router.put('/:id', auth, adminOnly, upload.single('image'), async (req, res) => 
   const db = getDB();
   const prod = db.prepare('SELECT * FROM products WHERE id=?').get(req.params.id);
   if (!prod) return res.status(404).json({ error: 'یافت نشد' });
-  const { category, code, name, price, stock, stock_alert, unit, note, colors, pack_size } = req.body;
+  const { category, code, name, price, cost, stock, stock_alert, unit, note, colors, pack_size } = req.body;
   let image = prod.image;
   if (req.file) {
     try {
@@ -99,8 +99,9 @@ router.put('/:id', auth, adminOnly, upload.single('image'), async (req, res) => 
       if (prod.image) { try { fs.unlinkSync(path.join(UPLOAD_DIR, prod.image)); } catch (e) {} }
     } catch (e) { image = prod.image; }
   }
-  db.prepare('UPDATE products SET category=?,code=?,name=?,price=?,stock=?,stock_alert=?,unit=?,note=?,image=?,colors=?,pack_size=? WHERE id=?')
-    .run(category || '', code || '', name || prod.name, parseFloat(price) || 0, parseInt(stock) || 0,
+  db.prepare('UPDATE products SET category=?,code=?,name=?,price=?,cost=?,stock=?,stock_alert=?,unit=?,note=?,image=?,colors=?,pack_size=? WHERE id=?')
+    .run(category || '', code || '', name || prod.name, parseFloat(price) || 0,
+         cost !== undefined ? (parseFloat(cost) || 0) : (prod.cost || 0), parseInt(stock) || 0,
          parseInt(stock_alert) || 5, unit || 'عدد', note || '', image,
          parseInt(colors) || prod.colors || 1, parseInt(pack_size) || prod.pack_size || 1,
          req.params.id);
